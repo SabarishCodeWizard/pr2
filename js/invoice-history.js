@@ -74,8 +74,7 @@ function displayInvoices(invoices) {
             </div>
             <div class="invoice-actions">
                 <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
-                <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
-                <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
+               
                 <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
                 <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
                 <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
@@ -83,6 +82,10 @@ function displayInvoices(invoices) {
         </div>
     `).join('');
 }
+
+
+//  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
+// <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
 
 // Clear filters
 function clearFilters() {
@@ -473,3 +476,4 @@ function logout() {
         window.location.href = 'login.html';
     }
 }
+
