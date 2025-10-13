@@ -113,15 +113,6 @@
                         <label>Subtotal:</label>
                         <span id="subTotal">0.00</span>
                     </div>
-                    <div class="payment-row">
-                        <label>Discount:</label>
-                        <input type="number" id="discount" value="0" class="discount-input">
-                        <span id="discountAmount">0.00</span>
-                    </div>
-                    <div class="payment-row">
-                        <label>Round Off:</label>
-                        <span id="roundOff">0.00</span>
-                    </div>
                     <div class="payment-row total">
                         <label>Total Amount:</label>
                         <span id="grandTotal">0.00</span>
@@ -131,32 +122,15 @@
                         <input type="number" id="amountPaid" value="0" class="payment-input">
                     </div>
                     <div class="payment-row">
-                        <label>Balance Due:</label>
-                        <span id="balanceDue">0.00</span>
+                        <label>Payment Method:</label>
+                        <select id="paymentMethod" class="payment-select">
+                            <option value="cash">CASH</option>
+                            <option value="gpay">UPI</option>
+                        </select>
                     </div>
                     <div class="payment-row">
-                        <label>Amount in Words:</label>
-                        <span id="amountInWords">Zero rupees only</span>
-                    </div>
-                </div>
-
-                <div class="bank-details">
-                    <h3>Bank Details</h3>
-                    <div class="bank-row">
-                        <label>NAME:</label>
-                        <span>PR FABRICS</span>
-                    </div>
-                    <div class="bank-row">
-                        <label>BANK NAME:</label>
-                        <span>CANARA BANK</span>
-                    </div>
-                    <div class="bank-row">
-                        <label>BANK A/C NO:</label>
-                        <span>65631010003339</span>
-                    </div>
-                    <div class="bank-row">
-                        <label>BANK IFSC CODE:</label>
-                        <span>CNRB0016563</span>
+                        <label>Balance Due:</label>
+                        <span id="balanceDue">0.00</span>
                     </div>
                 </div>
             </div>

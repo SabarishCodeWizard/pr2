@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
     
-    document.getElementById('discount').addEventListener('input', Utils.updateCalculations);
     document.getElementById('amountPaid').addEventListener('input', Utils.updateCalculations);
     
     // Check if we're editing an existing invoice
@@ -92,7 +91,8 @@ async function saveBill() {
                 invoiceNo: invoiceData.invoiceNo,
                 paymentDate: new Date().toISOString().split('T')[0],
                 amount: invoiceData.amountPaid,
-                paymentType: 'initial'
+                paymentType: 'initial',
+                paymentMethod: invoiceData.paymentMethod
             };
             await db.savePayment(paymentData);
         }
@@ -141,7 +141,6 @@ document.addEventListener('click', function(e) {
         Utils.updateCalculations();
     }
 });
-
 
 // Logout functionality
 document.getElementById('logoutBtn').addEventListener('click', function () {

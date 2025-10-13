@@ -8,23 +8,6 @@ class Utils {
         }).format(amount);
     }
 
-    // Convert number to words
-    static numberToWords(num) {
-        const a = ['', 'one ', 'two ', 'three ', 'four ', 'five ', 'six ', 'seven ', 'eight ', 'nine ', 'ten ', 'eleven ', 'twelve ', 'thirteen ', 'fourteen ', 'fifteen ', 'sixteen ', 'seventeen ', 'eighteen ', 'nineteen '];
-        const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-
-        if ((num = num.toString()).length > 9) return 'overflow';
-        let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
-        if (!n) return;
-        let str = '';
-        str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'crore ' : '';
-        str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'lakh ' : '';
-        str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'thousand ' : '';
-        str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'hundred ' : '';
-        str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + 'only' : 'only';
-        return str.replace(/\s+/g, ' ').trim();
-    }
-
     // Calculate subtotal from product rows
     static calculateSubtotal() {
         let subtotal = 0;
@@ -37,15 +20,12 @@ class Utils {
     }
 
     // Calculate grand total
-    static calculateGrandTotal(subtotal, discount) {
-        const discountAmount = (subtotal * discount) / 100;
-        const totalAfterDiscount = subtotal - discountAmount;
-        const roundedTotal = Math.round(totalAfterDiscount);
-        const roundOff = roundedTotal - totalAfterDiscount;
+    static calculateGrandTotal(subtotal) {
+        const roundedTotal = Math.round(subtotal);
+        const roundOff = roundedTotal - subtotal;
         
         return {
             grandTotal: roundedTotal,
-            discountAmount: discountAmount,
             roundOff: roundOff
         };
     }
@@ -107,9 +87,9 @@ class Utils {
         });
         
         const subtotal = Utils.calculateSubtotal();
-        const discount = parseFloat(document.getElementById('discount').value) || 0;
-        const calculations = Utils.calculateGrandTotal(subtotal, discount);
+        const calculations = Utils.calculateGrandTotal(subtotal);
         const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        const paymentMethod = document.getElementById('paymentMethod').value;
         
         return {
             invoiceNo: document.getElementById('invoiceNo').value,
@@ -123,13 +103,10 @@ class Utils {
             placeOfSupply: document.getElementById('placeOfSupply').value,
             products: products,
             subtotal: subtotal,
-            discount: discount,
-            discountAmount: calculations.discountAmount,
-            roundOff: calculations.roundOff,
             grandTotal: calculations.grandTotal,
             amountPaid: amountPaid,
+            paymentMethod: paymentMethod,
             balanceDue: calculations.grandTotal - amountPaid,
-            amountInWords: Utils.numberToWords(calculations.grandTotal) + ' rupees only',
             createdAt: new Date().toISOString()
         };
     }
@@ -145,8 +122,8 @@ class Utils {
         document.getElementById('vehicleNumber').value = data.vehicleNumber || '';
         document.getElementById('supplyDate').value = data.supplyDate || '';
         document.getElementById('placeOfSupply').value = data.placeOfSupply || '';
-        document.getElementById('discount').value = data.discount || 0;
         document.getElementById('amountPaid').value = data.amountPaid || 0;
+        document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
         
         // Clear existing product rows
         const tableBody = document.getElementById('productTableBody');
@@ -185,16 +162,12 @@ class Utils {
     // Update all calculations
     static updateCalculations() {
         const subtotal = Utils.calculateSubtotal();
-        const discount = parseFloat(document.getElementById('discount').value) || 0;
-        const calculations = Utils.calculateGrandTotal(subtotal, discount);
+        const calculations = Utils.calculateGrandTotal(subtotal);
         const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
         
         document.getElementById('subTotal').textContent = Utils.formatCurrency(subtotal);
-        document.getElementById('discountAmount').textContent = Utils.formatCurrency(calculations.discountAmount);
-        document.getElementById('roundOff').textContent = Utils.formatCurrency(calculations.roundOff);
         document.getElementById('grandTotal').textContent = Utils.formatCurrency(calculations.grandTotal);
         document.getElementById('balanceDue').textContent = Utils.formatCurrency(calculations.grandTotal - amountPaid);
-        document.getElementById('amountInWords').textContent = Utils.numberToWords(calculations.grandTotal) + ' rupees only';
         
         // Update product amounts
         document.querySelectorAll('#productTableBody tr').forEach(row => {
@@ -215,8 +188,8 @@ class Utils {
         document.getElementById('vehicleNumber').value = '';
         document.getElementById('supplyDate').value = '';
         document.getElementById('placeOfSupply').value = '';
-        document.getElementById('discount').value = 0;
         document.getElementById('amountPaid').value = 0;
+        document.getElementById('paymentMethod').value = 'cash';
         
         // Reset product table
         const tableBody = document.getElementById('productTableBody');

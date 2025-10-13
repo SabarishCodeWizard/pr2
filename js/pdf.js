@@ -28,11 +28,12 @@ class PDFGenerator {
                     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
                     th { background-color: #f2f2f2; }
                     .calculation-section { display: flex; justify-content: space-between; margin-bottom: 20px; }
-                    .payment-calculation, .bank-details { width: 48%; }
+                    .payment-calculation, .payment-info { width: 48%; }
                     .payment-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
                     .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
                     .declaration, .customer-signature, .company-signature { width: 30%; text-align: center; }
                     .signature-line { margin-top: 60px; border-top: 1px solid #333; padding-top: 5px; }
+                    .total { font-weight: bold; border-top: 2px solid #333; padding-top: 10px; }
                 </style>
             </head>
             <body>
@@ -99,14 +100,6 @@ class PDFGenerator {
                                 <label>Subtotal:</label>
                                 <span>${Utils.formatCurrency(invoiceData.subtotal)}</span>
                             </div>
-                            <div class="payment-row">
-                                <label>Discount (${invoiceData.discount}%):</label>
-                                <span>${Utils.formatCurrency(invoiceData.discountAmount)}</span>
-                            </div>
-                            <div class="payment-row">
-                                <label>Round Off:</label>
-                                <span>${Utils.formatCurrency(invoiceData.roundOff)}</span>
-                            </div>
                             <div class="payment-row total">
                                 <label>Total Amount:</label>
                                 <span>${Utils.formatCurrency(invoiceData.grandTotal)}</span>
@@ -116,33 +109,19 @@ class PDFGenerator {
                                 <span>${Utils.formatCurrency(invoiceData.amountPaid)}</span>
                             </div>
                             <div class="payment-row">
+                                <label>Payment Method:</label>
+                                <span>${invoiceData.paymentMethod === 'cash' ? 'Cash' : 'GPay'}</span>
+                            </div>
+                            <div class="payment-row">
                                 <label>Balance Due:</label>
                                 <span>${Utils.formatCurrency(invoiceData.balanceDue)}</span>
                             </div>
-                            <div class="payment-row">
-                                <label>Amount in Words:</label>
-                                <span>${invoiceData.amountInWords}</span>
-                            </div>
                         </div>
 
-                        <div class="bank-details">
-                            <h3>Bank Details</h3>
-                            <div class="bank-row">
-                                <label>NAME:</label>
-                                <span>PR FABRICS</span>
-                            </div>
-                            <div class="bank-row">
-                                <label>BANK NAME:</label>
-                                <span>CANARA BANK</span>
-                            </div>
-                            <div class="bank-row">
-                                <label>BANK A/C NO:</label>
-                                <span>65631010003339</span>
-                            </div>
-                            <div class="bank-row">
-                                <label>BANK IFSC CODE:</label>
-                                <span>CNRB0016563</span>
-                            </div>
+                        <div class="payment-info">
+                            <h3>Payment Information</h3>
+                            <p><strong>For Cash Payments:</strong> Please pay at our office</p>
+                            <p><strong>For GPay Payments:</strong> Use UPI ID: prfabrics@okhdfcbank</p>
                         </div>
                     </div>
 
