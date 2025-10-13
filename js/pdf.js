@@ -254,6 +254,7 @@ class PDFGenerator {
                             <p>42/65, THIRUNEELAKANDA PURAM, 1ST STREET,</p>
                             <p>TIRUPUR 641-602 | CELL: 9952520181</p>
                         </div>
+                        <img src="image.png" alt="pr-image">
                         <div class="invoice-title">
                             <h2>TAX INVOICE</h2>
                             <div class="invoice-number">
