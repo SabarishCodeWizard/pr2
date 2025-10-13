@@ -146,5 +146,5 @@ document.addEventListener('click', function(e) {
 // Logout functionality
 document.getElementById('logoutBtn').addEventListener('click', function () {
     sessionStorage.removeItem('isLoggedIn');
-    window.location.href = 'login.html';
+    window.location.href = 'https://prfabrics.vercel.app/login.html';
 });
