@@ -347,7 +347,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 #productTable thead {
-  background: var(--primary);
+  background: var(--dark);
   color: white;
 }
 
