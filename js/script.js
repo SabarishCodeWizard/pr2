@@ -141,3 +141,10 @@ document.addEventListener('click', function(e) {
         Utils.updateCalculations();
     }
 });
+
+
+// Logout functionality
+document.getElementById('logoutBtn').addEventListener('click', function () {
+    sessionStorage.removeItem('isLoggedIn');
+    window.location.href = 'login.html';
+});
