@@ -305,21 +305,7 @@ async function generatePDFStatement(invoiceData, payments) {
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        
-        // Subtotal
-        doc.text('Subtotal:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.subtotal)}`, pageWidth - margin, yPos, { align: 'right' });
-        yPos += 6;
-        
-        // Discount
-        doc.text(`Discount (${invoiceData.discount}%):`, margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.discountAmount)}`, pageWidth - margin, yPos, { align: 'right' });
-        yPos += 6;
-        
-        // Round Off
-        doc.text('Round Off:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.roundOff)}`, pageWidth - margin, yPos, { align: 'right' });
-        yPos += 6;
+    
         
         // Total Amount
         doc.setFont('helvetica', 'bold');
