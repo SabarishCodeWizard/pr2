@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR Fabrics - Billing System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="main"></div>
+    <div class="container">
+        <div class="controls">
+            <h1 class="bill-system-header">
+                <a href="#" class="brand-name">PR Fabrics</a>
+                <span class="system-name">Billing System</span>
+            </h1>
+            <a href="invoice-history.html" class="view-history-btn">View Invoice History</a>
+            <a href="dashboard.html" class="dashboard">Dashboard Analytics</a>
+            <div class="button-group">
+                <button id="generatePDF">Generate PDF</button>
+                <button id="saveBill">Save Bill</button>
+                <button id="resetForm">Reset Form</button>
+            </div>
+            <button id="logoutBtn">Logout</button>
+        </div>
+
+        <div id="invoice" class="invoice-container">
+            <div class="invoice-header">
+                <div class="company-details">
+                    <h2>PR FABRICS</h2>
+                    <p>42/65, THIRUNEELAKANDA PURAM, 1ST STREET,</p>
+                    <p>TIRUPUR 641-602. CELL NO: 9952520181</p>
+                </div>
+                <div class="invoice-title">
+                    <h2>Invoice</h2>
+                    <div class="invoice-number">
+                        <label for="invoiceNo">Invoice No:</label>
+                        <input type="text" id="invoiceNo" placeholder="Enter invoice number">
+                    </div>
+                    <div class="invoice-date">
+                        <label for="invoiceDate">Invoice Date:</label>
+                        <input type="date" id="invoiceDate">
+                    </div>
+                </div>
+            </div>
+
+            <div class="billing-info">
+                <div class="bill-to">
+                    <h3>Bill to Party</h3>
+                    <div class="form-group">
+                        <label for="customerName">Name:</label>
+                        <input type="text" id="customerName" placeholder="e.g. SLN TEX">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerAddress">Address:</label>
+                        <input type="text" id="customerAddress" placeholder="e.g. 1/1B,EAST Extn,M.S.NAGAR, TIRUPUR-7">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerPhone">Phone:</label>
+                        <input type="text" id="customerPhone" placeholder="e.g. 9876543210">
+                    </div>
+                </div>
+                <div class="shipping-info">
+                    <div class="form-group">
+                        <label for="transportMode">Transport Mode:</label>
+                        <input type="text" id="transportMode">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleNumber">Vehicle number:</label>
+                        <input type="text" id="vehicleNumber">
+                    </div>
+                    <div class="form-group">
+                        <label for="supplyDate">Date of Supply:</label>
+                        <input type="date" id="supplyDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="placeOfSupply">Place of Supply:</label>
+                        <input type="text" id="placeOfSupply">
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-table-container">
+                <table id="productTable">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Product Description</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <tr>
+                            <td>1</td>
+                            <td><input type="text" class="product-description"></td>
+                            <td><input type="number" class="qty" value="0"></td>
+                            <td><input type="number" class="rate" value="0.00"></td>
+                            <td class="amount">0.00</td>
+                            <td><button class="remove-row">X</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button id="addRow">Add Product</button>
+            </div>
+
+            <div class="calculation-section">
+                <div class="payment-calculation">
+                    <div class="payment-row">
+                        <label>Subtotal:</label>
+                        <span id="subTotal">0.00</span>
+                    </div>
+                    <div class="payment-row">
+                        <label>Discount:</label>
+                        <input type="number" id="discount" value="0" class="discount-input">
+                        <span id="discountAmount">0.00</span>
+                    </div>
+                    <div class="payment-row">
+                        <label>Round Off:</label>
+                        <span id="roundOff">0.00</span>
+                    </div>
+                    <div class="payment-row total">
+                        <label>Total Amount:</label>
+                        <span id="grandTotal">0.00</span>
+                    </div>
+                    <div class="payment-row">
+                        <label>Amount Paid:</label>
+                        <input type="number" id="amountPaid" value="0" class="payment-input">
+                    </div>
+                    <div class="payment-row">
+                        <label>Balance Due:</label>
+                        <span id="balanceDue">0.00</span>
+                    </div>
+                    <div class="payment-row">
+                        <label>Amount in Words:</label>
+                        <span id="amountInWords">Zero rupees only</span>
+                    </div>
+                </div>
+
+                <div class="bank-details">
+                    <h3>Bank Details</h3>
+                    <div class="bank-row">
+                        <label>NAME:</label>
+                        <span>PR FABRICS</span>
+                    </div>
+                    <div class="bank-row">
+                        <label>BANK NAME:</label>
+                        <span>CANARA BANK</span>
+                    </div>
+                    <div class="bank-row">
+                        <label>BANK A/C NO:</label>
+                        <span>65631010003339</span>
+                    </div>
+                    <div class="bank-row">
+                        <label>BANK IFSC CODE:</label>
+                        <span>CNRB0016563</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signature-section">
+                <div class="declaration">
+                    <p>Certified that the particulars given above are true and correct</p>
+                    <p>**TERMS AND CONDITIONS APPLY FOR PR FABRICS</p>
+                </div>
+                <div class="customer-signature">
+                    <p>Agreed and accepted the conditions and signed</p>
+                    <p class="signature-line">Signature of Customer</p>
+                    <p>Authorized signatory</p>
+                </div>
+                <div class="company-signature">
+                    <p class="signature-line">For PR FABRICS</p>
+                    <p>Authorized signatory</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/db.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/pdf.js"></script>
+    <script src="js/script.js"></script>
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-grid">
+                <div class="footer-section about">
+                    <h3>PR Fabrics</h3>
+                    <p>Your trusted partner for quality fabrics since 2010. We provide premium textile solutions with unmatched customer service.</p>
+                    <div class="social-links">
+                        <a href="#" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" target="_blank" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+    
+                <div class="footer-section links">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="#">Products</a></li>
+                        <li><a href="#">Services</a></li>
+                        <li><a href="invoice-history.html">Invoice History</a></li>
+                        <li><a href="#">About Us</a></li>
+                    </ul>
+                </div>
+    
+                <div class="footer-section contact">
+                    <h3>Contact Us</h3>
+                    <div class="contact-info">
+                        <p><i class="fas fa-map-marker-alt"></i> 42/65, Thiruneelakanda Puram, 1st Street, Tirupur 641-602</p>
+                        <p><i class="fas fa-phone"></i> <a href="tel:9952520181">+91 99525 20181</a></p>
+                        <p><i class="fas fa-envelope"></i> <a href="mailto:info@prfabrics.com">info@prfabrics.com</a></p>
+                    </div>
+                </div>
+    
+                <div class="footer-section newsletter">
+                    <h3>Newsletter</h3>
+                    <p>Subscribe to get updates on new products and special offers</p>
+                    <form class="newsletter-form">
+                        <input type="email" placeholder="Your Email Address" required>
+                        <button type="submit">Subscribe</button>
+                    </form>
+                </div>
+            </div>
+    
+            <div class="footer-bottom">
+                <div class="footer-bottom-content">
+                    <p>&copy; 2025 PR Fabrics Billing Software. All Rights Reserved.</p>
+                    <div class="developer-credit">
+                        <p>Developed by <a href="http://instagram.com/r_sabarish_k/" target="_blank">Sabarish R</a> | 
+                        <a href="tel:7845081278">7845081278</a></p>
+                        <div class="developer-links">
+                            <a href="https://github.com/SabarishCodeWizard" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                            <a href="https://www.linkedin.com/in/sabarish777" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" target="_blank" aria-label="Portfolio"><i class="fas fa-globe"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

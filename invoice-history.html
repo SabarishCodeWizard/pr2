@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice History - PR Fabrics</title>
+    <link rel="stylesheet" href="css/invoice-history.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="controls">
+            <h1 class="bill-system-header">
+                <a href="index.html" class="brand-name">PR Fabrics</a>
+                <span class="system-name">Invoice History</span>
+            </h1>
+            <a href="index.html" class="view-history-btn">Back to Billing</a>
+            <button id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="invoice-history-container">
+            <h2>Invoice History</h2>
+            <div class="search-filters">
+                <input type="text" id="searchInput" placeholder="Search by customer name or invoice number">
+                <input type="date" id="fromDate">
+                <input type="date" id="toDate">
+                <button id="searchBtn">Search</button>
+                <button id="clearFilters">Clear Filters</button>
+            </div>
+
+            <div class="invoices-list" id="invoicesList">
+                <!-- Invoices will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/db.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/invoice-history.js"></script>
+</body>
+
+</html>
