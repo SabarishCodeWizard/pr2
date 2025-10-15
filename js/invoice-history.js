@@ -3,7 +3,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize database
     await db.init();
     
-    // Load invoices
+    // Load recent invoices
+    loadRecentInvoices();
+    
+    // Load all invoices
     loadInvoices();
     
     // Add event listeners
@@ -11,6 +14,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 });
+
+// Load and display recent invoices (last 5)
+// Load and display recent invoices (last 5 by invoice number)
+async function loadRecentInvoices() {
+    try {
+        const invoices = await db.getAllInvoices();
+        
+        // Sort by invoice number in descending order (highest numbers first)
+        const recentInvoices = invoices
+            .sort((a, b) => {
+                // Convert invoice numbers to numbers for proper numerical sorting
+                const numA = parseInt(a.invoiceNo) || 0;
+                const numB = parseInt(b.invoiceNo) || 0;
+                return numB - numA; // Descending order (highest first)
+            })
+            .slice(0, 5);
+        
+        displayRecentInvoices(recentInvoices);
+    } catch (error) {
+        console.error('Error loading recent invoices:', error);
+    }
+}
+// Display recent invoices at the top
+function displayRecentInvoices(invoices) {
+    const recentInvoicesList = document.getElementById('recentInvoicesList');
+    
+    if (invoices.length === 0) {
+        recentInvoicesList.innerHTML = '<p class="no-recent-invoices">No recent invoices found.</p>';
+        return;
+    }
+    
+    recentInvoicesList.innerHTML = invoices.map(invoice => `
+        <div class="recent-invoice-item" onclick="filterByInvoice('${invoice.invoiceNo}')">
+            <span class="invoice-number">#${invoice.invoiceNo}</span>
+            <span class="invoice-customer">${invoice.customerName}</span>
+            <span class="invoice-date">${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</span>
+            <span class="invoice-amount">₹${Utils.formatCurrency(invoice.grandTotal)}</span>
+        </div>
+    `).join('');
+}
+
+// Filter invoices by specific invoice number
+function filterByInvoice(invoiceNo) {
+    document.getElementById('searchInput').value = invoiceNo;
+    loadInvoices();
+}
 
 // Load invoices with optional filters
 async function loadInvoices() {
@@ -74,7 +123,6 @@ function displayInvoices(invoices) {
             </div>
             <div class="invoice-actions">
                 <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
-               
                 <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
                 <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
                 <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
@@ -82,6 +130,7 @@ function displayInvoices(invoices) {
         </div>
     `).join('');
 }
+
 
 
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
