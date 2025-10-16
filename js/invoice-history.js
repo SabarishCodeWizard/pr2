@@ -380,39 +380,62 @@ async function loadInvoices() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const fromDate = document.getElementById('fromDate').value;
         const toDate = document.getElementById('toDate').value;
-
+        const fromInvoiceNo = document.getElementById('fromInvoiceNo').value;
+        const toInvoiceNo = document.getElementById('toInvoiceNo').value;
+        
         let filteredInvoices = invoices;
-
+        
         // Apply search filter
         if (searchTerm) {
-            filteredInvoices = filteredInvoices.filter(invoice =>
+            filteredInvoices = filteredInvoices.filter(invoice => 
                 invoice.customerName.toLowerCase().includes(searchTerm) ||
                 invoice.invoiceNo.toLowerCase().includes(searchTerm)
             );
         }
-
+        
         // Apply date filters
         if (fromDate) {
-            filteredInvoices = filteredInvoices.filter(invoice =>
+            filteredInvoices = filteredInvoices.filter(invoice => 
                 invoice.invoiceDate >= fromDate
             );
         }
-
+        
         if (toDate) {
-            filteredInvoices = filteredInvoices.filter(invoice =>
+            filteredInvoices = filteredInvoices.filter(invoice => 
                 invoice.invoiceDate <= toDate
             );
         }
-
-        // Sort by date (newest first)
-        filteredInvoices.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate));
-
+        
+        // Apply invoice number range filter
+        if (fromInvoiceNo || toInvoiceNo) {
+            filteredInvoices = filteredInvoices.filter(invoice => {
+                const invoiceNum = parseInt(invoice.invoiceNo) || 0;
+                
+                if (fromInvoiceNo && toInvoiceNo) {
+                    return invoiceNum >= parseInt(fromInvoiceNo) && invoiceNum <= parseInt(toInvoiceNo);
+                } else if (fromInvoiceNo) {
+                    return invoiceNum >= parseInt(fromInvoiceNo);
+                } else if (toInvoiceNo) {
+                    return invoiceNum <= parseInt(toInvoiceNo);
+                }
+                return true;
+            });
+        }
+        
+        // Sort by invoice number (descending order - highest first)
+        filteredInvoices.sort((a, b) => {
+            const numA = parseInt(a.invoiceNo) || 0;
+            const numB = parseInt(b.invoiceNo) || 0;
+            return numB - numA;
+        });
+        
         displayInvoices(filteredInvoices);
     } catch (error) {
         console.error('Error loading invoices:', error);
         alert('Error loading invoices.');
     }
 }
+
 
 // Display invoices in the list
 function displayInvoices(invoices) {
@@ -449,11 +472,14 @@ function displayInvoices(invoices) {
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
 // <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
 
+
 // Clear filters
 function clearFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('fromDate').value = '';
     document.getElementById('toDate').value = '';
+    document.getElementById('fromInvoiceNo').value = '';
+    document.getElementById('toInvoiceNo').value = '';
     loadInvoices();
 }
 

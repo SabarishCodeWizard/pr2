@@ -35,13 +35,24 @@
             </div>
 
             <div class="search-filters">
-                <input type="text" id="searchInput" placeholder="Search by customer name or invoice number">
-                <input type="date" id="fromDate">
-                <input type="date" id="toDate">
-                <button id="searchBtn">Search</button>
-                <button id="clearFilters">Clear Filters</button>
+                <div class="filter-group">
+                    <input type="text" id="searchInput" placeholder="Search by customer name or invoice number">
+                </div>
+                <div class="filter-group">
+                    <input type="number" id="fromInvoiceNo" placeholder="From Invoice No" min="1">
+                    <span class="range-separator">to</span>
+                    <input type="number" id="toInvoiceNo" placeholder="To Invoice No" min="1">
+                </div>
+                <div class="filter-group">
+                    <input type="date" id="fromDate" placeholder="From Date">
+                    <span class="range-separator">to</span>
+                    <input type="date" id="toDate" placeholder="To Date">
+                </div>
+                <div class="filter-actions">
+                    <button id="searchBtn">Search</button>
+                    <button id="clearFilters">Clear Filters</button>
+                </div>
             </div>
-
             <!-- ADD THIS NEW SECTION -->
             <div class="customer-statement-section">
                 <h3>Customer Statement</h3>
