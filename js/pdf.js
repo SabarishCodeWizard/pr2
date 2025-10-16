@@ -274,13 +274,6 @@ class PDFGenerator {
                             <p><strong>Address:</strong> ${invoiceData.customerAddress}</p>
                             <p><strong>Phone:</strong> ${invoiceData.customerPhone}</p>
                         </div>
-                        <div class="shipping-info">
-                            <h3>SHIPPING DETAILS</h3>
-                            <p><strong>Transport:</strong> ${invoiceData.transportMode || 'N/A'}</p>
-                            <p><strong>Vehicle No:</strong> ${invoiceData.vehicleNumber || 'N/A'}</p>
-                            <p><strong>Supply Date:</strong> ${invoiceData.supplyDate ? new Date(invoiceData.supplyDate).toLocaleDateString('en-IN') : 'N/A'}</p>
-                            <p><strong>Place:</strong> ${invoiceData.placeOfSupply || 'N/A'}</p>
-                        </div>
                     </div>
 
                     <!-- Products Table -->

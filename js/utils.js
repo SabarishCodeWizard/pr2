@@ -97,10 +97,10 @@ class Utils {
             customerName: document.getElementById('customerName').value,
             customerAddress: document.getElementById('customerAddress').value,
             customerPhone: document.getElementById('customerPhone').value,
-            transportMode: document.getElementById('transportMode').value,
-            vehicleNumber: document.getElementById('vehicleNumber').value,
-            supplyDate: document.getElementById('supplyDate').value,
-            placeOfSupply: document.getElementById('placeOfSupply').value,
+            // transportMode: document.getElementById('transportMode').value,
+            // vehicleNumber: document.getElementById('vehicleNumber').value,
+            // supplyDate: document.getElementById('supplyDate').value,
+            // placeOfSupply: document.getElementById('placeOfSupply').value,
             products: products,
             subtotal: subtotal,
             grandTotal: calculations.grandTotal,
@@ -118,10 +118,10 @@ class Utils {
         document.getElementById('customerName').value = data.customerName || '';
         document.getElementById('customerAddress').value = data.customerAddress || '';
         document.getElementById('customerPhone').value = data.customerPhone || '';
-        document.getElementById('transportMode').value = data.transportMode || '';
-        document.getElementById('vehicleNumber').value = data.vehicleNumber || '';
-        document.getElementById('supplyDate').value = data.supplyDate || '';
-        document.getElementById('placeOfSupply').value = data.placeOfSupply || '';
+        // document.getElementById('transportMode').value = data.transportMode || '';
+        // document.getElementById('vehicleNumber').value = data.vehicleNumber || '';
+        // document.getElementById('supplyDate').value = data.supplyDate || '';
+        // document.getElementById('placeOfSupply').value = data.placeOfSupply || '';
         document.getElementById('amountPaid').value = data.amountPaid || 0;
         document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
         
@@ -184,10 +184,10 @@ class Utils {
         document.getElementById('customerName').value = '';
         document.getElementById('customerAddress').value = '';
         document.getElementById('customerPhone').value = '';
-        document.getElementById('transportMode').value = '';
-        document.getElementById('vehicleNumber').value = '';
-        document.getElementById('supplyDate').value = '';
-        document.getElementById('placeOfSupply').value = '';
+        // document.getElementById('transportMode').value = '';
+        // document.getElementById('vehicleNumber').value = '';
+        // document.getElementById('supplyDate').value = '';
+        // document.getElementById('placeOfSupply').value = '';
         document.getElementById('amountPaid').value = 0;
         document.getElementById('paymentMethod').value = 'cash';
         
