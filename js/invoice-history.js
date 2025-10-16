@@ -1,14 +1,14 @@
 // Invoice history page functionality
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     // Initialize database
     await db.init();
-    
+
     // Load recent invoices
     loadRecentInvoices();
-    
+
     // Load all invoices
     loadInvoices();
-    
+
     // Add event listeners
     document.getElementById('searchBtn').addEventListener('click', loadInvoices);
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
@@ -20,18 +20,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Search for all invoices by customer name
 async function searchCustomerInvoices() {
     const customerName = document.getElementById('customerSearch').value.trim();
-    
+
     if (!customerName) {
         alert('Please enter a customer name');
         return;
     }
-    
+
     try {
         const invoices = await db.getAllInvoices();
-        const customerInvoices = invoices.filter(invoice => 
+        const customerInvoices = invoices.filter(invoice =>
             invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
         );
-        
+
         if (customerInvoices.length === 0) {
             document.getElementById('customerStatementResults').innerHTML = `
                 <div class="no-customer-invoices">
@@ -40,7 +40,7 @@ async function searchCustomerInvoices() {
             `;
             return;
         }
-        
+
         displayCustomerStatementResults(customerName, customerInvoices);
     } catch (error) {
         console.error('Error searching customer invoices:', error);
@@ -56,7 +56,7 @@ function displayCustomerStatementResults(customerName, invoices) {
     const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
     const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
     const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
-    
+
     document.getElementById('customerStatementResults').innerHTML = `
         <div class="customer-summary">
             <h4>Customer: ${customerName}</h4>
@@ -107,15 +107,15 @@ function displayCustomerStatementResults(customerName, invoices) {
 async function generateCombinedStatement(customerName) {
     try {
         const invoices = await db.getAllInvoices();
-        const customerInvoices = invoices.filter(invoice => 
+        const customerInvoices = invoices.filter(invoice =>
             invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
         );
-        
+
         if (customerInvoices.length === 0) {
             alert('No invoices found for this customer.');
             return;
         }
-        
+
         await generateCombinedPDFStatement(customerName, customerInvoices);
     } catch (error) {
         console.error('Error generating combined statement:', error);
@@ -129,30 +129,30 @@ async function generateCombinedPDFStatement(customerName, invoices) {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
-        
+
         let yPos = 20;
         const pageWidth = doc.internal.pageSize.getWidth();
         const margin = 20;
         const contentWidth = pageWidth - (margin * 2);
-        
+
         // Add header
         doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
         doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
         yPos += 8;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos, { align: 'center' });
         yPos += 5;
         doc.text('Cell: 9952520181 | Email: info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
         yPos += 8;
-        
+
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('COMBINED ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
         yPos += 15;
-        
+
         // Add statement info
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -160,39 +160,39 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.text(`Customer: ${customerName}`, margin, yPos + 5);
         doc.text(`Total Invoices: ${invoices.length}`, margin, yPos + 10);
         yPos += 20;
-        
+
         // Calculate totals
         const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
         const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
         const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
-        
+
         // Add summary
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Account Summary', margin, yPos);
         yPos += 10;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('Total Invoice Amount:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalAmount)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
-        
+
         doc.text('Total Amount Paid:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
-        
+
         doc.setFont('helvetica', 'bold');
         doc.text('Outstanding Balance:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalDue)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 15;
-        
+
         // Add invoice list header
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Invoice Details', margin, yPos);
         yPos += 10;
-        
+
         // Create invoice summary table
         const invoiceTableHeaders = [['Invoice No', 'Date', 'Total Amount', 'Amount Paid', 'Balance Due', 'Status']];
         const invoiceTableData = invoices.map(invoice => [
@@ -203,7 +203,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             Utils.formatCurrency(invoice.balanceDue),
             invoice.balanceDue === 0 ? 'Paid' : 'Pending'
         ]);
-        
+
         // Add total row
         invoiceTableData.push([
             'TOTAL',
@@ -213,7 +213,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             Utils.formatCurrency(totalDue),
             ''
         ]);
-        
+
         doc.autoTable({
             startY: yPos,
             head: invoiceTableHeaders,
@@ -237,14 +237,14 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                 5: { cellWidth: 20 }
             },
             margin: { left: margin, right: margin },
-            didDrawCell: function(data) {
+            didDrawCell: function (data) {
                 // Highlight total row
                 if (data.row.index === invoiceTableData.length - 1) {
                     doc.setFillColor(240, 240, 240);
                     doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
                     doc.setFont('helvetica', 'bold');
                 }
-                
+
                 // Color balance due in red if pending
                 if (data.column.index === 4 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) {
                     doc.setTextColor(255, 0, 0);
@@ -253,16 +253,16 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                 }
             }
         });
-        
+
         yPos = doc.lastAutoTable.finalY + 10;
-        
+
         // Add detailed transaction history if there's space
         if (yPos < 200) {
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             doc.text('Detailed Transaction History', margin, yPos);
             yPos += 10;
-            
+
             // Get all payments for these invoices
             const allPayments = [];
             for (const invoice of invoices) {
@@ -272,19 +272,20 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                     invoiceNo: invoice.invoiceNo
                 })));
             }
-            
+
             // Sort payments by date
             allPayments.sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate));
-            
+
             if (allPayments.length > 0) {
                 const paymentTableHeaders = [['Date', 'Invoice No', 'Description', 'Amount (₹)']];
+                // In the combined statement payment table
                 const paymentTableData = allPayments.map(payment => [
                     new Date(payment.paymentDate).toLocaleDateString('en-IN'),
                     payment.invoiceNo,
-                    `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'}`,
+                    `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'} (${payment.paymentMethod?.toUpperCase() || 'CASH'})`,
                     Utils.formatCurrency(payment.amount)
                 ]);
-                
+
                 doc.autoTable({
                     startY: yPos,
                     head: paymentTableHeaders,
@@ -301,11 +302,11 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                     },
                     margin: { left: margin, right: margin }
                 });
-                
+
                 yPos = doc.lastAutoTable.finalY + 10;
             }
         }
-        
+
         // Add footer
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
@@ -315,10 +316,10 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.text('For any queries, please contact: 9952520181 | info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
         yPos += 4;
         doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
-        
+
         // Save the PDF
         doc.save(`Combined_Statement_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
-        
+
     } catch (error) {
         console.error('Error generating combined PDF statement:', error);
         throw error;
@@ -331,7 +332,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
 async function loadRecentInvoices() {
     try {
         const invoices = await db.getAllInvoices();
-        
+
         // Sort by invoice number in descending order (highest numbers first)
         const recentInvoices = invoices
             .sort((a, b) => {
@@ -341,7 +342,7 @@ async function loadRecentInvoices() {
                 return numB - numA; // Descending order (highest first)
             })
             .slice(0, 5);
-        
+
         displayRecentInvoices(recentInvoices);
     } catch (error) {
         console.error('Error loading recent invoices:', error);
@@ -350,12 +351,12 @@ async function loadRecentInvoices() {
 // Display recent invoices at the top
 function displayRecentInvoices(invoices) {
     const recentInvoicesList = document.getElementById('recentInvoicesList');
-    
+
     if (invoices.length === 0) {
         recentInvoicesList.innerHTML = '<p class="no-recent-invoices">No recent invoices found.</p>';
         return;
     }
-    
+
     recentInvoicesList.innerHTML = invoices.map(invoice => `
         <div class="recent-invoice-item" onclick="filterByInvoice('${invoice.invoiceNo}')">
             <span class="invoice-number">#${invoice.invoiceNo}</span>
@@ -379,33 +380,33 @@ async function loadInvoices() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const fromDate = document.getElementById('fromDate').value;
         const toDate = document.getElementById('toDate').value;
-        
+
         let filteredInvoices = invoices;
-        
+
         // Apply search filter
         if (searchTerm) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.customerName.toLowerCase().includes(searchTerm) ||
                 invoice.invoiceNo.toLowerCase().includes(searchTerm)
             );
         }
-        
+
         // Apply date filters
         if (fromDate) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.invoiceDate >= fromDate
             );
         }
-        
+
         if (toDate) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.invoiceDate <= toDate
             );
         }
-        
+
         // Sort by date (newest first)
         filteredInvoices.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate));
-        
+
         displayInvoices(filteredInvoices);
     } catch (error) {
         console.error('Error loading invoices:', error);
@@ -416,12 +417,12 @@ async function loadInvoices() {
 // Display invoices in the list
 function displayInvoices(invoices) {
     const invoicesList = document.getElementById('invoicesList');
-    
+
     if (invoices.length === 0) {
         invoicesList.innerHTML = '<p class="no-invoices">No invoices found.</p>';
         return;
     }
-    
+
     invoicesList.innerHTML = invoices.map(invoice => `
         <div class="invoice-item">
             <div class="invoice-info">
@@ -429,7 +430,9 @@ function displayInvoices(invoices) {
                 <p><strong>Customer:</strong> ${invoice.customerName}</p>
                 <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</p>
                 <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
-                <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)}</p>
+                <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
+                    ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
+                </p>
                 <p><strong>Balance Due:</strong> ₹${Utils.formatCurrency(invoice.balanceDue)}</p>
             </div>
             <div class="invoice-actions">
@@ -441,7 +444,6 @@ function displayInvoices(invoices) {
         </div>
     `).join('');
 }
-
 
 
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
@@ -475,10 +477,10 @@ async function generateInvoicePDF(invoiceNo) {
             // Temporarily set form data to generate PDF
             const originalData = Utils.getFormData();
             Utils.setFormData(invoiceData);
-            
+
             // Generate PDF
             await PDFGenerator.generatePDF();
-            
+
             // Restore original form data
             Utils.setFormData(originalData);
         } else {
@@ -490,43 +492,112 @@ async function generateInvoicePDF(invoiceNo) {
     }
 }
 
-// Add payment to an invoice
+// Add payment to an invoice with payment method
 async function addPayment(invoiceNo) {
-    const amount = prompt('Enter payment amount:');
-    if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
-        try {
-            const invoiceData = await db.getInvoice(invoiceNo);
-            if (invoiceData) {
-                const paymentAmount = parseFloat(amount);
-                const newAmountPaid = invoiceData.amountPaid + paymentAmount;
-                
-                // Update invoice with new payment
-                invoiceData.amountPaid = newAmountPaid;
-                invoiceData.balanceDue = invoiceData.grandTotal - newAmountPaid;
-                
-                await db.saveInvoice(invoiceData);
-                
-                // Save payment record
-                const paymentData = {
-                    invoiceNo: invoiceNo,
-                    paymentDate: new Date().toISOString().split('T')[0],
-                    amount: paymentAmount,
-                    paymentType: 'additional'
-                };
-                await db.savePayment(paymentData);
-                
-                alert('Payment added successfully!');
-                loadInvoices(); // Refresh the list
-            } else {
-                alert('Invoice not found!');
+    // Create a custom dialog for payment input
+    const paymentDialog = document.createElement('div');
+    paymentDialog.className = 'payment-dialog-overlay';
+    paymentDialog.innerHTML = `
+        <div class="payment-dialog">
+            <h3>Add Payment - Invoice #${invoiceNo}</h3>
+            <div class="payment-form">
+                <div class="form-group">
+                    <label for="paymentAmount">Payment Amount:</label>
+                    <input type="number" id="paymentAmount" step="0.01" min="0.01" placeholder="Enter amount">
+                </div>
+                <div class="form-group">
+                    <label for="paymentMethodSelect">Payment Method:</label>
+                    <select id="paymentMethodSelect" class="payment-select">
+                        <option value="cash">Cash</option>
+                        <option value="gpay">GPay</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="paymentDate">Payment Date:</label>
+                    <input type="date" id="paymentDate" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="payment-dialog-actions">
+                    <button id="confirmPayment" class="btn-confirm">Add Payment</button>
+                    <button id="cancelPayment" class="btn-cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(paymentDialog);
+
+    // Focus on amount input
+    setTimeout(() => {
+        document.getElementById('paymentAmount').focus();
+    }, 100);
+
+    // Return a promise to handle the payment
+    return new Promise((resolve) => {
+        document.getElementById('confirmPayment').addEventListener('click', async function () {
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const paymentMethod = document.getElementById('paymentMethodSelect').value;
+            const paymentDate = document.getElementById('paymentDate').value;
+
+            if (!amount || isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid payment amount.');
+                return;
             }
-        } catch (error) {
-            console.error('Error adding payment:', error);
-            alert('Error adding payment.');
-        }
-    } else if (amount !== null) {
-        alert('Please enter a valid payment amount.');
-    }
+
+            if (!paymentDate) {
+                alert('Please select a payment date.');
+                return;
+            }
+
+            try {
+                const invoiceData = await db.getInvoice(invoiceNo);
+                if (invoiceData) {
+                    const paymentAmount = parseFloat(amount);
+                    const newAmountPaid = invoiceData.amountPaid + paymentAmount;
+
+                    // Update invoice with new payment
+                    invoiceData.amountPaid = newAmountPaid;
+                    invoiceData.balanceDue = invoiceData.grandTotal - newAmountPaid;
+
+                    await db.saveInvoice(invoiceData);
+
+                    // Save payment record with method
+                    const paymentData = {
+                        invoiceNo: invoiceNo,
+                        paymentDate: paymentDate,
+                        amount: paymentAmount,
+                        paymentMethod: paymentMethod,
+                        paymentType: 'additional'
+                    };
+                    await db.savePayment(paymentData);
+
+                    document.body.removeChild(paymentDialog);
+                    alert(`Payment of ₹${Utils.formatCurrency(paymentAmount)} via ${paymentMethod.toUpperCase()} added successfully!`);
+                    loadInvoices(); // Refresh the list
+                    resolve(true);
+                } else {
+                    alert('Invoice not found!');
+                    resolve(false);
+                }
+            } catch (error) {
+                console.error('Error adding payment:', error);
+                alert('Error adding payment.');
+                resolve(false);
+            }
+        });
+
+        document.getElementById('cancelPayment').addEventListener('click', function () {
+            document.body.removeChild(paymentDialog);
+            resolve(false);
+        });
+
+        // Close on overlay click
+        paymentDialog.addEventListener('click', function (e) {
+            if (e.target === paymentDialog) {
+                document.body.removeChild(paymentDialog);
+                resolve(false);
+            }
+        });
+    });
 }
 
 // Generate statement for an invoice with PDF download
@@ -534,7 +605,7 @@ async function generateStatement(invoiceNo) {
     try {
         const invoiceData = await db.getInvoice(invoiceNo);
         const payments = await db.getPaymentsByInvoice(invoiceNo);
-        
+
         if (invoiceData) {
             await generatePDFStatement(invoiceData, payments);
         } else {
@@ -552,44 +623,44 @@ async function generatePDFStatement(invoiceData, payments) {
         // Create PDF document
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
-        
+
         // Set initial y position
         let yPos = 20;
         const pageWidth = doc.internal.pageSize.getWidth();
         const margin = 20;
         const contentWidth = pageWidth - (margin * 2);
-        
+
         // Add header
         doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
         doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
         yPos += 8;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos, { align: 'center' });
         yPos += 5;
         doc.text('Cell: 9952520181 | Email: info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
         yPos += 8;
-        
+
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
         yPos += 15;
-        
+
         // Add statement info
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
         doc.text(`Statement Period: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')}`, margin, yPos + 5);
         yPos += 15;
-        
+
         // Add customer information
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Customer Information', margin, yPos);
         yPos += 7;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`Name: ${invoiceData.customerName}`, margin, yPos);
@@ -602,19 +673,19 @@ async function generatePDFStatement(invoiceData, payments) {
         yPos += 5;
         doc.text(`Invoice Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}`, margin, yPos);
         yPos += 10;
-        
+
         // Check if we need a new page
         if (yPos > 240) {
             doc.addPage();
             yPos = 20;
         }
-        
+
         // Add invoice details header
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Invoice Details', margin, yPos);
         yPos += 10;
-        
+
         // Create invoice details table
         const invoiceTableHeaders = [['S.No.', 'Description', 'Qty', 'Rate (₹)', 'Amount (₹)']];
         const invoiceTableData = invoiceData.products.map((product, index) => [
@@ -624,7 +695,7 @@ async function generatePDFStatement(invoiceData, payments) {
             Utils.formatCurrency(product.rate),
             Utils.formatCurrency(product.amount)
         ]);
-        
+
         doc.autoTable({
             startY: yPos,
             head: invoiceTableHeaders,
@@ -648,47 +719,47 @@ async function generatePDFStatement(invoiceData, payments) {
             },
             margin: { left: margin, right: margin }
         });
-        
+
         yPos = doc.lastAutoTable.finalY + 10;
-        
+
         // Check if we need a new page
         if (yPos > 200) {
             doc.addPage();
             yPos = 20;
         }
-        
+
         // Add invoice summary
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Invoice Summary', margin, yPos);
         yPos += 10;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-    
-        
+
+
         // Total Amount
         doc.setFont('helvetica', 'bold');
         doc.text('Total Amount:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 10;
-        
+
         // Check if we need a new page
         if (yPos > 220) {
             doc.addPage();
             yPos = 20;
         }
-        
+
         // Add payment history header
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Payment History', margin, yPos);
         yPos += 10;
-        
+
         // Create payment history table
         const paymentTableHeaders = [['Date', 'Description', 'Amount (₹)', 'Balance (₹)']];
         const paymentTableData = generatePaymentTableData(payments, invoiceData.grandTotal);
-        
+
         doc.autoTable({
             startY: yPos,
             head: paymentTableHeaders,
@@ -710,7 +781,7 @@ async function generatePDFStatement(invoiceData, payments) {
                 3: { cellWidth: 30 }
             },
             margin: { left: margin, right: margin },
-            didDrawCell: function(data) {
+            didDrawCell: function (data) {
                 // Color negative amounts (payments) in green
                 if (data.column.index === 2 && data.cell.raw.includes('-')) {
                     doc.setTextColor(0, 128, 0); // Green color for payments
@@ -719,40 +790,40 @@ async function generatePDFStatement(invoiceData, payments) {
                 }
             }
         });
-        
+
         yPos = doc.lastAutoTable.finalY + 10;
-        
+
         // Check if we need a new page
         if (yPos > 180) {
             doc.addPage();
             yPos = 20;
         }
-        
+
         // Add account summary
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Account Summary', margin, yPos);
         yPos += 10;
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        
+
         // Invoice Amount
         doc.text('Invoice Amount:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
-        
+
         // Total Paid
         doc.text('Total Paid:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(invoiceData.amountPaid)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
-        
+
         // Outstanding Balance
         doc.setFont('helvetica', 'bold');
         doc.text('Outstanding Balance:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 15;
-        
+
         // Add footer
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
@@ -762,24 +833,24 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.text('For any queries, please contact: 9952520181 | info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
         yPos += 4;
         doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
-        
+
         // Save the PDF
         doc.save(`Statement_${invoiceData.invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`);
-        
+
     } catch (error) {
         console.error('Error generating PDF statement:', error);
         throw error;
     }
 }
 
-// Generate payment table data with running balance
+// In the payment table data generation, update to include payment method
 function generatePaymentTableData(payments, grandTotal) {
     const tableData = [];
     let runningBalance = grandTotal;
-    
+
     // Sort payments by date
     payments.sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate));
-    
+
     // Add initial invoice row
     tableData.push([
         new Date().toLocaleDateString('en-IN'),
@@ -787,18 +858,18 @@ function generatePaymentTableData(payments, grandTotal) {
         Utils.formatCurrency(grandTotal),
         Utils.formatCurrency(runningBalance)
     ]);
-    
+
     // Add payment rows
     payments.forEach(payment => {
         runningBalance -= payment.amount;
         tableData.push([
             new Date(payment.paymentDate).toLocaleDateString('en-IN'),
-            `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'}`,
+            `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'} (${payment.paymentMethod?.toUpperCase() || 'CASH'})`,
             `-${Utils.formatCurrency(payment.amount)}`,
             Utils.formatCurrency(runningBalance)
         ]);
     });
-    
+
     return tableData;
 }
 
