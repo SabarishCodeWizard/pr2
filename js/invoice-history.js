@@ -13,9 +13,320 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('searchBtn').addEventListener('click', loadInvoices);
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
     document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('generateCustomerStatement').addEventListener('click', searchCustomerInvoices);
 });
 
-// Load and display recent invoices (last 5)
+
+// Search for all invoices by customer name
+async function searchCustomerInvoices() {
+    const customerName = document.getElementById('customerSearch').value.trim();
+    
+    if (!customerName) {
+        alert('Please enter a customer name');
+        return;
+    }
+    
+    try {
+        const invoices = await db.getAllInvoices();
+        const customerInvoices = invoices.filter(invoice => 
+            invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
+        );
+        
+        if (customerInvoices.length === 0) {
+            document.getElementById('customerStatementResults').innerHTML = `
+                <div class="no-customer-invoices">
+                    No invoices found for customer: "${customerName}"
+                </div>
+            `;
+            return;
+        }
+        
+        displayCustomerStatementResults(customerName, customerInvoices);
+    } catch (error) {
+        console.error('Error searching customer invoices:', error);
+        alert('Error searching customer invoices.');
+    }
+}
+
+
+// Display customer statement results
+function displayCustomerStatementResults(customerName, invoices) {
+    // Calculate summary statistics
+    const totalInvoices = invoices.length;
+    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
+    const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+    const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
+    
+    document.getElementById('customerStatementResults').innerHTML = `
+        <div class="customer-summary">
+            <h4>Customer: ${customerName}</h4>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-value">${totalInvoices}</div>
+                    <div class="stat-label">Total Invoices</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">₹${Utils.formatCurrency(totalAmount)}</div>
+                    <div class="stat-label">Total Amount</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">₹${Utils.formatCurrency(totalPaid)}</div>
+                    <div class="stat-label">Total Paid</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">₹${Utils.formatCurrency(totalDue)}</div>
+                    <div class="stat-label">Balance Due</div>
+                </div>
+            </div>
+            
+            <div class="customer-invoices-list">
+                ${invoices.map(invoice => `
+                    <div class="customer-invoice-item">
+                        <div class="customer-invoice-info">
+                            <strong>Invoice #${invoice.invoiceNo}</strong> - 
+                            ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - 
+                            Total: ₹${Utils.formatCurrency(invoice.grandTotal)} - 
+                            Paid: ₹${Utils.formatCurrency(invoice.amountPaid)} - 
+                            Due: ₹${Utils.formatCurrency(invoice.balanceDue)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="statement-actions">
+                <button id="downloadCombinedStatement" onclick="generateCombinedStatement('${customerName}')">
+                    <i class="fas fa-download"></i> Download Combined Statement PDF
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+
+// Generate combined statement PDF for all customer invoices
+async function generateCombinedStatement(customerName) {
+    try {
+        const invoices = await db.getAllInvoices();
+        const customerInvoices = invoices.filter(invoice => 
+            invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
+        );
+        
+        if (customerInvoices.length === 0) {
+            alert('No invoices found for this customer.');
+            return;
+        }
+        
+        await generateCombinedPDFStatement(customerName, customerInvoices);
+    } catch (error) {
+        console.error('Error generating combined statement:', error);
+        alert('Error generating combined statement.');
+    }
+}
+
+
+// Generate combined PDF statement for all customer invoices
+async function generateCombinedPDFStatement(customerName, invoices) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        let yPos = 20;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        // Add header
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 5;
+        doc.text('Cell: 9952520181 | Email: info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+        
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('COMBINED ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 15;
+        
+        // Add statement info
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
+        doc.text(`Customer: ${customerName}`, margin, yPos + 5);
+        doc.text(`Total Invoices: ${invoices.length}`, margin, yPos + 10);
+        yPos += 20;
+        
+        // Calculate totals
+        const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
+        const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+        const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
+        
+        // Add summary
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Account Summary', margin, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Total Invoice Amount:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalAmount)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
+        
+        doc.text('Total Amount Paid:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text('Outstanding Balance:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 15;
+        
+        // Add invoice list header
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Invoice Details', margin, yPos);
+        yPos += 10;
+        
+        // Create invoice summary table
+        const invoiceTableHeaders = [['Invoice No', 'Date', 'Total Amount', 'Amount Paid', 'Balance Due', 'Status']];
+        const invoiceTableData = invoices.map(invoice => [
+            invoice.invoiceNo,
+            new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
+            Utils.formatCurrency(invoice.grandTotal),
+            Utils.formatCurrency(invoice.amountPaid),
+            Utils.formatCurrency(invoice.balanceDue),
+            invoice.balanceDue === 0 ? 'Paid' : 'Pending'
+        ]);
+        
+        // Add total row
+        invoiceTableData.push([
+            'TOTAL',
+            '',
+            Utils.formatCurrency(totalAmount),
+            Utils.formatCurrency(totalPaid),
+            Utils.formatCurrency(totalDue),
+            ''
+        ]);
+        
+        doc.autoTable({
+            startY: yPos,
+            head: invoiceTableHeaders,
+            body: invoiceTableData,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [44, 62, 80],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            styles: {
+                fontSize: 8,
+                cellPadding: 3,
+            },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 25 },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 25 },
+                5: { cellWidth: 20 }
+            },
+            margin: { left: margin, right: margin },
+            didDrawCell: function(data) {
+                // Highlight total row
+                if (data.row.index === invoiceTableData.length - 1) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                    doc.setFont('helvetica', 'bold');
+                }
+                
+                // Color balance due in red if pending
+                if (data.column.index === 4 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) {
+                    doc.setTextColor(255, 0, 0);
+                } else {
+                    doc.setTextColor(0, 0, 0);
+                }
+            }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 10;
+        
+        // Add detailed transaction history if there's space
+        if (yPos < 200) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Detailed Transaction History', margin, yPos);
+            yPos += 10;
+            
+            // Get all payments for these invoices
+            const allPayments = [];
+            for (const invoice of invoices) {
+                const payments = await db.getPaymentsByInvoice(invoice.invoiceNo);
+                allPayments.push(...payments.map(p => ({
+                    ...p,
+                    invoiceNo: invoice.invoiceNo
+                })));
+            }
+            
+            // Sort payments by date
+            allPayments.sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate));
+            
+            if (allPayments.length > 0) {
+                const paymentTableHeaders = [['Date', 'Invoice No', 'Description', 'Amount (₹)']];
+                const paymentTableData = allPayments.map(payment => [
+                    new Date(payment.paymentDate).toLocaleDateString('en-IN'),
+                    payment.invoiceNo,
+                    `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'}`,
+                    Utils.formatCurrency(payment.amount)
+                ]);
+                
+                doc.autoTable({
+                    startY: yPos,
+                    head: paymentTableHeaders,
+                    body: paymentTableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [44, 62, 80],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 7,
+                        cellPadding: 2,
+                    },
+                    margin: { left: margin, right: margin }
+                });
+                
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+        }
+        
+        // Add footer
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('This is a computer-generated combined statement. No signature is required.', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text('For any queries, please contact: 9952520181 | info@prfabrics.com', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
+        
+        // Save the PDF
+        doc.save(`Combined_Statement_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+    } catch (error) {
+        console.error('Error generating combined PDF statement:', error);
+        throw error;
+    }
+}
+
+
+
 // Load and display recent invoices (last 5 by invoice number)
 async function loadRecentInvoices() {
     try {

@@ -626,3 +626,152 @@ body {
         padding: 10px;
     }
 }
+
+/* Customer Statement Section */
+.customer-statement-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.customer-statement-section h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+
+.customer-search {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.customer-search input {
+    flex: 1;
+    min-width: 250px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#generateCustomerStatement {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+#generateCustomerStatement:hover {
+    background: #219653;
+}
+
+.customer-statement-results {
+    margin-top: 15px;
+}
+
+.customer-summary {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+}
+
+.customer-summary h4 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.stat-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.customer-invoices-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.customer-invoice-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    background: white;
+}
+
+.customer-invoice-item:last-child {
+    border-bottom: none;
+}
+
+.customer-invoice-info {
+    flex: 1;
+}
+
+.customer-invoice-info strong {
+    color: #2c3e50;
+}
+
+.customer-invoice-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.statement-actions {
+    margin-top: 15px;
+    text-align: center;
+}
+
+#downloadCombinedStatement {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+#downloadCombinedStatement:hover {
+    background: #c0392b;
+}
+
+.no-customer-invoices {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}

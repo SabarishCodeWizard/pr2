@@ -25,7 +25,7 @@
 
         <div class="invoice-history-container">
             <h2>Invoice History</h2>
-            
+
             <!-- Recent Invoices Section -->
             <div class="recent-invoices-section">
                 <h3>Recent Invoices</h3>
@@ -40,6 +40,19 @@
                 <input type="date" id="toDate">
                 <button id="searchBtn">Search</button>
                 <button id="clearFilters">Clear Filters</button>
+            </div>
+
+            <!-- ADD THIS NEW SECTION -->
+            <div class="customer-statement-section">
+                <h3>Customer Statement</h3>
+                <div class="customer-search">
+                    <input type="text" id="customerSearch"
+                        placeholder="Enter customer name to generate combined statement">
+                    <button id="generateCustomerStatement">Generate Combined Statement</button>
+                </div>
+                <div id="customerStatementResults" class="customer-statement-results">
+                    <!-- Customer statement results will appear here -->
+                </div>
             </div>
 
             <div class="invoices-list" id="invoicesList">
