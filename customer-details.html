@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Details - PR Fabrics</title>
+    <link rel="stylesheet" href="css/customer-details.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="main"></div>
+    <div class="container">
+        <div class="controls">
+            <h1 class="bill-system-header">
+                <a href="index.html" class="brand-name">PR Fabrics</a>
+                <span class="system-name">Customer Details</span>
+            </h1>
+            <div class="navigation-buttons">
+                <a href="index.html" class="nav-btn">Back to Billing</a>
+                <a href="invoice-history.html" class="nav-btn">Invoice History</a>
+                <button id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+        <div class="customer-details-container">
+            <h2>Customer Database</h2>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards" id="summaryCards">
+                <!-- Summary cards will be loaded here dynamically -->
+            </div>
+
+
+            <!-- Search and Filters -->
+            <div class="search-filters">
+                <div class="filter-group">
+                    <input type="text" id="searchCustomer" placeholder="Search by customer name">
+                    <button id="searchCustomerBtn" class="btn-search">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button id="clearSearch" class="btn-clear"> <!-- Make sure this ID matches -->
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+                <div class="filter-group">
+                    <select id="filterStatus">
+                        <option value="all">All Customers</option>
+                        <option value="pending">Pending Payments</option>
+                        <option value="paid">Fully Paid</option>
+                        <option value="overdue">Overdue</option>
+                    </select>
+                    <button id="exportCustomers" class="btn-export">
+                        <i class="fas fa-download"></i> Export to PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- Customer List -->
+            <div class="customers-list" id="customersList">
+                <!-- Customers will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/db.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/customer-details.js"></script>
+</body>
+
+</html>
