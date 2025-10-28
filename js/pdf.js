@@ -308,6 +308,10 @@ class PDFGenerator {
                                 <label>Subtotal:</label>
                                 <span>₹${Utils.formatCurrency(invoiceData.subtotal)}</span>
                             </div>
+                            <div class="payment-row">
+                                <label>Previous Balance:</label>
+                                <span>₹${Utils.formatCurrency(invoiceData.previousBalance || 0)}</span>
+                            </div>
                             <div class="payment-row total">
                                 <label>Total Amount:</label>
                                 <span>₹${Utils.formatCurrency(invoiceData.grandTotal)}</span>

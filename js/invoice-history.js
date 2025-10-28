@@ -51,11 +51,23 @@ async function searchCustomerInvoices() {
 
 // Display customer statement results
 function displayCustomerStatementResults(customerName, invoices) {
+    // Sort invoices by invoice number (newest first)
+    invoices.sort((a, b) => {
+        const numA = parseInt(a.invoiceNo) || 0;
+        const numB = parseInt(b.invoiceNo) || 0;
+        return numB - numA; // Descending order (newest first)
+    });
+    
     // Calculate summary statistics
     const totalInvoices = invoices.length;
-    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
+    const totalCurrentBillAmount = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+    
+    // Get balance due from the most recent invoice only
+    const mostRecentInvoice = invoices[0];
+    const balanceDue = mostRecentInvoice.balanceDue;
+    
+    // Calculate total paid as sum of all amountPaid values
     const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
-    const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
 
     document.getElementById('customerStatementResults').innerHTML = `
         <div class="customer-summary">
@@ -66,15 +78,15 @@ function displayCustomerStatementResults(customerName, invoices) {
                     <div class="stat-label">Total Invoices</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value">₹${Utils.formatCurrency(totalAmount)}</div>
-                    <div class="stat-label">Total Amount</div>
+                    <div class="stat-value">₹${Utils.formatCurrency(totalCurrentBillAmount)}</div>
+                    <div class="stat-label">Total Current Bill Amount</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-value">₹${Utils.formatCurrency(totalPaid)}</div>
                     <div class="stat-label">Total Paid</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value">₹${Utils.formatCurrency(totalDue)}</div>
+                    <div class="stat-value">₹${Utils.formatCurrency(balanceDue)}</div>
                     <div class="stat-label">Balance Due</div>
                 </div>
             </div>
@@ -85,7 +97,7 @@ function displayCustomerStatementResults(customerName, invoices) {
                         <div class="customer-invoice-info">
                             <strong>Invoice #${invoice.invoiceNo}</strong> - 
                             ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - 
-                            Total: ₹${Utils.formatCurrency(invoice.grandTotal)} - 
+                            Current: ₹${Utils.formatCurrency(invoice.subtotal)} - 
                             Paid: ₹${Utils.formatCurrency(invoice.amountPaid)} - 
                             Due: ₹${Utils.formatCurrency(invoice.balanceDue)}
                         </div>
@@ -101,7 +113,6 @@ function displayCustomerStatementResults(customerName, invoices) {
         </div>
     `;
 }
-
 
 // Generate combined statement PDF for all customer invoices
 async function generateCombinedStatement(customerName) {
@@ -161,10 +172,18 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.text(`Total Invoices: ${invoices.length}`, margin, yPos + 10);
         yPos += 20;
 
-        // Calculate totals
+        // Sort invoices by invoice number (newest first)
+        invoices.sort((a, b) => {
+            const numA = parseInt(a.invoiceNo) || 0;
+            const numB = parseInt(b.invoiceNo) || 0;
+            return numB - numA;
+        });
+
+        // Calculate totals correctly
+        const totalCurrentBillAmount = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
         const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
-        const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
-        const totalDue = invoices.reduce((sum, invoice) => sum + invoice.balanceDue, 0);
+        const balanceDue = invoices[0].balanceDue; // Most recent invoice balance
+        const totalPaid = totalCurrentBillAmount - balanceDue; // Calculated correctly
 
         // Add summary
         doc.setFontSize(12);
@@ -174,9 +193,13 @@ async function generateCombinedPDFStatement(customerName, invoices) {
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text('Total Invoice Amount:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(totalAmount)}`, pageWidth - margin, yPos, { align: 'right' });
+        doc.text('Total Current Bill Amount:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalCurrentBillAmount)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
+
+        // doc.text('Total Amount (with Previous Balance):', margin, yPos);
+        // doc.text(`₹${Utils.formatCurrency(totalAmount)}`, pageWidth - margin, yPos, { align: 'right' });
+        // yPos += 6;
 
         doc.text('Total Amount Paid:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin, yPos, { align: 'right' });
@@ -184,7 +207,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
 
         doc.setFont('helvetica', 'bold');
         doc.text('Outstanding Balance:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(totalDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        doc.text(`₹${Utils.formatCurrency(balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 15;
 
         // Add invoice list header
@@ -194,10 +217,11 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         yPos += 10;
 
         // Create invoice summary table
-        const invoiceTableHeaders = [['Invoice No', 'Date', 'Total Amount', 'Amount Paid', 'Balance Due', 'Status']];
+        const invoiceTableHeaders = [['Invoice No', 'Date', 'Current Bill', 'Total Amount', 'Amount Paid', 'Balance Due', 'Status']];
         const invoiceTableData = invoices.map(invoice => [
             invoice.invoiceNo,
             new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
+            Utils.formatCurrency(invoice.subtotal),
             Utils.formatCurrency(invoice.grandTotal),
             Utils.formatCurrency(invoice.amountPaid),
             Utils.formatCurrency(invoice.balanceDue),
@@ -208,9 +232,10 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         invoiceTableData.push([
             'TOTAL',
             '',
+            Utils.formatCurrency(totalCurrentBillAmount),
             Utils.formatCurrency(totalAmount),
             Utils.formatCurrency(totalPaid),
-            Utils.formatCurrency(totalDue),
+            Utils.formatCurrency(balanceDue),
             ''
         ]);
 
@@ -229,12 +254,13 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                 cellPadding: 3,
             },
             columnStyles: {
-                0: { cellWidth: 25 },
-                1: { cellWidth: 25 },
-                2: { cellWidth: 25 },
-                3: { cellWidth: 25 },
-                4: { cellWidth: 25 },
-                5: { cellWidth: 20 }
+                0: { cellWidth: 20 },
+                1: { cellWidth: 20 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 },
+                5: { cellWidth: 20 },
+                6: { cellWidth: 15 }
             },
             margin: { left: margin, right: margin },
             didDrawCell: function (data) {
@@ -246,7 +272,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                 }
 
                 // Color balance due in red if pending
-                if (data.column.index === 4 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) {
+                if (data.column.index === 5 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) {
                     doc.setTextColor(255, 0, 0);
                 } else {
                     doc.setTextColor(0, 0, 0);
@@ -255,57 +281,6 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         });
 
         yPos = doc.lastAutoTable.finalY + 10;
-
-        // Add detailed transaction history if there's space
-        if (yPos < 200) {
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Detailed Transaction History', margin, yPos);
-            yPos += 10;
-
-            // Get all payments for these invoices
-            const allPayments = [];
-            for (const invoice of invoices) {
-                const payments = await db.getPaymentsByInvoice(invoice.invoiceNo);
-                allPayments.push(...payments.map(p => ({
-                    ...p,
-                    invoiceNo: invoice.invoiceNo
-                })));
-            }
-
-            // Sort payments by date
-            allPayments.sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate));
-
-            if (allPayments.length > 0) {
-                const paymentTableHeaders = [['Date', 'Invoice No', 'Description', 'Amount (₹)']];
-                // In the combined statement payment table
-                const paymentTableData = allPayments.map(payment => [
-                    new Date(payment.paymentDate).toLocaleDateString('en-IN'),
-                    payment.invoiceNo,
-                    `Payment - ${payment.paymentType === 'initial' ? 'Initial' : 'Additional'} (${payment.paymentMethod?.toUpperCase() || 'CASH'})`,
-                    Utils.formatCurrency(payment.amount)
-                ]);
-
-                doc.autoTable({
-                    startY: yPos,
-                    head: paymentTableHeaders,
-                    body: paymentTableData,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [44, 62, 80],
-                        textColor: 255,
-                        fontStyle: 'bold'
-                    },
-                    styles: {
-                        fontSize: 7,
-                        cellPadding: 2,
-                    },
-                    margin: { left: margin, right: margin }
-                });
-
-                yPos = doc.lastAutoTable.finalY + 10;
-            }
-        }
 
         // Add footer
         doc.setFontSize(8);
@@ -325,8 +300,6 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         throw error;
     }
 }
-
-
 
 // Load and display recent invoices (last 5 by invoice number)
 async function loadRecentInvoices() {
@@ -382,35 +355,35 @@ async function loadInvoices() {
         const toDate = document.getElementById('toDate').value;
         const fromInvoiceNo = document.getElementById('fromInvoiceNo').value;
         const toInvoiceNo = document.getElementById('toInvoiceNo').value;
-        
+
         let filteredInvoices = invoices;
-        
+
         // Apply search filter
         if (searchTerm) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.customerName.toLowerCase().includes(searchTerm) ||
                 invoice.invoiceNo.toLowerCase().includes(searchTerm)
             );
         }
-        
+
         // Apply date filters
         if (fromDate) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.invoiceDate >= fromDate
             );
         }
-        
+
         if (toDate) {
-            filteredInvoices = filteredInvoices.filter(invoice => 
+            filteredInvoices = filteredInvoices.filter(invoice =>
                 invoice.invoiceDate <= toDate
             );
         }
-        
+
         // Apply invoice number range filter
         if (fromInvoiceNo || toInvoiceNo) {
             filteredInvoices = filteredInvoices.filter(invoice => {
                 const invoiceNum = parseInt(invoice.invoiceNo) || 0;
-                
+
                 if (fromInvoiceNo && toInvoiceNo) {
                     return invoiceNum >= parseInt(fromInvoiceNo) && invoiceNum <= parseInt(toInvoiceNo);
                 } else if (fromInvoiceNo) {
@@ -421,14 +394,14 @@ async function loadInvoices() {
                 return true;
             });
         }
-        
+
         // Sort by invoice number (descending order - highest first)
         filteredInvoices.sort((a, b) => {
             const numA = parseInt(a.invoiceNo) || 0;
             const numB = parseInt(b.invoiceNo) || 0;
             return numB - numA;
         });
-        
+
         displayInvoices(filteredInvoices);
     } catch (error) {
         console.error('Error loading invoices:', error);
@@ -452,6 +425,7 @@ function displayInvoices(invoices) {
                 <h3>Invoice #${invoice.invoiceNo}</h3>
                 <p><strong>Customer:</strong> ${invoice.customerName}</p>
                 <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</p>
+                <p><strong>Current Bill Amount:</strong> ₹${Utils.formatCurrency(invoice.subtotal)}</p>
                 <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
                 <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
                     ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
@@ -467,7 +441,6 @@ function displayInvoices(invoices) {
         </div>
     `).join('');
 }
-
 
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
 // <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
@@ -585,6 +558,10 @@ async function addPayment(invoiceNo) {
                     invoiceData.balanceDue = invoiceData.grandTotal - newAmountPaid;
 
                     await db.saveInvoice(invoiceData);
+
+
+                    // Update all subsequent invoices
+                    await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
 
                     // Save payment record with method
                     const paymentData = {

@@ -804,3 +804,95 @@ input:focus, select:focus, textarea:focus {
     background: white;
   }
 }
+/* Customer Balance Info Styles */
+.customer-balance-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.balance-summary h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.2em;
+    text-align: center;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    padding-bottom: 10px;
+}
+
+.balance-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.balance-item {
+    text-align: center;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+}
+
+.balance-label {
+    display: block;
+    font-size: 0.9em;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.balance-value {
+    display: block;
+    font-size: 1.3em;
+    font-weight: bold;
+}
+
+/* Update calculation section styles */
+.payment-calculation {
+    flex: 1;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #27ae60;
+}
+
+.payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.payment-row.total {
+    border-bottom: 2px solid #2c3e50;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-top: 10px;
+    padding-top: 12px;
+    background: #e8f5e8;
+    margin-left: -15px;
+    margin-right: -15px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.payment-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* Highlight previous balance row */
+.payment-row:nth-child(2) {
+    background: #fff3cd;
+    margin-left: -15px;
+    margin-right: -15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+}
+

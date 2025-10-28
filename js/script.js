@@ -1,35 +1,45 @@
 // Main application logic
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     // Initialize database
     await db.init();
-    
+
     // Set current date as default for invoice date
     document.getElementById('invoiceDate').valueAsDate = new Date();
-    
+
     // Add event listeners
     document.getElementById('addRow').addEventListener('click', addProductRow);
     document.getElementById('generatePDF').addEventListener('click', PDFGenerator.generatePDF);
     document.getElementById('saveBill').addEventListener('click', saveBill);
     document.getElementById('resetForm').addEventListener('click', resetForm);
     document.getElementById('logoutBtn').addEventListener('click', logout);
-    
+
     // Add event listeners for dynamic calculations
-    document.getElementById('productTableBody').addEventListener('input', function(e) {
+    document.getElementById('productTableBody').addEventListener('input', function (e) {
         if (e.target.classList.contains('qty') || e.target.classList.contains('rate')) {
             updateRowAmount(e.target.closest('tr'));
             Utils.updateCalculations();
         }
     });
-    
+
+    // Add event listener for customer name changes
+    document.getElementById('customerName').addEventListener('input', function () {
+        // Debounce the balance calculation
+        clearTimeout(this.debounce);
+        this.debounce = setTimeout(async () => {
+            await Utils.calculateAndSetPreviousBalance();
+        }, 500);
+    });
+
+
     document.getElementById('amountPaid').addEventListener('input', Utils.updateCalculations);
-    
+
     // Check if we're editing an existing invoice
     const urlParams = new URLSearchParams(window.location.search);
     const editInvoiceNo = urlParams.get('edit');
     if (editInvoiceNo) {
         loadInvoiceForEditing(editInvoiceNo);
     }
-    
+
     // Initial calculations
     Utils.updateCalculations();
 });
@@ -39,7 +49,7 @@ function addProductRow() {
     const tableBody = document.getElementById('productTableBody');
     const rowCount = tableBody.rows.length;
     const newRow = tableBody.insertRow();
-    
+
     newRow.innerHTML = `
         <td>${rowCount + 1}</td>
         <td><input type="text" class="product-description"></td>
@@ -48,9 +58,9 @@ function addProductRow() {
         <td class="amount">0.00</td>
         <td><button class="remove-row">X</button></td>
     `;
-    
+
     // Add event listener to the remove button
-    newRow.querySelector('.remove-row').addEventListener('click', function() {
+    newRow.querySelector('.remove-row').addEventListener('click', function () {
         this.closest('tr').remove();
         updateRowNumbers();
         Utils.updateCalculations();
@@ -78,24 +88,31 @@ async function saveBill() {
     if (!Utils.validateForm()) {
         return;
     }
-    
-    const invoiceData = Utils.getFormData();
-    
+
     try {
+        const invoiceData = await Utils.getFormData();
+        const isEditing = !!invoiceData.invoiceNo; // Check if we're editing an existing invoice
+
         await db.saveInvoice(invoiceData);
         alert('Bill saved successfully!');
-        
+
         // If this is a new payment, save it
         if (invoiceData.amountPaid > 0) {
             const paymentData = {
                 invoiceNo: invoiceData.invoiceNo,
                 paymentDate: new Date().toISOString().split('T')[0],
                 amount: invoiceData.amountPaid,
-                paymentType: 'initial',
-                paymentMethod: invoiceData.paymentMethod
+                paymentMethod: invoiceData.paymentMethod,
+                paymentType: 'initial'
             };
             await db.savePayment(paymentData);
         }
+
+        // If editing an existing invoice, update subsequent invoices
+        if (isEditing) {
+            await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
+        }
+
     } catch (error) {
         console.error('Error saving bill:', error);
         alert('Error saving bill. Please try again.');
@@ -134,7 +151,7 @@ async function loadInvoiceForEditing(invoiceNo) {
 }
 
 // Add event delegation for remove buttons (for dynamically added rows)
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('remove-row')) {
         e.target.closest('tr').remove();
         updateRowNumbers();

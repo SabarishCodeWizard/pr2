@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
     <div class="main"></div>
     <div class="container">
@@ -15,8 +17,10 @@
                 <a href="#" class="brand-name">PR Fabrics</a>
                 <span class="system-name">Billing System</span>
             </h1>
+             <a href="index.html" class="dashboard">New Bill</a>
             <a href="invoice-history.html" class="view-history-btn">View Invoice History</a>
             <a href="dashboard.html" class="dashboard">Dashboard Analytics</a>
+           
             <div class="button-group">
                 <button id="generatePDF">Generate PDF</button>
                 <button id="saveBill">Save Bill</button>
@@ -82,6 +86,24 @@
                 </div> -->
             </div>
 
+            <!-- Add this after billing-info section -->
+            <div class="customer-balance-info" id="customerBalanceInfo" style="display: none;">
+                <div class="balance-summary">
+                    <h3>Customer Account Summary</h3>
+                    <div class="balance-details">
+                        <div class="balance-item">
+                            <span class="balance-label">Total Previous Bills:</span>
+                            <span class="balance-value" id="totalPreviousBills">₹0.00</span>
+                        </div>
+                        <div class="balance-item">
+                            <span class="balance-label">Balance Carried Forward:</span>
+                            <span class="balance-value" id="balanceCarriedForward">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <div class="product-table-container">
                 <table id="productTable">
                     <thead>
@@ -108,18 +130,23 @@
                 <button id="addRow">Add Product</button>
             </div>
 
+            <!-- Update the calculation section -->
             <div class="calculation-section">
                 <div class="payment-calculation">
                     <div class="payment-row">
-                        <label>Subtotal:</label>
+                        <label>Current Bill Subtotal:</label>
                         <span id="subTotal">0.00</span>
                     </div>
+                    <div class="payment-row previous-balance-row">
+                        <label>Previous Balance Due:</label>
+                        <span id="previousBalance">0.00</span>
+                    </div>
                     <div class="payment-row total">
-                        <label>Total Amount:</label>
+                        <label>Total Amount Due:</label>
                         <span id="grandTotal">0.00</span>
                     </div>
                     <div class="payment-row">
-                        <label>Amount Paid:</label>
+                        <label>Amount Paid (This Bill):</label>
                         <input type="number" id="amountPaid" value="0" class="payment-input">
                     </div>
                     <div class="payment-row">
@@ -130,11 +157,12 @@
                         </select>
                     </div>
                     <div class="payment-row">
-                        <label>Balance Due:</label>
+                        <label>New Balance Due:</label>
                         <span id="balanceDue">0.00</span>
                     </div>
                 </div>
             </div>
+
 
             <div class="signature-section">
                 <div class="declaration">
@@ -153,18 +181,19 @@
             </div>
         </div>
     </div>
-    
+
     <script src="js/db.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/pdf.js"></script>
     <script src="js/script.js"></script>
-    
+
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-grid">
                 <div class="footer-section about">
                     <h3>PR Fabrics</h3>
-                    <p>Your trusted partner for quality fabrics since 2010. We provide premium textile solutions with unmatched customer service.</p>
+                    <p>Your trusted partner for quality fabrics since 2010. We provide premium textile solutions with
+                        unmatched customer service.</p>
                     <div class="social-links">
                         <a href="#" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
                         <a href="#" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
@@ -172,7 +201,7 @@
                         <a href="#" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
                     </div>
                 </div>
-    
+
                 <div class="footer-section links">
                     <h3>Quick Links</h3>
                     <ul>
@@ -183,16 +212,18 @@
                         <li><a href="#">About Us</a></li>
                     </ul>
                 </div>
-    
+
                 <div class="footer-section contact">
                     <h3>Contact Us</h3>
                     <div class="contact-info">
-                        <p><i class="fas fa-map-marker-alt"></i> 42/65, Thiruneelakanda Puram, 1st Street, Tirupur 641-602</p>
+                        <p><i class="fas fa-map-marker-alt"></i> 42/65, Thiruneelakanda Puram, 1st Street, Tirupur
+                            641-602</p>
                         <p><i class="fas fa-phone"></i> <a href="tel:9952520181">+91 99525 20181</a></p>
-                        <p><i class="fas fa-envelope"></i> <a href="mailto:info@prfabrics.com">info@prfabrics.com</a></p>
+                        <p><i class="fas fa-envelope"></i> <a href="mailto:info@prfabrics.com">info@prfabrics.com</a>
+                        </p>
                     </div>
                 </div>
-    
+
                 <div class="footer-section newsletter">
                     <h3>Newsletter</h3>
                     <p>Subscribe to get updates on new products and special offers</p>
@@ -202,16 +233,19 @@
                     </form>
                 </div>
             </div>
-    
+
             <div class="footer-bottom">
                 <div class="footer-bottom-content">
                     <p>&copy; 2025 PR Fabrics Billing Software. All Rights Reserved.</p>
                     <div class="developer-credit">
-                        <p>Developed by <a href="http://instagram.com/r_sabarish_k/" target="_blank">Sabarish R</a> | 
-                        <a href="tel:7845081278">7845081278</a></p>
+                        <p>Developed by <a href="http://instagram.com/r_sabarish_k/" target="_blank">Sabarish R</a> |
+                            <a href="tel:7845081278">7845081278</a>
+                        </p>
                         <div class="developer-links">
-                            <a href="https://github.com/SabarishCodeWizard" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                            <a href="https://www.linkedin.com/in/sabarish777" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="https://github.com/SabarishCodeWizard" target="_blank" aria-label="GitHub"><i
+                                    class="fab fa-github"></i></a>
+                            <a href="https://www.linkedin.com/in/sabarish777" target="_blank" aria-label="LinkedIn"><i
+                                    class="fab fa-linkedin-in"></i></a>
                             <a href="#" target="_blank" aria-label="Portfolio"><i class="fas fa-globe"></i></a>
                         </div>
                     </div>
@@ -220,4 +254,5 @@
         </div>
     </footer>
 </body>
+
 </html>
