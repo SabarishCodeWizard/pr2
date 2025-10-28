@@ -57,15 +57,15 @@ function displayCustomerStatementResults(customerName, invoices) {
         const numB = parseInt(b.invoiceNo) || 0;
         return numB - numA; // Descending order (newest first)
     });
-    
+
     // Calculate summary statistics
     const totalInvoices = invoices.length;
     const totalCurrentBillAmount = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
-    
+
     // Get balance due from the most recent invoice only
     const mostRecentInvoice = invoices[0];
     const balanceDue = mostRecentInvoice.balanceDue;
-    
+
     // Calculate total paid as sum of all amountPaid values
     const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
 
@@ -217,7 +217,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         yPos += 10;
 
         // Create invoice summary table
-        const invoiceTableHeaders = [['Invoice No', 'Date', 'Current Bill', 'Total Amount', 'Amount Paid', 'Balance Due', 'Status']];
+        const invoiceTableHeaders = [['Invoice No', 'Date', 'Current Bill', 'Total Balance Amount', 'Amount Paid', 'Balance Due', 'Status']];
         const invoiceTableData = invoices.map(invoice => [
             invoice.invoiceNo,
             new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
@@ -335,7 +335,7 @@ function displayRecentInvoices(invoices) {
             <span class="invoice-number">#${invoice.invoiceNo}</span>
             <span class="invoice-customer">${invoice.customerName}</span>
             <span class="invoice-date">${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</span>
-            <span class="invoice-amount">₹${Utils.formatCurrency(invoice.grandTotal)}</span>
+            <span class="invoice-amount">₹${Utils.formatCurrency(invoice.subtotal)}</span>
         </div>
     `).join('');
 }
@@ -419,13 +419,18 @@ function displayInvoices(invoices) {
         return;
     }
 
-    invoicesList.innerHTML = invoices.map(invoice => `
+    invoicesList.innerHTML = invoices.map(invoice => {
+        // Calculate previous bill amount (grandTotal - subtotal)
+        const previousBillAmount = invoice.grandTotal - invoice.subtotal;
+        
+        return `
         <div class="invoice-item">
             <div class="invoice-info">
                 <h3>Invoice #${invoice.invoiceNo}</h3>
                 <p><strong>Customer:</strong> ${invoice.customerName}</p>
                 <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</p>
                 <p><strong>Current Bill Amount:</strong> ₹${Utils.formatCurrency(invoice.subtotal)}</p>
+                <p><strong>Previous Balance:</strong> ₹${Utils.formatCurrency(previousBillAmount)}</p>
                 <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
                 <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
                     ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
@@ -439,7 +444,8 @@ function displayInvoices(invoices) {
                 <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
