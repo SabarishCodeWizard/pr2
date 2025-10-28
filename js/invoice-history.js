@@ -109,6 +109,9 @@ function displayCustomerStatementResults(customerName, invoices) {
                 <button id="downloadCombinedStatement" onclick="generateCombinedStatement('${customerName}')">
                     <i class="fas fa-download"></i> Download Combined Statement PDF
                 </button>
+                <button id="shareCombinedStatement" onclick="shareCombinedStatementViaWhatsApp('${customerName}')">
+                <i class="fab fa-whatsapp"></i> Share via WhatsApp
+            </button>
             </div>
         </div>
     `;
@@ -422,7 +425,7 @@ function displayInvoices(invoices) {
     invoicesList.innerHTML = invoices.map(invoice => {
         // Calculate previous bill amount (grandTotal - subtotal)
         const previousBillAmount = invoice.grandTotal - invoice.subtotal;
-        
+
         return `
         <div class="invoice-item">
             <div class="invoice-info">
@@ -441,6 +444,9 @@ function displayInvoices(invoices) {
                 <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
                 <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
                 <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
+                <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
+        <i class="fab fa-whatsapp"></i> Share
+    </button>
                 <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
             </div>
         </div>
@@ -451,6 +457,144 @@ function displayInvoices(invoices) {
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
 // <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
 
+// Share combined statement via WhatsApp
+async function shareCombinedStatementViaWhatsApp(customerName) {
+    try {
+        const invoices = await db.getAllInvoices();
+        const customerInvoices = invoices.filter(invoice =>
+            invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
+        );
+
+        if (customerInvoices.length === 0) {
+            alert('No invoices found for this customer.');
+            return;
+        }
+
+        // Sort invoices by invoice number (newest first)
+        customerInvoices.sort((a, b) => {
+            const numA = parseInt(a.invoiceNo) || 0;
+            const numB = parseInt(b.invoiceNo) || 0;
+            return numB - numA;
+        });
+
+        // Calculate totals
+        const totalInvoices = customerInvoices.length;
+        const totalCurrentBillAmount = customerInvoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+        const balanceDue = customerInvoices[0].balanceDue;
+        const totalPaid = customerInvoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+
+        // Get customer details from the most recent invoice
+        const mostRecentInvoice = customerInvoices[0];
+        const customerPhone = mostRecentInvoice.customerPhone;
+        const customerAddress = mostRecentInvoice.customerAddress;
+
+        // Create WhatsApp message
+        const message = `*PR FABRICS - ACCOUNT STATEMENT*
+
+*Customer:* ${customerName}
+*Address:* ${customerAddress || 'Not specified'}
+*Total Invoices:* ${totalInvoices}
+*Total Current Bill Amount:* ₹${Utils.formatCurrency(totalCurrentBillAmount)}
+*Total Amount Paid:* ₹${Utils.formatCurrency(totalPaid)}
+*Outstanding Balance:* ₹${Utils.formatCurrency(balanceDue)}
+
+*Invoice Summary:*
+${customerInvoices.map(invoice =>
+            `• Invoice #${invoice.invoiceNo} (${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}): Current: ₹${Utils.formatCurrency(invoice.subtotal)} | Paid: ₹${Utils.formatCurrency(invoice.amountPaid)} | Due: ₹${Utils.formatCurrency(invoice.balanceDue)}`
+        ).join('\n')}
+
+*Contact Information:*
+PR Fabrics, Tirupur
+Phone: 9952520181
+
+_This is an automated statement. Please contact us for any queries._`;
+
+        // Generate PDF first
+        await generateCombinedPDFStatement(customerName, customerInvoices);
+
+        // Open WhatsApp with the message
+        openWhatsApp(customerPhone, message);
+
+    } catch (error) {
+        console.error('Error sharing combined statement:', error);
+        alert('Error sharing statement. Please try again.');
+    }
+}
+
+// Share individual invoice via WhatsApp
+async function shareInvoiceViaWhatsApp(invoiceNo) {
+    try {
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        if (!invoiceData) {
+            alert('Invoice not found!');
+            return;
+        }
+
+        // Calculate previous balance
+        const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
+
+        // Create WhatsApp message
+        const message = `*PR FABRICS - INVOICE STATEMENT*
+
+*Invoice Details:*
+Invoice #: ${invoiceData.invoiceNo}
+Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}
+Customer: ${invoiceData.customerName}
+Address: ${invoiceData.customerAddress || 'Not specified'}
+Phone: ${invoiceData.customerPhone || 'Not specified'}
+
+*Amount Summary:*
+Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
+Previous Balance: ₹${Utils.formatCurrency(previousBalance)}
+Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
+Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}
+Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}
+Payment Method: ${invoiceData.paymentMethod?.toUpperCase() || 'CASH'}
+
+*Product Details:*
+${invoiceData.products.map((product, index) =>
+            `${index + 1}. ${product.description} - Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
+        ).join('\n')}
+
+*Contact Information:*
+PR Fabrics, Tirupur
+Phone: 9952520181
+
+_This is an automated invoice statement. Please contact us for any queries._`;
+
+        // Generate PDF first
+        const payments = await db.getPaymentsByInvoice(invoiceNo);
+        await generatePDFStatement(invoiceData, payments);
+
+        // Open WhatsApp with the message
+        openWhatsApp(invoiceData.customerPhone, message);
+
+    } catch (error) {
+        console.error('Error sharing invoice:', error);
+        alert('Error sharing invoice. Please try again.');
+    }
+}
+
+// Open WhatsApp with formatted message
+function openWhatsApp(phoneNumber, message) {
+    // Clean phone number (remove spaces, dashes, etc.)
+    const cleanPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+
+    if (!cleanPhone) {
+        alert('Customer phone number not found. Please check customer details.');
+        return;
+    }
+
+    // Format message for URL
+    const encodedMessage = encodeURIComponent(message);
+
+    // Create WhatsApp URL
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+
+    // Open in new tab
+    window.open(whatsappUrl, '_blank');
+}
 
 // Clear filters
 function clearFilters() {
