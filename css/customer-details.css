@@ -409,6 +409,8 @@ td {
     background: rgba(26, 35, 126, 0.1);
     border-radius: 6px;
     transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .invoice-count:hover {
@@ -418,7 +420,7 @@ td {
 .invoice-numbers-list {
     display: none;
     position: absolute;
-    top: 100%;
+    bottom: 100%; 
     left: 0;
     background: white;
     border-radius: 8px;
@@ -429,10 +431,25 @@ td {
     border: 1px solid var(--border-color);
     flex-wrap: wrap;
     gap: 8px;
+    margin-bottom: 5px; /* Reduced margin */
+    padding-top: 20px; /* Added top padding to create overlap area */
+    margin-top: -10px; /* Pull the list up to overlap with the trigger */
 }
 
 .invoice-numbers:hover .invoice-numbers-list {
     display: flex;
+}
+
+/* Add an invisible bridge to maintain hover state */
+.invoice-numbers::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 15px; /* Bridge height */
+    background: transparent;
+    z-index: 5;
 }
 
 .invoice-number-badge {
@@ -443,6 +460,8 @@ td {
     transition: all 0.2s ease;
     cursor: pointer;
     white-space: nowrap;
+    position: relative;
+    z-index: 11; /* Ensure badges are above the bridge */
 }
 
 .invoice-number-badge:hover {
