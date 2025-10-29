@@ -1,0 +1,488 @@
+/* ----------------------------
+   PR Fabrics - Customer Details Page
+   Modern Bank-Style Dashboard Theme
+   Author: Sabarish R
+-----------------------------*/
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+    min-height: 100vh;
+    color: #1f1f1f;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Container --- */
+.container {
+    width: 95%;
+    max-width: 1300px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    overflow: hidden;
+    padding-bottom: 30px;
+}
+
+/* --- Header Section --- */
+.controls {
+    background: linear-gradient(90deg, #002b5b, #0077b6);
+    color: #fff;
+    padding: 25px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bill-system-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-name {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.brand-name:hover {
+    color: #ffd60a;
+}
+
+.system-name {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.nav-btn, .logout-btn {
+    background: #fff;
+    color: #003566;
+    padding: 10px 18px;
+    border-radius: 25px;
+    font-weight: 600;
+    border: none;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.nav-btn:hover, .logout-btn:hover {
+    background: #ffd60a;
+    color: #000;
+}
+
+/* --- Search Section --- */
+.search-section {
+    padding: 30px;
+    border-bottom: 1px solid #eee;
+}
+
+.search-header h2 {
+    color: #002b5b;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-header p {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 3px;
+}
+
+.search-box {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.search-input-group {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    background: #f5f6fa;
+    border-radius: 30px;
+    padding: 10px 18px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.search-input-group i {
+    color: #0077b6;
+    font-size: 1.1rem;
+}
+
+.search-input-group input {
+    border: none;
+    outline: none;
+    background: transparent;
+    margin-left: 10px;
+    font-size: 1rem;
+    flex: 1;
+}
+
+.search-btn, .clear-btn {
+    background: #0077b6;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.search-btn:hover, .clear-btn:hover {
+    background: #005f87;
+}
+
+.clear-btn {
+    background: #ff5c5c;
+}
+
+/* --- Stats Cards --- */
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+    padding: 30px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 18px;
+    padding: 25px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    background: linear-gradient(135deg, #0077b6, #00b4d8);
+    color: #fff;
+    border-radius: 15px;
+    padding: 15px;
+    font-size: 1.6rem;
+}
+
+.stat-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+#totalCustomers {
+    color: #002b5b;
+}
+
+#totalInvoices {
+    color: #002b5b;
+}
+
+#totalRevenue {
+    color: #22c55e; /* Green for revenue */
+}
+
+#pendingBalance {
+    color: #ef4444; /* Red for pending balance */
+}
+
+.stat-info p {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* --- Customer Table --- */
+.customer-table-section {
+    padding: 0 30px 30px 30px;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.table-header h3 {
+    color: #002b5b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    background: #003566;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.action-btn:hover {
+    background: #00509d;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+#customerTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+#customerTable th, #customerTable td {
+    text-align: left;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 0.95rem;
+}
+
+#customerTable th {
+    background: #0077b6;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+#customerTable tr:hover td {
+    background: #f1f8ff;
+}
+
+/* --- Amount Styling --- */
+.amount-positive {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.amount-negative {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.amount-neutral {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* --- Action Buttons in Table --- */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-view, .btn-statement, .btn-whatsapp {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-view {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #2563eb;
+}
+
+.btn-statement {
+    background: #8b5cf6;
+    color: white;
+}
+
+.btn-statement:hover {
+    background: #7c3aed;
+}
+
+.btn-whatsapp {
+    background: #22c55e;
+    color: white;
+}
+
+.btn-whatsapp:hover {
+    background: #16a34a;
+}
+
+/* --- Customer Name Styling --- */
+.customer-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.customer-name i {
+    color: #0077b6;
+}
+
+/* --- No Customers --- */
+.no-customers {
+    text-align: center;
+    padding: 50px 0;
+    display: none;
+}
+
+.no-data-icon {
+    font-size: 3rem;
+    color: #ccc;
+}
+
+.no-customers h3 {
+    color: #003566;
+    font-size: 1.4rem;
+    margin-top: 10px;
+}
+
+.no-customers p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .stats-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .nav-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .search-box {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .action-btn {
+        padding: 8px 10px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .btn-view, .btn-statement, .btn-whatsapp {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Invoice Numbers Styles */
+.invoice-numbers {
+    position: relative;
+    cursor: pointer;
+}
+
+.invoice-count {
+    color: #3498db;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.invoice-count:hover {
+    background: #e3f2fd;
+    border-color: #3498db;
+}
+
+.invoice-numbers-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 200px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.invoice-numbers:hover .invoice-numbers-list {
+    display: block;
+}
+
+.invoice-number-badge {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.invoice-number-badge:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Make sure table has enough space */
+.customer-table td:nth-child(5) {
+    min-width: 150px;
+}
+
