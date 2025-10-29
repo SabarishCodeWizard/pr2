@@ -105,7 +105,8 @@ function processCustomerData(invoices) {
     return customers;
 }
 
-// Update statistics cards
+
+// Update statistics cards with color coding
 function updateStatistics(customers) {
     const totalCustomers = customers.length;
     const totalInvoices = customers.reduce((sum, customer) => sum + customer.totalInvoices, 0);
@@ -113,11 +114,36 @@ function updateStatistics(customers) {
     const totalPaid = customers.reduce((sum, customer) => sum + customer.amountPaid, 0);
     const pendingBalance = customers.reduce((sum, customer) => sum + customer.balanceDue, 0);
 
+    // Update the values
     document.getElementById('totalCustomers').textContent = totalCustomers.toLocaleString();
     document.getElementById('totalInvoices').textContent = totalInvoices.toLocaleString();
     document.getElementById('totalRevenue').textContent = `₹${Utils.formatCurrency(totalCurrentBillAmount)}`;
     document.getElementById('totalPaid').textContent = `₹${Utils.formatCurrency(totalPaid)}`;
     document.getElementById('pendingBalance').textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
+
+    // Apply color coding to statistics cards
+    const statsCards = document.querySelectorAll('.stat-card');
+    
+    // Total Customers - always positive
+    statsCards[0].classList.add('positive-value');
+    
+    // Total Invoices - always positive
+    statsCards[1].classList.add('positive-value');
+    
+    // Total Revenue - always positive
+    statsCards[2].classList.add('positive-value');
+    
+    // Total Paid - always positive
+    statsCards[3].classList.add('positive-value');
+    
+    // Pending Balance - color based on value
+    if (pendingBalance > 0) {
+        statsCards[4].classList.add('negative-value');
+    } else if (pendingBalance < 0) {
+        statsCards[4].classList.add('positive-value');
+    } else {
+        statsCards[4].classList.add('neutral-value');
+    }
 }
 
 // Display customers in table
