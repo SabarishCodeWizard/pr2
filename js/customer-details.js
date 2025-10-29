@@ -146,7 +146,7 @@ function updateStatistics(customers) {
     }
 }
 
-// Display customers in table
+// Update the displayCustomers function with hover events
 function displayCustomers(customers) {
     const tableBody = document.getElementById('customerTableBody');
     const noCustomers = document.getElementById('noCustomers');
@@ -177,7 +177,12 @@ function displayCustomers(customers) {
                     <span class="invoice-count">${customer.totalInvoices} invoices</span>
                     <div class="invoice-numbers-list">
                         ${customer.allInvoiceNumbers.map(invoiceNo => 
-                            `<span class="invoice-number-badge" onclick="viewInvoice('${invoiceNo}')">#${invoiceNo}</span>`
+                            `<span class="invoice-number-badge" 
+                                  onclick="viewInvoice('${invoiceNo}')"
+                                  onmouseenter="showInvoicePopup('${invoiceNo}', this)"
+                                  onmouseleave="setTimeout(() => closeInvoicePopup(), 100)">
+                                #${invoiceNo}
+                            </span>`
                         ).join('')}
                     </div>
                 </div>
@@ -187,13 +192,140 @@ function displayCustomers(customers) {
             <td class="${customer.balanceDue > 0 ? 'amount-negative' : (customer.balanceDue < 0 ? 'amount-positive' : 'amount-neutral')}">
                 ₹${Utils.formatCurrency(customer.balanceDue)}
             </td>
-            
+        </tr>
     `).join('');
 }
 
-// View specific invoice
+
+// View specific invoice - redirect to invoice-history page with search filter
 function viewInvoice(invoiceNo) {
+    // Redirect to invoice-history page with the invoice number as search parameter
     window.location.href = `invoice-history.html?search=${invoiceNo}`;
+}
+
+// Show invoice details popup on hover - Updated for top-left positioning
+async function showInvoicePopup(invoiceNo, element) {
+    try {
+        const invoiceData = await db.getInvoice(invoiceNo);
+        if (!invoiceData) return;
+
+        // Calculate previous balance
+        const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
+
+        // Create popup element
+        const popup = document.createElement('div');
+        popup.className = 'invoice-popup';
+        popup.innerHTML = `
+            <div class="invoice-popup-content">
+                <div class="popup-header">
+                    <h4>Invoice #${invoiceData.invoiceNo}</h4>
+                    <button class="popup-close" onclick="closeInvoicePopup()">&times;</button>
+                </div>
+                <div class="popup-body">
+                    <div class="customer-info">
+                        <strong>${invoiceData.customerName}</strong>
+                        <div class="customer-details">
+                            ${invoiceData.customerPhone ? `<div>📞 ${invoiceData.customerPhone}</div>` : ''}
+                            ${invoiceData.customerAddress ? `<div>📍 ${invoiceData.customerAddress}</div>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="invoice-details">
+                        <div class="detail-row">
+                            <span>Date:</span>
+                            <span>${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Current Bill:</span>
+                            <span>₹${Utils.formatCurrency(invoiceData.subtotal)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Previous Balance:</span>
+                            <span>₹${Utils.formatCurrency(previousBalance)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Total Amount:</span>
+                            <span>₹${Utils.formatCurrency(invoiceData.grandTotal)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Amount Paid:</span>
+                            <span class="amount-paid">₹${Utils.formatCurrency(invoiceData.amountPaid)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Balance Due:</span>
+                            <span class="${invoiceData.balanceDue > 0 ? 'amount-due' : 'amount-paid'}">
+                                ₹${Utils.formatCurrency(invoiceData.balanceDue)}
+                            </span>
+                        </div>
+                        ${invoiceData.paymentMethod ? `
+                        <div class="detail-row">
+                            <span>Payment Method:</span>
+                            <span class="payment-method ${invoiceData.paymentMethod}">
+                                ${invoiceData.paymentMethod.toUpperCase()}
+                            </span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${invoiceData.products && invoiceData.products.length > 0 ? `
+                    <div class="products-preview">
+                        <strong>Products (${invoiceData.products.length}):</strong>
+                        <div class="products-list">
+                            ${invoiceData.products.slice(0, 3).map(product => `
+                                <div class="product-item">
+                                    <span class="product-desc">${product.description}</span>
+                                    <span class="product-qty">${product.qty} × ₹${Utils.formatCurrency(product.rate)}</span>
+                                </div>
+                            `).join('')}
+                            ${invoiceData.products.length > 3 ? 
+                                `<div class="more-products">+ ${invoiceData.products.length - 3} more items</div>` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="popup-actions">
+                    <button class="btn-view-full" onclick="viewInvoice('${invoiceData.invoiceNo}')">
+                        <i class="fas fa-external-link-alt"></i> View on Invoice Page
+                    </button>
+                    <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoiceData.invoiceNo}')">
+                        <i class="fab fa-whatsapp"></i> Share
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Position the popup in top-left corner of the screen
+        popup.style.position = 'fixed';
+        popup.style.left = '20px';
+        popup.style.top = '20px';
+        popup.style.zIndex = '1000';
+
+        document.body.appendChild(popup);
+
+        // Close popup when clicking outside
+        const closeOnClickOutside = (e) => {
+            if (!popup.contains(e.target) && e.target !== element) {
+                closeInvoicePopup();
+                document.removeEventListener('click', closeOnClickOutside);
+            }
+        };
+
+        // Add slight delay to prevent immediate close
+        setTimeout(() => {
+            document.addEventListener('click', closeOnClickOutside);
+        }, 100);
+
+    } catch (error) {
+        console.error('Error loading invoice details:', error);
+    }
+}
+
+// Close invoice popup
+function closeInvoicePopup() {
+    const popup = document.querySelector('.invoice-popup');
+    if (popup) {
+        popup.remove();
+    }
 }
 
 // Search customers

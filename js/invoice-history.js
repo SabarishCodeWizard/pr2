@@ -6,6 +6,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Load recent invoices
     loadRecentInvoices();
 
+
+    
+    // Check for URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    
+    if (searchParam) {
+        document.getElementById('searchInput').value = searchParam;
+    }
+
+    
     // Load all invoices
     loadInvoices();
 
