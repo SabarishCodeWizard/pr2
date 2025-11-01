@@ -680,7 +680,6 @@ async function displayInvoices(invoices) {
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
 // <button class="btn-pdf" onclick="generateInvoicePDF('${invoice.invoiceNo}')">PDF</button>
 
-// Share combined statement via WhatsApp
 async function shareCombinedStatementViaWhatsApp(customerName) {
     try {
         const invoices = await db.getAllInvoices();
@@ -728,6 +727,7 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
 
         // Create WhatsApp message with returns information
         const message = `*PR FABRICS - ACCOUNT STATEMENT*
+*GST: 33CLJPG4331G1ZG*
 
 *Customer:* ${customerName}
 *Address:* ${customerAddress || 'Not specified'}
@@ -752,9 +752,10 @@ ${totalReturns > 0 ? `
 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 ` : ''}
 
-*Contact Information:*
-PR Fabrics, Tirupur
-Phone: 9952520181
+*CONTACT INFORMATION:*
+*PR FABRICS*
+*Tirupur*
+*Phone: 9952520181*
 
 _This is an automated statement. Please contact us for any queries._`;
 
@@ -784,9 +785,13 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
         const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
+        
+        // Get detailed return information
+        const returns = await db.getReturnsByInvoice(invoiceNo);
 
         // Create WhatsApp message with returns information
         const message = `*PR FABRICS - INVOICE STATEMENT*
+*GST: 33CLJPG4331G1ZG*
 
 *Invoice Details:*
 Invoice #: ${invoiceData.invoiceNo}
@@ -811,12 +816,18 @@ ${invoiceData.products.map((product, index) =>
 
 ${totalReturns > 0 ? `
 *Return Details:*
+${returns.map((returnItem, index) =>
+            `${index + 1}. ${returnItem.description} - Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? ` (Reason: ${returnItem.reason})` : ''}`
+        ).join('\n')}
+
+*Return Summary:*
 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 ` : ''}
 
-*Contact Information:*
-PR Fabrics, Tirupur
-Phone: 9952520181
+*CONTACT INFORMATION:*
+*PR FABRICS*
+*Tirupur*
+*Phone: 9952520181*
 
 _This is an automated invoice statement. Please contact us for any queries._`;
 
