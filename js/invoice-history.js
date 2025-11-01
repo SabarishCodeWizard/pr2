@@ -7,16 +7,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     loadRecentInvoices();
 
 
-    
+
     // Check for URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const searchParam = urlParams.get('search');
-    
+
     if (searchParam) {
         document.getElementById('searchInput').value = searchParam;
     }
 
-    
+
     // Load all invoices
     loadInvoices();
 
@@ -61,7 +61,7 @@ async function searchCustomerInvoices() {
 
 
 // Display customer statement results
-function displayCustomerStatementResults(customerName, invoices) {
+async function displayCustomerStatementResults(customerName, invoices) {
     // Sort invoices by invoice number (newest first)
     invoices.sort((a, b) => {
         const numA = parseInt(a.invoiceNo) || 0;
@@ -69,16 +69,27 @@ function displayCustomerStatementResults(customerName, invoices) {
         return numB - numA; // Descending order (newest first)
     });
 
+    // Calculate returns for all invoices
+    const invoicesWithReturns = await Promise.all(
+        invoices.map(async (invoice) => {
+            const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+            return {
+                ...invoice,
+                totalReturns,
+                adjustedBalanceDue: invoice.balanceDue - totalReturns
+            };
+        })
+    );
+
     // Calculate summary statistics
-    const totalInvoices = invoices.length;
-    const totalCurrentBillAmount = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+    const totalInvoices = invoicesWithReturns.length;
+    const totalCurrentBillAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+    const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
+    const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
 
-    // Get balance due from the most recent invoice only
-    const mostRecentInvoice = invoices[0];
-    const balanceDue = mostRecentInvoice.balanceDue;
-
-    // Calculate total paid as sum of all amountPaid values
-    const totalPaid = invoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+    // Get adjusted balance due from the most recent invoice
+    const mostRecentInvoice = invoicesWithReturns[0];
+    const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
 
     document.getElementById('customerStatementResults').innerHTML = `
         <div class="customer-summary">
@@ -96,24 +107,42 @@ function displayCustomerStatementResults(customerName, invoices) {
                     <div class="stat-value">₹${Utils.formatCurrency(totalPaid)}</div>
                     <div class="stat-label">Total Paid</div>
                 </div>
+                ${totalReturns > 0 ? `
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #dc3545;">-₹${Utils.formatCurrency(totalReturns)}</div>
+                        <div class="stat-label">Total Returns</div>
+                    </div>
+                ` : ''}
                 <div class="stat-item">
-                    <div class="stat-value">₹${Utils.formatCurrency(balanceDue)}</div>
-                    <div class="stat-label">Balance Due</div>
+                    <div class="stat-value ${adjustedBalanceDue > 0 ? 'amount-negative' : (adjustedBalanceDue < 0 ? 'amount-positive' : '')}">
+                        ₹${Utils.formatCurrency(adjustedBalanceDue)}
+                    </div>
+                    <div class="stat-label">${totalReturns > 0 ? 'Adjusted Balance Due' : 'Balance Due'}</div>
                 </div>
             </div>
             
             <div class="customer-invoices-list">
-                ${invoices.map(invoice => `
+                ${invoicesWithReturns.map(invoice => {
+                    const previousBalance = invoice.grandTotal - invoice.subtotal;
+                    return `
                     <div class="customer-invoice-item">
                         <div class="customer-invoice-info">
                             <strong>Invoice #${invoice.invoiceNo}</strong> - 
                             ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - 
                             Current: ₹${Utils.formatCurrency(invoice.subtotal)} - 
-                            Paid: ₹${Utils.formatCurrency(invoice.amountPaid)} - 
-                            Due: ₹${Utils.formatCurrency(invoice.balanceDue)}
+                            ${previousBalance > 0 ? `Prev Bal: ₹${Utils.formatCurrency(previousBalance)} - ` : ''}
+                            Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}
+                            ${invoice.totalReturns > 0 ? ` - Returns: ₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
+                            - Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}
+                            ${invoice.totalReturns > 0 ? ' (Adjusted)' : ''}
                         </div>
+                        ${invoice.totalReturns > 0 ? `
+                            <div class="return-badge">
+                                <i class="fas fa-undo"></i> Returns: ₹${Utils.formatCurrency(invoice.totalReturns)}
+                            </div>
+                        ` : ''}
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>
             
             <div class="statement-actions">
@@ -121,8 +150,8 @@ function displayCustomerStatementResults(customerName, invoices) {
                     <i class="fas fa-download"></i> Download Combined Statement PDF
                 </button>
                 <button id="shareCombinedStatement" onclick="shareCombinedStatementViaWhatsApp('${customerName}')">
-                <i class="fab fa-whatsapp"></i> Share via WhatsApp
-            </button>
+                    <i class="fab fa-whatsapp"></i> Share via WhatsApp
+                </button>
             </div>
         </div>
     `;
@@ -193,11 +222,27 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             return numB - numA;
         });
 
-        // Calculate totals correctly
-        const totalCurrentBillAmount = invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
-        const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
-        const balanceDue = invoices[0].balanceDue; // Most recent invoice balance
-        const totalPaid = totalCurrentBillAmount - balanceDue; // Calculated correctly
+        // Calculate returns for all invoices
+        const invoicesWithReturns = await Promise.all(
+            invoices.map(async (invoice) => {
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                return {
+                    ...invoice,
+                    totalReturns,
+                    adjustedBalanceDue: invoice.balanceDue - totalReturns
+                };
+            })
+        );
+
+        // Calculate totals correctly with returns
+        const totalCurrentBillAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+        const totalAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
+        const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+        const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
+        
+        // Get adjusted balance from the most recent invoice
+        const mostRecentInvoice = invoicesWithReturns[0];
+        const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
 
         // Add summary
         doc.setFontSize(12);
@@ -207,21 +252,34 @@ async function generateCombinedPDFStatement(customerName, invoices) {
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
+        
+        // Total Current Bill Amount
         doc.text('Total Current Bill Amount:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalCurrentBillAmount)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
 
-        // doc.text('Total Amount (with Previous Balance):', margin, yPos);
-        // doc.text(`₹${Utils.formatCurrency(totalAmount)}`, pageWidth - margin, yPos, { align: 'right' });
-        // yPos += 6;
-
+        // Total Amount Paid
         doc.text('Total Amount Paid:', margin, yPos);
         doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
 
+        // Total Returns (if any)
+        if (totalReturns > 0) {
+            doc.text('Total Returns:', margin, yPos);
+            doc.setTextColor(139, 0, 0); // Dark red for returns
+            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin, yPos, { align: 'right' });
+            doc.setTextColor(0, 0, 0); // Reset to black
+            yPos += 6;
+        }
+
+        // Outstanding Balance
         doc.setFont('helvetica', 'bold');
-        doc.text('Outstanding Balance:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        if (totalReturns > 0) {
+            doc.text('Adjusted Outstanding Balance:', margin, yPos);
+        } else {
+            doc.text('Outstanding Balance:', margin, yPos);
+        }
+        doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 15;
 
         // Add invoice list header
@@ -230,28 +288,75 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.text('Invoice Details', margin, yPos);
         yPos += 10;
 
-        // Create invoice summary table
-        const invoiceTableHeaders = [['Invoice No', 'Date', 'Current Bill', 'Total Balance Amount', 'Amount Paid', 'Balance Due', 'Status']];
-        const invoiceTableData = invoices.map(invoice => [
-            invoice.invoiceNo,
-            new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
-            Utils.formatCurrency(invoice.subtotal),
-            Utils.formatCurrency(invoice.grandTotal),
-            Utils.formatCurrency(invoice.amountPaid),
-            Utils.formatCurrency(invoice.balanceDue),
-            invoice.balanceDue === 0 ? 'Paid' : 'Pending'
-        ]);
+        // Create invoice summary table with returns
+        const invoiceTableHeaders = totalReturns > 0 
+            ? [['Invoice No', 'Date', 'Current Bill', 'Amount Paid', 'Returns', 'Balance Due', 'Status']]
+            : [['Invoice No', 'Date', 'Current Bill', 'Amount Paid', 'Balance Due', 'Status']];
+
+        const invoiceTableData = invoicesWithReturns.map(invoice => {
+            const baseData = [
+                invoice.invoiceNo,
+                new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
+                Utils.formatCurrency(invoice.subtotal),
+                Utils.formatCurrency(invoice.amountPaid)
+            ];
+            
+            if (totalReturns > 0) {
+                baseData.push(
+                    Utils.formatCurrency(invoice.totalReturns),
+                    Utils.formatCurrency(invoice.adjustedBalanceDue),
+                    invoice.adjustedBalanceDue === 0 ? 'Paid' : 'Pending'
+                );
+            } else {
+                baseData.push(
+                    Utils.formatCurrency(invoice.balanceDue),
+                    invoice.balanceDue === 0 ? 'Paid' : 'Pending'
+                );
+            }
+            
+            return baseData;
+        });
 
         // Add total row
-        invoiceTableData.push([
-            'TOTAL',
-            '',
-            Utils.formatCurrency(totalCurrentBillAmount),
-            Utils.formatCurrency(totalAmount),
-            Utils.formatCurrency(totalPaid),
-            Utils.formatCurrency(balanceDue),
-            ''
-        ]);
+        if (totalReturns > 0) {
+            invoiceTableData.push([
+                'TOTAL',
+                '',
+                Utils.formatCurrency(totalCurrentBillAmount),
+                Utils.formatCurrency(totalPaid),
+                Utils.formatCurrency(totalReturns),
+                Utils.formatCurrency(adjustedBalanceDue),
+                ''
+            ]);
+        } else {
+            invoiceTableData.push([
+                'TOTAL',
+                '',
+                Utils.formatCurrency(totalCurrentBillAmount),
+                Utils.formatCurrency(totalPaid),
+                Utils.formatCurrency(adjustedBalanceDue),
+                ''
+            ]);
+        }
+
+        const columnStyles = totalReturns > 0 
+            ? {
+                0: { cellWidth: 18 },
+                1: { cellWidth: 18 },
+                2: { cellWidth: 18 },
+                3: { cellWidth: 18 },
+                4: { cellWidth: 18 },
+                5: { cellWidth: 18 },
+                6: { cellWidth: 12 }
+            }
+            : {
+                0: { cellWidth: 20 },
+                1: { cellWidth: 20 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 20 },
+                5: { cellWidth: 15 }
+            };
 
         doc.autoTable({
             startY: yPos,
@@ -267,15 +372,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                 fontSize: 8,
                 cellPadding: 3,
             },
-            columnStyles: {
-                0: { cellWidth: 20 },
-                1: { cellWidth: 20 },
-                2: { cellWidth: 20 },
-                3: { cellWidth: 20 },
-                4: { cellWidth: 20 },
-                5: { cellWidth: 20 },
-                6: { cellWidth: 15 }
-            },
+            columnStyles: columnStyles,
             margin: { left: margin, right: margin },
             didDrawCell: function (data) {
                 // Highlight total row
@@ -285,8 +382,13 @@ async function generateCombinedPDFStatement(customerName, invoices) {
                     doc.setFont('helvetica', 'bold');
                 }
 
+                // Color returns column in dark red
+                if (totalReturns > 0 && data.column.index === 4 && data.cell.raw !== '') {
+                    doc.setTextColor(139, 0, 0);
+                }
                 // Color balance due in red if pending
-                if (data.column.index === 5 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) {
+                else if ((totalReturns > 0 && data.column.index === 5 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) ||
+                         (!totalReturns && data.column.index === 4 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0)) {
                     doc.setTextColor(255, 0, 0);
                 } else {
                     doc.setTextColor(0, 0, 0);
@@ -295,6 +397,93 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         });
 
         yPos = doc.lastAutoTable.finalY + 10;
+
+        // Add return details section if there are returns
+        if (totalReturns > 0) {
+            // Check if we need a new page
+            if (yPos > 180) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Return Details', margin, yPos);
+            yPos += 10;
+
+            // Get all returns for this customer
+            const allReturns = await db.getAllReturns();
+            const customerReturns = allReturns.filter(returnItem => 
+                returnItem.customerName.toLowerCase().includes(customerName.toLowerCase())
+            );
+
+            if (customerReturns.length > 0) {
+                const returnTableHeaders = [['Invoice No', 'Date', 'Product', 'Qty', 'Rate (₹)', 'Amount (₹)', 'Reason']];
+                const returnTableData = customerReturns.map(returnItem => [
+                    returnItem.invoiceNo,
+                    new Date(returnItem.returnDate).toLocaleDateString('en-IN'),
+                    returnItem.description,
+                    returnItem.qty.toString(),
+                    Utils.formatCurrency(returnItem.rate),
+                    Utils.formatCurrency(returnItem.returnAmount),
+                    returnItem.reason || 'N/A'
+                ]);
+
+                // Add total return row
+                returnTableData.push([
+                    'TOTAL',
+                    '',
+                    '',
+                    '',
+                    '',
+                    Utils.formatCurrency(totalReturns),
+                    ''
+                ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: returnTableHeaders,
+                    body: returnTableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [139, 0, 0], // Dark red for returns
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 7,
+                        cellPadding: 2,
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 18 },
+                        1: { cellWidth: 18 },
+                        2: { cellWidth: 'auto' },
+                        3: { cellWidth: 12 },
+                        4: { cellWidth: 15 },
+                        5: { cellWidth: 15 },
+                        6: { cellWidth: 25 }
+                    },
+                    margin: { left: margin, right: margin },
+                    didDrawCell: function (data) {
+                        // Highlight total row
+                        if (data.row.index === returnTableData.length - 1) {
+                            doc.setFillColor(255, 230, 230);
+                            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                            doc.setFont('helvetica', 'bold');
+                        }
+                        
+                        // Color return amounts in dark red
+                        if (data.column.index === 5 && data.cell.raw !== '') {
+                            doc.setTextColor(139, 0, 0);
+                        } else {
+                            doc.setTextColor(0, 0, 0);
+                        }
+                    }
+                });
+
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+        }
 
         // Add footer
         doc.setFontSize(8);
@@ -425,7 +614,7 @@ async function loadInvoices() {
 
 
 // Display invoices in the list
-function displayInvoices(invoices) {
+async function displayInvoices(invoices) {
     const invoicesList = document.getElementById('invoicesList');
 
     if (invoices.length === 0) {
@@ -433,7 +622,19 @@ function displayInvoices(invoices) {
         return;
     }
 
-    invoicesList.innerHTML = invoices.map(invoice => {
+    // Calculate returns for all invoices first
+    const invoicesWithReturns = await Promise.all(
+        invoices.map(async (invoice) => {
+            const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+            return {
+                ...invoice,
+                totalReturns,
+                adjustedBalanceDue: invoice.balanceDue - totalReturns
+            };
+        })
+    );
+
+    invoicesList.innerHTML = invoicesWithReturns.map(invoice => {
         // Calculate previous bill amount (grandTotal - subtotal)
         const previousBillAmount = invoice.grandTotal - invoice.subtotal;
 
@@ -449,15 +650,26 @@ function displayInvoices(invoices) {
                 <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
                     ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
                 </p>
-                <p><strong>Balance Due:</strong> ₹${Utils.formatCurrency(invoice.balanceDue)}</p>
+                ${invoice.totalReturns > 0 ? `
+                    <p><strong>Return Amount:</strong> ₹${Utils.formatCurrency(invoice.totalReturns)}</p>
+                    <p><strong>Adjusted Balance Due:</strong> ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}</p>
+                ` : `
+                    <p><strong>Balance Due:</strong> ₹${Utils.formatCurrency(invoice.balanceDue)}</p>
+                `}
             </div>
             <div class="invoice-actions">
                 <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
                 <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
+                <button class="btn-return" onclick="addReturn('${invoice.invoiceNo}')">Return</button>
                 <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
                 <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
-        <i class="fab fa-whatsapp"></i> Share
-    </button>
+                    <i class="fab fa-whatsapp"></i> Share
+                </button>
+                ${invoice.totalReturns > 0 ? `
+                    <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
+                        <i class="fas fa-history"></i> Return Status
+                    </button>
+                ` : ''}
                 <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
             </div>
         </div>
@@ -488,18 +700,33 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
             return numB - numA;
         });
 
-        // Calculate totals
-        const totalInvoices = customerInvoices.length;
-        const totalCurrentBillAmount = customerInvoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
-        const balanceDue = customerInvoices[0].balanceDue;
-        const totalPaid = customerInvoices.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+        // Calculate returns for all invoices
+        const invoicesWithReturns = await Promise.all(
+            customerInvoices.map(async (invoice) => {
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                return {
+                    ...invoice,
+                    totalReturns,
+                    adjustedBalanceDue: invoice.balanceDue - totalReturns
+                };
+            })
+        );
+
+        // Calculate totals with returns
+        const totalInvoices = invoicesWithReturns.length;
+        const totalCurrentBillAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+        const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
+        const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
+        
+        // Get adjusted balance from the most recent invoice
+        const mostRecentInvoice = invoicesWithReturns[0];
+        const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
 
         // Get customer details from the most recent invoice
-        const mostRecentInvoice = customerInvoices[0];
         const customerPhone = mostRecentInvoice.customerPhone;
         const customerAddress = mostRecentInvoice.customerAddress;
 
-        // Create WhatsApp message
+        // Create WhatsApp message with returns information
         const message = `*PR FABRICS - ACCOUNT STATEMENT*
 
 *Customer:* ${customerName}
@@ -507,12 +734,23 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
 *Total Invoices:* ${totalInvoices}
 *Total Current Bill Amount:* ₹${Utils.formatCurrency(totalCurrentBillAmount)}
 *Total Amount Paid:* ₹${Utils.formatCurrency(totalPaid)}
-*Outstanding Balance:* ₹${Utils.formatCurrency(balanceDue)}
+${totalReturns > 0 ? `*Total Returns:* -₹${Utils.formatCurrency(totalReturns)}` : ''}
+*${totalReturns > 0 ? 'Adjusted Outstanding Balance:' : 'Outstanding Balance:'}* ₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : mostRecentInvoice.balanceDue)}
 
 *Invoice Summary:*
-${customerInvoices.map(invoice =>
-            `• Invoice #${invoice.invoiceNo} (${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}): Current: ₹${Utils.formatCurrency(invoice.subtotal)} | Paid: ₹${Utils.formatCurrency(invoice.amountPaid)} | Due: ₹${Utils.formatCurrency(invoice.balanceDue)}`
-        ).join('\n')}
+${invoicesWithReturns.map(invoice => {
+            const previousBalance = invoice.grandTotal - invoice.subtotal;
+            return `• Invoice #${invoice.invoiceNo} (${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}): 
+   Current: ₹${Utils.formatCurrency(invoice.subtotal)}${previousBalance > 0 ? ` | Prev Bal: ₹${Utils.formatCurrency(previousBalance)}` : ''}
+   | Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}
+   ${invoice.totalReturns > 0 ? `| Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
+   | Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}${invoice.totalReturns > 0 ? ' (Adjusted)' : ''}`;
+        }).join('\n')}
+
+${totalReturns > 0 ? `
+*Return Summary:*
+Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
+` : ''}
 
 *Contact Information:*
 PR Fabrics, Tirupur
@@ -542,10 +780,12 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
             return;
         }
 
-        // Calculate previous balance
+        // Calculate previous balance and returns
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
+        const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
+        const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
 
-        // Create WhatsApp message
+        // Create WhatsApp message with returns information
         const message = `*PR FABRICS - INVOICE STATEMENT*
 
 *Invoice Details:*
@@ -560,13 +800,19 @@ Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
 Previous Balance: ₹${Utils.formatCurrency(previousBalance)}
 Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
 Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}
-Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}
+${totalReturns > 0 ? `Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
+${totalReturns > 0 ? `Adjusted Balance Due: ₹${Utils.formatCurrency(adjustedBalanceDue)}` : `Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}`}
 Payment Method: ${invoiceData.paymentMethod?.toUpperCase() || 'CASH'}
 
 *Product Details:*
 ${invoiceData.products.map((product, index) =>
             `${index + 1}. ${product.description} - Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
         ).join('\n')}
+
+${totalReturns > 0 ? `
+*Return Details:*
+Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
+` : ''}
 
 *Contact Information:*
 PR Fabrics, Tirupur
@@ -784,6 +1030,10 @@ async function generateStatement(invoiceNo) {
 // Generate PDF statement
 async function generatePDFStatement(invoiceData, payments) {
     try {
+        // Calculate returns for this invoice
+        const totalReturns = await Utils.calculateTotalReturns(invoiceData.invoiceNo);
+        const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
+        
         // Create PDF document
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
@@ -901,6 +1151,16 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
 
+        // Current Bill Amount
+        doc.text('Current Bill Amount:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.subtotal)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
+
+        // Previous Balance
+        const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
+        doc.text('Previous Balance:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(previousBalance)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
 
         // Total Amount
         doc.setFont('helvetica', 'bold');
@@ -914,6 +1174,87 @@ async function generatePDFStatement(invoiceData, payments) {
             yPos = 20;
         }
 
+        // Add return information if applicable
+        if (totalReturns > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Return Information', margin, yPos);
+            yPos += 10;
+
+            // Get return details
+            const returns = await db.getReturnsByInvoice(invoiceData.invoiceNo);
+            
+            if (returns.length > 0) {
+                const returnTableHeaders = [['Date', 'Product', 'Qty', 'Rate (₹)', 'Amount (₹)', 'Reason']];
+                const returnTableData = returns.map((returnItem, index) => [
+                    new Date(returnItem.returnDate).toLocaleDateString('en-IN'),
+                    returnItem.description,
+                    returnItem.qty.toString(),
+                    Utils.formatCurrency(returnItem.rate),
+                    Utils.formatCurrency(returnItem.returnAmount),
+                    returnItem.reason || 'N/A'
+                ]);
+
+                // Add total return row
+                returnTableData.push([
+                    'TOTAL',
+                    '',
+                    '',
+                    '',
+                    Utils.formatCurrency(totalReturns),
+                    ''
+                ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: returnTableHeaders,
+                    body: returnTableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [139, 0, 0], // Dark red for returns
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    styles: {
+                        fontSize: 7,
+                        cellPadding: 2,
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 20 },
+                        1: { cellWidth: 'auto' },
+                        2: { cellWidth: 15 },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 20 },
+                        5: { cellWidth: 30 }
+                    },
+                    margin: { left: margin, right: margin },
+                    didDrawCell: function (data) {
+                        // Highlight total row
+                        if (data.row.index === returnTableData.length - 1) {
+                            doc.setFillColor(255, 230, 230);
+                            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+                            doc.setFont('helvetica', 'bold');
+                        }
+                        
+                        // Color return amounts in red
+                        if (data.column.index === 4 && data.cell.raw !== '') {
+                            doc.setTextColor(139, 0, 0); // Dark red for return amounts
+                        } else {
+                            doc.setTextColor(0, 0, 0);
+                        }
+                    }
+                });
+
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+
+            // Check if we need a new page after returns
+            if (yPos > 200) {
+                doc.addPage();
+                yPos = 20;
+            }
+        }
+
         // Add payment history header
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
@@ -922,7 +1263,7 @@ async function generatePDFStatement(invoiceData, payments) {
 
         // Create payment history table
         const paymentTableHeaders = [['Date', 'Description', 'Amount (₹)', 'Balance (₹)']];
-        const paymentTableData = generatePaymentTableData(payments, invoiceData.grandTotal);
+        const paymentTableData = generatePaymentTableData(payments, invoiceData.grandTotal, totalReturns);
 
         doc.autoTable({
             startY: yPos,
@@ -982,10 +1323,22 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.text(`₹${Utils.formatCurrency(invoiceData.amountPaid)}`, pageWidth - margin, yPos, { align: 'right' });
         yPos += 6;
 
+        // Return Amount (if applicable)
+        if (totalReturns > 0) {
+            doc.text('Return Amount:', margin, yPos);
+            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin, yPos, { align: 'right' });
+            yPos += 6;
+        }
+
         // Outstanding Balance
         doc.setFont('helvetica', 'bold');
-        doc.text('Outstanding Balance:', margin, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        if (totalReturns > 0) {
+            doc.text('Adjusted Balance Due:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        } else {
+            doc.text('Outstanding Balance:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        }
         yPos += 15;
 
         // Add footer
@@ -1007,8 +1360,9 @@ async function generatePDFStatement(invoiceData, payments) {
     }
 }
 
-// In the payment table data generation, update to include payment method
-function generatePaymentTableData(payments, grandTotal) {
+
+// In the payment table data generation, update to include returns
+function generatePaymentTableData(payments, grandTotal, totalReturns = 0) {
     const tableData = [];
     let runningBalance = grandTotal;
 
@@ -1034,7 +1388,373 @@ function generatePaymentTableData(payments, grandTotal) {
         ]);
     });
 
+    // Add return row if applicable
+    if (totalReturns > 0) {
+        runningBalance -= totalReturns;
+        tableData.push([
+            'Multiple Dates',
+            'Product Returns',
+            `-${Utils.formatCurrency(totalReturns)}`,
+            Utils.formatCurrency(runningBalance)
+        ]);
+    }
+
     return tableData;
+}
+
+// Add Return to an invoice
+async function addReturn(invoiceNo) {
+    try {
+        const invoiceData = await db.getInvoice(invoiceNo);
+        if (!invoiceData) {
+            alert('Invoice not found!');
+            return;
+        }
+
+        // Create return dialog
+        const returnDialog = document.createElement('div');
+        returnDialog.className = 'return-dialog-overlay';
+        returnDialog.innerHTML = `
+            <div class="return-dialog">
+                <div class="return-dialog-header">
+                    <h3>Process Return - Invoice #${invoiceNo}</h3>
+                    <button class="close-return-dialog">&times;</button>
+                </div>
+                
+                <div class="return-customer-info">
+                    <h4>Customer: ${invoiceData.customerName}</h4>
+                    <p>Invoice Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}</p>
+                </div>
+
+                <div class="return-form-section">
+                    <div class="form-group">
+                        <label for="returnDate">Return Date:</label>
+                        <input type="date" id="returnDate" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+
+                    <div class="return-products-section">
+                        <h4>Return Products</h4>
+                        <div class="return-products-list" id="returnProductsList">
+                            <!-- Return items will be added here -->
+                        </div>
+                        <button type="button" class="btn-add-return-item" onclick="addReturnItem()">
+                            <i class="fas fa-plus"></i> Add Return Item
+                        </button>
+                    </div>
+
+                    <div class="return-summary">
+                        <div class="summary-item">
+                            <span>Original Balance Due:</span>
+                            <span>₹${Utils.formatCurrency(invoiceData.balanceDue)}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span>Total Return Amount:</span>
+                            <span id="totalReturnAmount">₹0.00</span>
+                        </div>
+                        <div class="summary-item total">
+                            <span>Adjusted Balance Due:</span>
+                            <span id="adjustedBalanceDue">₹${Utils.formatCurrency(invoiceData.balanceDue)}</span>
+                        </div>
+                    </div>
+
+                    <div class="return-dialog-actions">
+                        <button type="button" class="btn-save-return" onclick="saveReturn('${invoiceNo}')">
+                            <i class="fas fa-save"></i> Save Return
+                        </button>
+                        <button type="button" class="btn-view-return-status" onclick="viewReturnStatus('${invoiceNo}')">
+                            <i class="fas fa-history"></i> View Return Status
+                        </button>
+                        <button type="button" class="btn-cancel-return">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(returnDialog);
+
+        // Initialize with one return item - pass the products
+        addReturnItem(invoiceData.products || []);
+
+        // Event listeners
+        returnDialog.querySelector('.close-return-dialog').addEventListener('click', () => {
+            document.body.removeChild(returnDialog);
+        });
+
+        returnDialog.querySelector('.btn-cancel-return').addEventListener('click', () => {
+            document.body.removeChild(returnDialog);
+        });
+
+        returnDialog.addEventListener('click', (e) => {
+            if (e.target === returnDialog) {
+                document.body.removeChild(returnDialog);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error opening return dialog:', error);
+        alert('Error processing return.');
+    }
+}
+
+// Add return item row
+function addReturnItem(originalProducts = []) {
+    const returnProductsList = document.getElementById('returnProductsList');
+    const itemIndex = returnProductsList.children.length;
+
+    const returnItemHTML = `
+        <div class="return-item" data-index="${itemIndex}">
+            <div class="return-item-header">
+                <span>Return Item ${itemIndex + 1}</span>
+                <button type="button" class="btn-remove-return-item" onclick="removeReturnItem(${itemIndex})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="return-item-fields">
+                <div class="form-group">
+                    <label for="productDescription${itemIndex}">Product Description:</label>
+                    <select id="productDescription${itemIndex}" class="product-description-select" onchange="updateReturnProductInfo(${itemIndex})">
+                        <option value="">-- Select from invoice or enter custom --</option>
+                        ${originalProducts.map(product =>
+        `<option value="${product.description}" data-rate="${product.rate}" data-maxqty="${product.qty}">
+                                ${product.description} (Available: ${product.qty} @ ₹${Utils.formatCurrency(product.rate)})
+                            </option>`
+    ).join('')}
+                        <option value="custom">-- Enter Custom Product --</option>
+                    </select>
+                    <input type="text" id="customProduct${itemIndex}" class="custom-product-input" placeholder="Enter custom product description" style="display: none;">
+                </div>
+
+                <div class="form-group">
+                    <label for="returnQty${itemIndex}">Quantity:</label>
+                    <input type="number" id="returnQty${itemIndex}" class="return-qty" min="0" step="1" value="0" onchange="calculateReturnAmount(${itemIndex})">
+                </div>
+
+                <div class="form-group">
+                    <label for="returnRate${itemIndex}">Rate (₹):</label>
+                    <input type="number" id="returnRate${itemIndex}" class="return-rate" min="0" step="0.01" value="0" onchange="calculateReturnAmount(${itemIndex})">
+                </div>
+
+                <div class="form-group">
+                    <label for="returnAmount${itemIndex}">Return Amount (₹):</label>
+                    <input type="number" id="returnAmount${itemIndex}" class="return-amount" readonly value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="returnReason${itemIndex}">Reason for Return:</label>
+                    <textarea id="returnReason${itemIndex}" class="return-reason" placeholder="Enter reason for return"></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+
+    returnProductsList.insertAdjacentHTML('beforeend', returnItemHTML);
+}
+
+// Remove return item
+function removeReturnItem(index) {
+    const returnItem = document.querySelector(`.return-item[data-index="${index}"]`);
+    if (returnItem) {
+        returnItem.remove();
+        updateReturnSummary();
+    }
+}
+
+// Update product info when selection changes
+function updateReturnProductInfo(index) {
+    const select = document.getElementById(`productDescription${index}`);
+    const customInput = document.getElementById(`customProduct${index}`);
+    const rateInput = document.getElementById(`returnRate${index}`);
+    const selectedOption = select.options[select.selectedIndex];
+
+    if (selectedOption.value === 'custom') {
+        customInput.style.display = 'block';
+        customInput.value = '';
+        rateInput.value = '0';
+    } else {
+        customInput.style.display = 'none';
+        if (selectedOption.dataset.rate) {
+            rateInput.value = selectedOption.dataset.rate;
+            calculateReturnAmount(index);
+        }
+    }
+}
+
+// Calculate return amount for an item
+function calculateReturnAmount(index) {
+    const qty = parseFloat(document.getElementById(`returnQty${index}`).value) || 0;
+    const rate = parseFloat(document.getElementById(`returnRate${index}`).value) || 0;
+    const amount = qty * rate;
+
+    document.getElementById(`returnAmount${index}`).value = amount.toFixed(2);
+    updateReturnSummary();
+}
+
+// Update return summary
+function updateReturnSummary() {
+    let totalReturnAmount = 0;
+    const returnItems = document.querySelectorAll('.return-item');
+
+    returnItems.forEach(item => {
+        const amount = parseFloat(item.querySelector('.return-amount').value) || 0;
+        totalReturnAmount += amount;
+    });
+
+    document.getElementById('totalReturnAmount').textContent = `₹${Utils.formatCurrency(totalReturnAmount)}`;
+
+    // Get original balance due from the first summary item
+    const originalBalanceText = document.querySelector('.summary-item:first-child span:last-child').textContent;
+    const originalBalance = parseFloat(originalBalanceText.replace(/[^\d.]/g, '')) || 0;
+    const adjustedBalance = originalBalance - totalReturnAmount;
+
+    document.getElementById('adjustedBalanceDue').textContent = `₹${Utils.formatCurrency(adjustedBalance)}`;
+}
+
+// Save return
+async function saveReturn(invoiceNo) {
+    try {
+        const invoiceData = await db.getInvoice(invoiceNo);
+        const returnDate = document.getElementById('returnDate').value;
+        const returnItems = document.querySelectorAll('.return-item');
+        
+        if (!returnDate) {
+            alert('Please select a return date.');
+            return;
+        }
+
+        if (returnItems.length === 0) {
+            alert('Please add at least one return item.');
+            return;
+        }
+
+        const returns = [];
+        let totalReturnAmount = 0;
+
+        // Collect return items
+        for (const item of returnItems) {
+            const index = item.dataset.index;
+            const descriptionSelect = document.getElementById(`productDescription${index}`);
+            const customInput = document.getElementById(`customProduct${index}`);
+            const description = descriptionSelect.value === 'custom' ? customInput.value : descriptionSelect.value;
+            const qty = parseFloat(document.getElementById(`returnQty${index}`).value) || 0;
+            const rate = parseFloat(document.getElementById(`returnRate${index}`).value) || 0;
+            const amount = parseFloat(document.getElementById(`returnAmount${index}`).value) || 0;
+            const reason = document.getElementById(`returnReason${index}`).value;
+
+            if (!description || qty <= 0 || rate <= 0) {
+                alert('Please fill all required fields for return item ' + (parseInt(index) + 1));
+                return;
+            }
+
+            returns.push({
+                description,
+                qty,
+                rate,
+                returnAmount: amount,
+                reason,
+                returnDate
+            });
+
+            totalReturnAmount += amount;
+        }
+
+        // Save return records
+        for (const returnItem of returns) {
+            const returnData = {
+                invoiceNo: invoiceNo,
+                customerName: invoiceData.customerName,
+                ...returnItem,
+                createdAt: new Date().toISOString()
+            };
+            await db.saveReturn(returnData);
+        }
+
+        // Update invoice with return information
+        await Utils.updateInvoiceWithReturns(invoiceNo);
+
+        // Update all subsequent invoices
+        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+        alert(`Return processed successfully! Total return amount: ₹${Utils.formatCurrency(totalReturnAmount)}`);
+        
+        // Close dialog and refresh
+        document.querySelector('.return-dialog-overlay').remove();
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error saving return:', error);
+        alert('Error processing return.');
+    }
+}
+
+// View return status
+async function viewReturnStatus(invoiceNo) {
+    try {
+        const returns = await db.getReturnsByInvoice(invoiceNo);
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        if (returns.length === 0) {
+            alert('No return records found for this invoice.');
+            return;
+        }
+
+        const returnStatusHTML = `
+            <div class="return-status-dialog">
+                <div class="return-status-header">
+                    <h3>Return Status - Invoice #${invoiceNo}</h3>
+                    <button class="close-return-status">&times;</button>
+                </div>
+                <div class="return-status-content">
+                    <div class="customer-info">
+                        <h4>${invoiceData.customerName}</h4>
+                        <p>Total Returns: ${returns.length}</p>
+                    </div>
+                    
+                    <div class="returns-list">
+                        ${returns.map((returnItem, index) => `
+                            <div class="return-record">
+                                <div class="return-record-header">
+                                    <strong>Return #${index + 1}</strong>
+                                    <span class="return-date">${new Date(returnItem.returnDate).toLocaleDateString('en-IN')}</span>
+                                </div>
+                                <div class="return-details">
+                                    <p><strong>Product:</strong> ${returnItem.description}</p>
+                                    <p><strong>Quantity:</strong> ${returnItem.qty}</p>
+                                    <p><strong>Rate:</strong> ₹${Utils.formatCurrency(returnItem.rate)}</p>
+                                    <p><strong>Amount:</strong> ₹${Utils.formatCurrency(returnItem.returnAmount)}</p>
+                                    <p><strong>Reason:</strong> ${returnItem.reason}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="return-total">
+                        <strong>Total Return Amount: ₹${Utils.formatCurrency(returns.reduce((sum, item) => sum + item.returnAmount, 0))}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const returnStatusDialog = document.createElement('div');
+        returnStatusDialog.className = 'return-status-overlay';
+        returnStatusDialog.innerHTML = returnStatusHTML;
+
+        document.body.appendChild(returnStatusDialog);
+
+        returnStatusDialog.querySelector('.close-return-status').addEventListener('click', () => {
+            document.body.removeChild(returnStatusDialog);
+        });
+
+        returnStatusDialog.addEventListener('click', (e) => {
+            if (e.target === returnStatusDialog) {
+                document.body.removeChild(returnStatusDialog);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error viewing return status:', error);
+        alert('Error loading return status.');
+    }
 }
 
 // Delete invoice

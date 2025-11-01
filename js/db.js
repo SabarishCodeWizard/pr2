@@ -38,6 +38,14 @@ class Database {
                     paymentStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
                     paymentStore.createIndex('paymentDate', 'paymentDate', { unique: false });
                 }
+
+                // Create object store for returns
+                if (!db.objectStoreNames.contains('returns')) {
+                    const returnStore = db.createObjectStore('returns', { keyPath: 'id', autoIncrement: true });
+                    returnStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
+                    returnStore.createIndex('returnDate', 'returnDate', { unique: false });
+                    returnStore.createIndex('customerName', 'customerName', { unique: false });
+                }
             };
         });
     }
@@ -146,6 +154,60 @@ class Database {
 
             request.onerror = () => {
                 console.error('Error deleting invoice');
+                reject(request.error);
+            };
+        });
+    }
+
+    // Save return record
+    async saveReturn(returnData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['returns'], 'readwrite');
+            const store = transaction.objectStore('returns');
+            const request = store.put(returnData);
+
+            request.onsuccess = () => {
+                console.log('Return saved successfully');
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                console.error('Error saving return');
+                reject(request.error);
+            };
+        });
+    }
+
+    // Get all returns for an invoice
+    async getReturnsByInvoice(invoiceNo) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['returns'], 'readonly');
+            const store = transaction.objectStore('returns');
+            const index = store.index('invoiceNo');
+            const request = index.getAll(invoiceNo);
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    }
+
+    // Get all returns
+    async getAllReturns() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['returns'], 'readonly');
+            const store = transaction.objectStore('returns');
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
                 reject(request.error);
             };
         });

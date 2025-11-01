@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function loadAllCustomers() {
     try {
         const invoices = await db.getAllInvoices();
-        const customers = processCustomerData(invoices);
+        const customers = await processCustomerData(invoices); // Made async
         
         updateStatistics(customers);
         displayCustomers(customers);
@@ -35,10 +35,11 @@ async function loadAllCustomers() {
     }
 }
 
-// Process invoice data to get customer summaries
-function processCustomerData(invoices) {
+// Process invoice data to get customer summaries - Updated for returns
+async function processCustomerData(invoices) {
     const customerMap = new Map();
 
+    // First, process all invoices
     invoices.forEach(invoice => {
         const customerName = invoice.customerName;
         
@@ -52,8 +53,10 @@ function processCustomerData(invoices) {
                 totalAmount: 0,
                 amountPaid: 0,
                 balanceDue: 0,
-                allInvoiceNumbers: [], // Store all invoice numbers
-                invoices: [] // Store all invoices for this customer
+                totalReturns: 0, // Added for returns
+                adjustedBalanceDue: 0, // Added for returns
+                allInvoiceNumbers: [],
+                invoices: []
             });
         }
 
@@ -75,20 +78,30 @@ function processCustomerData(invoices) {
         }
     });
 
-    // After processing all invoices, calculate the correct balance due and sort invoice numbers
+    // After processing all invoices, calculate returns and adjusted balances
     const customers = Array.from(customerMap.values());
     
-    customers.forEach(customer => {
-        // Sort invoices by invoice number (newest first) to get the most recent balance
+    // Calculate returns for each customer
+    for (let customer of customers) {
+        // Sort invoices by invoice number (newest first)
         customer.invoices.sort((a, b) => {
             const numA = parseInt(a.invoiceNo) || 0;
             const numB = parseInt(b.invoiceNo) || 0;
-            return numB - numA; // Descending order (newest first)
+            return numB - numA;
         });
         
-        // Set balance due to the most recent invoice's balance due only
+        // Calculate total returns for this customer
+        customer.totalReturns = 0;
+        for (let invoice of customer.invoices) {
+            const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
+            const invoiceReturns = returns.reduce((sum, returnItem) => sum + returnItem.returnAmount, 0);
+            customer.totalReturns += invoiceReturns;
+        }
+        
+        // Set balance due to the most recent invoice's balance due
         if (customer.invoices.length > 0) {
             customer.balanceDue = customer.invoices[0].balanceDue;
+            customer.adjustedBalanceDue = customer.balanceDue - customer.totalReturns;
         }
         
         // Sort invoice numbers in descending order (newest first)
@@ -100,25 +113,61 @@ function processCustomerData(invoices) {
         
         // Remove the invoices array as we don't need it anymore
         delete customer.invoices;
-    });
+    }
 
     return customers;
 }
 
-
-// Update statistics cards with color coding
+// Update statistics cards with color coding - Updated for returns
 function updateStatistics(customers) {
     const totalCustomers = customers.length;
     const totalInvoices = customers.reduce((sum, customer) => sum + customer.totalInvoices, 0);
     const totalCurrentBillAmount = customers.reduce((sum, customer) => sum + customer.totalCurrentBillAmount, 0);
     const totalPaid = customers.reduce((sum, customer) => sum + customer.amountPaid, 0);
-    const pendingBalance = customers.reduce((sum, customer) => sum + customer.balanceDue, 0);
+    const totalReturns = customers.reduce((sum, customer) => sum + customer.totalReturns, 0);
+    
+    // CORRECTED: Calculate pending balance as (Total Amount - Total Paid - Total Returns)
+    const pendingBalance = totalCurrentBillAmount - totalPaid - totalReturns;
 
     // Update the values
     document.getElementById('totalCustomers').textContent = totalCustomers.toLocaleString();
     document.getElementById('totalInvoices').textContent = totalInvoices.toLocaleString();
     document.getElementById('totalRevenue').textContent = `₹${Utils.formatCurrency(totalCurrentBillAmount)}`;
     document.getElementById('totalPaid').textContent = `₹${Utils.formatCurrency(totalPaid)}`;
+    
+    // Add returns statistics if there are returns
+    if (totalReturns > 0) {
+        // Create or update returns statistics card
+        let returnsCard = document.getElementById('totalReturns');
+        if (!returnsCard) {
+            const statsCards = document.querySelector('.stats-cards');
+            const returnsHTML = `
+                <div class="stat-card" id="totalReturns">
+                    <div class="stat-icon">
+                        <i class="fas fa-undo"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalReturnsValue">-₹${Utils.formatCurrency(totalReturns)}</h3>
+                        <p>Total Returns</p>
+                    </div>
+                </div>
+            `;
+            // Insert before pending balance card
+            const pendingBalanceCard = document.querySelector('.stat-card:last-child');
+            pendingBalanceCard.insertAdjacentHTML('beforebegin', returnsHTML);
+            returnsCard = document.getElementById('totalReturns');
+            returnsCard.classList.add('negative-value');
+        } else {
+            document.getElementById('totalReturnsValue').textContent = `-₹${Utils.formatCurrency(totalReturns)}`;
+        }
+    } else {
+        // Remove returns card if no returns
+        const returnsCard = document.getElementById('totalReturns');
+        if (returnsCard) {
+            returnsCard.remove();
+        }
+    }
+    
     document.getElementById('pendingBalance').textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
 
     // Apply color coding to statistics cards
@@ -136,17 +185,24 @@ function updateStatistics(customers) {
     // Total Paid - always positive
     statsCards[3].classList.add('positive-value');
     
+    // Total Returns - always negative (red)
+    const returnsCard = document.getElementById('totalReturns');
+    if (returnsCard) {
+        returnsCard.classList.add('negative-value');
+    }
+    
     // Pending Balance - color based on value
+    const pendingBalanceCard = document.querySelector('.stat-card:last-child');
     if (pendingBalance > 0) {
-        statsCards[4].classList.add('negative-value');
+        pendingBalanceCard.classList.add('negative-value');
     } else if (pendingBalance < 0) {
-        statsCards[4].classList.add('positive-value');
+        pendingBalanceCard.classList.add('positive-value');
     } else {
-        statsCards[4].classList.add('neutral-value');
+        pendingBalanceCard.classList.add('neutral-value');
     }
 }
 
-// Update the displayCustomers function with hover events
+// Update the displayCustomers function with correct balance calculation
 function displayCustomers(customers) {
     const tableBody = document.getElementById('customerTableBody');
     const noCustomers = document.getElementById('noCustomers');
@@ -159,12 +215,18 @@ function displayCustomers(customers) {
 
     noCustomers.style.display = 'none';
 
-    tableBody.innerHTML = customers.map(customer => `
+    tableBody.innerHTML = customers.map(customer => {
+        // Calculate the correct balance for each customer
+        // Balance = (Total Current Bill Amount - Amount Paid - Total Returns)
+        const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
+
+        return `
         <tr>
             <td>
                 <div class="customer-name">
                     <i class="fas fa-user"></i>
                     ${customer.name}
+                    ${customer.totalReturns > 0 ? `<span class="customer-return-badge" title="This customer has returns">🔄</span>` : ''}
                 </div>
             </td>
             <td>${customer.phone || 'N/A'}</td>
@@ -189,13 +251,15 @@ function displayCustomers(customers) {
             </td>
             <td class="amount-positive">₹${Utils.formatCurrency(customer.totalCurrentBillAmount)}</td>
             <td class="amount-positive">₹${Utils.formatCurrency(customer.amountPaid)}</td>
-            <td class="${customer.balanceDue > 0 ? 'amount-negative' : (customer.balanceDue < 0 ? 'amount-positive' : 'amount-neutral')}">
-                ₹${Utils.formatCurrency(customer.balanceDue)}
+            <td class="${customer.totalReturns > 0 ? 'amount-negative' : 'amount-neutral'}">
+                ${customer.totalReturns > 0 ? `-₹${Utils.formatCurrency(customer.totalReturns)}` : '₹0.00'}
+            </td>
+            <td class="${customerBalance > 0 ? 'amount-negative' : (customerBalance < 0 ? 'amount-positive' : 'amount-neutral')}">
+                ₹${Utils.formatCurrency(customerBalance)}
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 }
-
 
 // View specific invoice - redirect to invoice-history page with search filter
 function viewInvoice(invoiceNo) {
@@ -203,14 +267,16 @@ function viewInvoice(invoiceNo) {
     window.location.href = `invoice-history.html?search=${invoiceNo}`;
 }
 
-// Show invoice details popup on hover - Updated for top-left positioning
+// Show invoice details popup on hover - Updated with returns information
 async function showInvoicePopup(invoiceNo, element) {
     try {
         const invoiceData = await db.getInvoice(invoiceNo);
         if (!invoiceData) return;
 
-        // Calculate previous balance
+        // Calculate previous balance and returns
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
+        const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
+        const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
 
         // Create popup element
         const popup = document.createElement('div');
@@ -251,10 +317,16 @@ async function showInvoicePopup(invoiceNo, element) {
                             <span>Amount Paid:</span>
                             <span class="amount-paid">₹${Utils.formatCurrency(invoiceData.amountPaid)}</span>
                         </div>
+                        ${totalReturns > 0 ? `
                         <div class="detail-row">
-                            <span>Balance Due:</span>
-                            <span class="${invoiceData.balanceDue > 0 ? 'amount-due' : 'amount-paid'}">
-                                ₹${Utils.formatCurrency(invoiceData.balanceDue)}
+                            <span>Return Amount:</span>
+                            <span class="amount-return">-₹${Utils.formatCurrency(totalReturns)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <span>${totalReturns > 0 ? 'Adjusted Balance Due:' : 'Balance Due:'}</span>
+                            <span class="${adjustedBalanceDue > 0 ? 'amount-due' : 'amount-paid'}">
+                                ₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : invoiceData.balanceDue)}
                             </span>
                         </div>
                         ${invoiceData.paymentMethod ? `
@@ -282,6 +354,15 @@ async function showInvoicePopup(invoiceNo, element) {
                         </div>
                     </div>
                     ` : ''}
+
+                    ${totalReturns > 0 ? `
+                    <div class="returns-preview">
+                        <strong>Returns Processed: ₹${Utils.formatCurrency(totalReturns)}</strong>
+                        <button class="btn-view-returns" onclick="viewReturnStatus('${invoiceNo}')">
+                            <i class="fas fa-history"></i> View Return Details
+                        </button>
+                    </div>
+                    ` : ''}
                 </div>
                 <div class="popup-actions">
                     <button class="btn-view-full" onclick="viewInvoice('${invoiceData.invoiceNo}')">
@@ -290,6 +371,11 @@ async function showInvoicePopup(invoiceNo, element) {
                     <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoiceData.invoiceNo}')">
                         <i class="fab fa-whatsapp"></i> Share
                     </button>
+                    ${totalReturns === 0 ? `
+                    <button class="btn-return" onclick="addReturn('${invoiceData.invoiceNo}')">
+                        <i class="fas fa-undo"></i> Process Return
+                    </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -339,7 +425,7 @@ async function searchCustomers() {
 
     try {
         const invoices = await db.getAllInvoices();
-        let customers = processCustomerData(invoices);
+        let customers = await processCustomerData(invoices); // Made async
 
         // Filter customers based on search term
         customers = customers.filter(customer =>
@@ -363,9 +449,96 @@ function clearSearch() {
     loadAllCustomers();
 }
 
+// Export customers function (placeholder - implement as needed)
+async function exportCustomers() {
+    try {
+        const invoices = await db.getAllInvoices();
+        const customers = await processCustomerData(invoices);
+        
+        // Convert to CSV or implement your export logic here
+        console.log('Exporting customers:', customers);
+        alert('Export feature to be implemented');
+        
+    } catch (error) {
+        console.error('Error exporting customers:', error);
+        alert('Error exporting customer data.');
+    }
+}
+
 // Logout function
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         window.location.href = 'login.html';
     }
 }
+
+// Add these CSS styles for the new elements
+const returnStyles = `
+    .customer-return-badge {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 50%;
+        padding: 2px 5px;
+        font-size: 10px;
+        margin-left: 5px;
+        cursor: help;
+    }
+
+    .amount-return {
+        color: #dc3545 !important;
+        font-weight: 600;
+    }
+
+    .returns-preview {
+        margin-top: 15px;
+        padding: 10px;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+    }
+
+    .btn-view-returns {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-view-returns:hover {
+        background: #138496;
+    }
+
+    .btn-return {
+        background: #ffc107;
+        color: #212529;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    .btn-return:hover {
+        background: #e0a800;
+    }
+
+    .stat-card.returns-value .stat-icon {
+        background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+    }
+`;
+
+// Add the styles to the document
+const style = document.createElement('style');
+style.textContent = returnStyles;
+document.head.appendChild(style);
