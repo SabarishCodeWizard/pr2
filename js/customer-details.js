@@ -92,10 +92,16 @@ async function processCustomerData(invoices) {
         
         // Calculate total returns for this customer
         customer.totalReturns = 0;
-        for (let invoice of customer.invoices) {
-            const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
-            const invoiceReturns = returns.reduce((sum, returnItem) => sum + returnItem.returnAmount, 0);
-            customer.totalReturns += invoiceReturns;
+        try {
+            for (let invoice of customer.invoices) {
+                const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
+                const invoiceReturns = returns.reduce((sum, returnItem) => sum + returnItem.returnAmount, 0);
+                customer.totalReturns += invoiceReturns;
+            }
+        } catch (error) {
+            console.error('Error calculating returns for customer:', customer.name, error);
+            // If there's an error (like returns store doesn't exist), set returns to 0
+            customer.totalReturns = 0;
         }
         
         // Set balance due to the most recent invoice's balance due

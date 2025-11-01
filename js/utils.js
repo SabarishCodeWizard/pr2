@@ -37,8 +37,8 @@ class Utils {
             const returns = await db.getReturnsByInvoice(invoiceNo);
             return returns.reduce((total, returnItem) => total + returnItem.returnAmount, 0);
         } catch (error) {
-            console.error('Error calculating returns:', error);
-            return 0;
+            console.error('Error calculating returns for invoice:', invoiceNo, error);
+            return 0; // Return 0 if there's an error
         }
     }
 
@@ -58,52 +58,52 @@ class Utils {
         }
     }
     // Calculate customer's previous balance
-// Calculate customer's previous balance (only the most recent balance)
-static async calculateCustomerBalance(customerName, currentInvoiceNo = null) {
-    try {
-        const invoices = await db.getAllInvoices();
+    // Calculate customer's previous balance (only the most recent balance)
+    static async calculateCustomerBalance(customerName, currentInvoiceNo = null) {
+        try {
+            const invoices = await db.getAllInvoices();
 
-        // Filter customer invoices and exclude current invoice
-        const customerInvoices = invoices.filter(invoice =>
-            invoice.customerName === customerName &&
-            invoice.invoiceNo !== currentInvoiceNo
-        );
+            // Filter customer invoices and exclude current invoice
+            const customerInvoices = invoices.filter(invoice =>
+                invoice.customerName === customerName &&
+                invoice.invoiceNo !== currentInvoiceNo
+            );
 
-        if (customerInvoices.length === 0) {
+            if (customerInvoices.length === 0) {
+                return {
+                    totalPreviousBills: 0,
+                    balanceCarriedForward: 0,
+                    invoiceCount: 0,
+                    lastInvoiceNo: null
+                };
+            }
+
+            // Sort invoices by invoice number in descending order (newest first)
+            customerInvoices.sort((a, b) => {
+                const numA = parseInt(a.invoiceNo) || 0;
+                const numB = parseInt(b.invoiceNo) || 0;
+                return numB - numA;
+            });
+
+            // Get the most recent invoice's adjusted balance due
+            const mostRecentInvoice = customerInvoices[0];
+            const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
+            const adjustedBalanceDue = mostRecentInvoice.balanceDue - totalReturns;
+
+            // Calculate total of all previous bills (for display only)
+            const totalPreviousBills = customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
+
             return {
-                totalPreviousBills: 0,
-                balanceCarriedForward: 0,
-                invoiceCount: 0,
-                lastInvoiceNo: null
+                totalPreviousBills,
+                balanceCarriedForward: adjustedBalanceDue, // Use adjusted balance
+                invoiceCount: customerInvoices.length,
+                lastInvoiceNo: mostRecentInvoice.invoiceNo
             };
+        } catch (error) {
+            console.error('Error calculating customer balance:', error);
+            return { totalPreviousBills: 0, balanceCarriedForward: 0, invoiceCount: 0, lastInvoiceNo: null };
         }
-
-        // Sort invoices by invoice number in descending order (newest first)
-        customerInvoices.sort((a, b) => {
-            const numA = parseInt(a.invoiceNo) || 0;
-            const numB = parseInt(b.invoiceNo) || 0;
-            return numB - numA;
-        });
-
-        // Get the most recent invoice's adjusted balance due
-        const mostRecentInvoice = customerInvoices[0];
-        const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
-        const adjustedBalanceDue = mostRecentInvoice.balanceDue - totalReturns;
-
-        // Calculate total of all previous bills (for display only)
-        const totalPreviousBills = customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
-
-        return {
-            totalPreviousBills,
-            balanceCarriedForward: adjustedBalanceDue, // Use adjusted balance
-            invoiceCount: customerInvoices.length,
-            lastInvoiceNo: mostRecentInvoice.invoiceNo
-        };
-    } catch (error) {
-        console.error('Error calculating customer balance:', error);
-        return { totalPreviousBills: 0, balanceCarriedForward: 0, invoiceCount: 0, lastInvoiceNo: null };
     }
-}
 
     // Validate form data
     static validateForm() {
@@ -199,134 +199,134 @@ static async calculateCustomerBalance(customerName, currentInvoiceNo = null) {
         }
     }
 
-// Calculate previous balance as it was at the time of a specific invoice
-static async calculatePreviousBalanceAtTime(customerName, currentInvoiceNo = null) {
-    try {
-        const invoices = await db.getAllInvoices();
+    // Calculate previous balance as it was at the time of a specific invoice
+    static async calculatePreviousBalanceAtTime(customerName, currentInvoiceNo = null) {
+        try {
+            const invoices = await db.getAllInvoices();
 
-        // Filter customer invoices and sort by invoice number (ascending)
-        const customerInvoices = invoices
-            .filter(invoice => invoice.customerName === customerName)
-            .sort((a, b) => {
-                const numA = parseInt(a.invoiceNo) || 0;
-                const numB = parseInt(b.invoiceNo) || 0;
-                return numA - numB; // Sort oldest to newest
-            });
+            // Filter customer invoices and sort by invoice number (ascending)
+            const customerInvoices = invoices
+                .filter(invoice => invoice.customerName === customerName)
+                .sort((a, b) => {
+                    const numA = parseInt(a.invoiceNo) || 0;
+                    const numB = parseInt(b.invoiceNo) || 0;
+                    return numA - numB; // Sort oldest to newest
+                });
 
-        if (customerInvoices.length === 0) {
+            if (customerInvoices.length === 0) {
+                return {
+                    totalPreviousBills: 0,
+                    balanceCarriedForward: 0,
+                    invoiceCount: 0
+                };
+            }
+
+            // If we're creating a new invoice, find the balance from the most recent existing invoice
+            if (!currentInvoiceNo || !customerInvoices.find(inv => inv.invoiceNo === currentInvoiceNo)) {
+                const mostRecentInvoice = customerInvoices[customerInvoices.length - 1];
+
+                // Calculate adjusted balance considering returns
+                const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
+                const adjustedBalance = mostRecentInvoice.balanceDue - totalReturns;
+
+                return {
+                    totalPreviousBills: customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0),
+                    balanceCarriedForward: adjustedBalance, // Use adjusted balance instead of original balance
+                    invoiceCount: customerInvoices.length
+                };
+            }
+
+            // If we're editing an existing invoice, calculate running balance up to the previous invoice
+            const currentInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === currentInvoiceNo);
+
+            if (currentInvoiceIndex === 0) {
+                // This is the first invoice for this customer
+                return {
+                    totalPreviousBills: 0,
+                    balanceCarriedForward: 0,
+                    invoiceCount: 0
+                };
+            }
+
+            // Calculate running balance: start from 0 and apply each invoice's net effect
+            let runningBalance = 0;
+            for (let i = 0; i < currentInvoiceIndex; i++) {
+                const invoice = customerInvoices[i];
+
+                // Calculate adjusted balance for each invoice considering returns
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const adjustedBalanceDue = invoice.balanceDue - totalReturns;
+
+                runningBalance += invoice.grandTotal; // Add invoice total
+                runningBalance -= invoice.amountPaid; // Subtract payments
+                runningBalance -= totalReturns; // Subtract returns
+            }
+
             return {
-                totalPreviousBills: 0,
-                balanceCarriedForward: 0,
-                invoiceCount: 0
+                totalPreviousBills: customerInvoices.slice(0, currentInvoiceIndex).reduce((sum, invoice) => sum + invoice.grandTotal, 0),
+                balanceCarriedForward: runningBalance,
+                invoiceCount: currentInvoiceIndex
             };
+
+        } catch (error) {
+            console.error('Error calculating previous balance at time:', error);
+            return { totalPreviousBills: 0, balanceCarriedForward: 0, invoiceCount: 0 };
         }
-
-        // If we're creating a new invoice, find the balance from the most recent existing invoice
-        if (!currentInvoiceNo || !customerInvoices.find(inv => inv.invoiceNo === currentInvoiceNo)) {
-            const mostRecentInvoice = customerInvoices[customerInvoices.length - 1];
-            
-            // Calculate adjusted balance considering returns
-            const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
-            const adjustedBalance = mostRecentInvoice.balanceDue - totalReturns;
-            
-            return {
-                totalPreviousBills: customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0),
-                balanceCarriedForward: adjustedBalance, // Use adjusted balance instead of original balance
-                invoiceCount: customerInvoices.length
-            };
-        }
-
-        // If we're editing an existing invoice, calculate running balance up to the previous invoice
-        const currentInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === currentInvoiceNo);
-
-        if (currentInvoiceIndex === 0) {
-            // This is the first invoice for this customer
-            return {
-                totalPreviousBills: 0,
-                balanceCarriedForward: 0,
-                invoiceCount: 0
-            };
-        }
-
-        // Calculate running balance: start from 0 and apply each invoice's net effect
-        let runningBalance = 0;
-        for (let i = 0; i < currentInvoiceIndex; i++) {
-            const invoice = customerInvoices[i];
-            
-            // Calculate adjusted balance for each invoice considering returns
-            const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
-            const adjustedBalanceDue = invoice.balanceDue - totalReturns;
-            
-            runningBalance += invoice.grandTotal; // Add invoice total
-            runningBalance -= invoice.amountPaid; // Subtract payments
-            runningBalance -= totalReturns; // Subtract returns
-        }
-
-        return {
-            totalPreviousBills: customerInvoices.slice(0, currentInvoiceIndex).reduce((sum, invoice) => sum + invoice.grandTotal, 0),
-            balanceCarriedForward: runningBalance,
-            invoiceCount: currentInvoiceIndex
-        };
-
-    } catch (error) {
-        console.error('Error calculating previous balance at time:', error);
-        return { totalPreviousBills: 0, balanceCarriedForward: 0, invoiceCount: 0 };
     }
-}
 
-// Update all subsequent invoices when a payment or return is made
-static async updateSubsequentInvoices(customerName, updatedInvoiceNo) {
-    try {
-        const invoices = await db.getAllInvoices();
-        
-        // Get all invoices for this customer after the updated one
-        const customerInvoices = invoices
-            .filter(invoice => invoice.customerName === customerName)
-            .sort((a, b) => {
-                const numA = parseInt(a.invoiceNo) || 0;
-                const numB = parseInt(b.invoiceNo) || 0;
-                return numA - numB;
-            });
-        
-        const updatedInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === updatedInvoiceNo);
-        
-        if (updatedInvoiceIndex === -1 || updatedInvoiceIndex === customerInvoices.length - 1) {
-            return; // No subsequent invoices to update
+    // Update all subsequent invoices when a payment or return is made
+    static async updateSubsequentInvoices(customerName, updatedInvoiceNo) {
+        try {
+            const invoices = await db.getAllInvoices();
+
+            // Get all invoices for this customer after the updated one
+            const customerInvoices = invoices
+                .filter(invoice => invoice.customerName === customerName)
+                .sort((a, b) => {
+                    const numA = parseInt(a.invoiceNo) || 0;
+                    const numB = parseInt(b.invoiceNo) || 0;
+                    return numA - numB;
+                });
+
+            const updatedInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === updatedInvoiceNo);
+
+            if (updatedInvoiceIndex === -1 || updatedInvoiceIndex === customerInvoices.length - 1) {
+                return; // No subsequent invoices to update
+            }
+
+            // Update all invoices after the changed one
+            for (let i = updatedInvoiceIndex + 1; i < customerInvoices.length; i++) {
+                const invoice = customerInvoices[i];
+
+                // Recalculate the previous balance for this invoice (considering returns)
+                const previousBalanceInfo = await Utils.calculatePreviousBalanceAtTime(customerName, invoice.invoiceNo);
+                const previousBalance = previousBalanceInfo.balanceCarriedForward;
+
+                // Recalculate the totals
+                const subtotal = invoice.products.reduce((sum, product) => sum + product.amount, 0);
+                const totalAmount = subtotal + previousBalance;
+
+                // Calculate returns for this invoice
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const balanceDue = totalAmount - invoice.amountPaid - totalReturns;
+
+                // Update the invoice
+                invoice.subtotal = subtotal;
+                invoice.grandTotal = totalAmount;
+                invoice.balanceDue = balanceDue;
+                invoice.totalReturns = totalReturns;
+                invoice.adjustedBalanceDue = balanceDue;
+
+                // Save the updated invoice
+                await db.saveInvoice(invoice);
+            }
+
+            console.log(`Updated ${customerInvoices.length - updatedInvoiceIndex - 1} subsequent invoices`);
+
+        } catch (error) {
+            console.error('Error updating subsequent invoices:', error);
         }
-        
-        // Update all invoices after the changed one
-        for (let i = updatedInvoiceIndex + 1; i < customerInvoices.length; i++) {
-            const invoice = customerInvoices[i];
-            
-            // Recalculate the previous balance for this invoice (considering returns)
-            const previousBalanceInfo = await Utils.calculatePreviousBalanceAtTime(customerName, invoice.invoiceNo);
-            const previousBalance = previousBalanceInfo.balanceCarriedForward;
-            
-            // Recalculate the totals
-            const subtotal = invoice.products.reduce((sum, product) => sum + product.amount, 0);
-            const totalAmount = subtotal + previousBalance;
-            
-            // Calculate returns for this invoice
-            const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
-            const balanceDue = totalAmount - invoice.amountPaid - totalReturns;
-            
-            // Update the invoice
-            invoice.subtotal = subtotal;
-            invoice.grandTotal = totalAmount;
-            invoice.balanceDue = balanceDue;
-            invoice.totalReturns = totalReturns;
-            invoice.adjustedBalanceDue = balanceDue;
-            
-            // Save the updated invoice
-            await db.saveInvoice(invoice);
-        }
-        
-        console.log(`Updated ${customerInvoices.length - updatedInvoiceIndex - 1} subsequent invoices`);
-        
-    } catch (error) {
-        console.error('Error updating subsequent invoices:', error);
     }
-}
 
     // Set form data from object
     static async setFormData(data) {
