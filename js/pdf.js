@@ -120,8 +120,8 @@ class PDFGenerator {
                         font-size: 13px;
                     }
                     th {
-                        background: #2c3e50;
-                        color: #fff;
+                        background: wheat;
+                        color: #1c1b1bff;
                     }
                     /* Payment Summary */
                     .calculation-section {
