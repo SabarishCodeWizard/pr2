@@ -7,11 +7,11 @@ class PDFGenerator {
         }
 
         const invoiceData = Utils.getFormData();
-        
+
         // Calculate returns for this invoice
         const totalReturns = await Utils.calculateTotalReturns(invoiceData.invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
-        
+
         // Create a new window for PDF
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -20,245 +20,191 @@ class PDFGenerator {
             <head>
                 <title>Invoice ${invoiceData.invoiceNo}</title>
                 <style>
-                    @page {
-                        size: A4;
-                        margin: 10mm;
-                    }
-                    body { 
-                        font-family: 'Arial', sans-serif; 
-                        margin: 0; 
-                        padding: 0;
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 0;
+                        padding: 40px;
+                        background: #fff;
+                        position: relative;
                         color: #333;
-                        line-height: 1.3;
-                        font-size: 11px;
                     }
-                    .invoice-container { 
-                        width: 190mm;
-                        margin: 0 auto;
-                        padding: 8mm;
-                        background: white;
-                        box-sizing: border-box;
-                        min-height: 277mm;
+                    .invoice-container {
+                        position: relative;
+                        z-index: 2;
                     }
-                    .invoice-header { 
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
-                        margin-bottom: 12px;
-                        padding-bottom: 10px;
-                        border-bottom: 1.5px solid #2c3e50;
+                    /* Watermark */
+                    body::before {
+                        content: "PR FABRICS";
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%) rotate(-45deg);
+                        font-size: 100px;
+                        color: rgba(200, 200, 200, 0.15);
+                        font-weight: 900;
+                        white-space: nowrap;
+                        pointer-events: none;
+                        z-index: 0;
                     }
-                    .company-details h2 { 
-                        margin: 0 0 4px 0; 
-                        color: #2c3e50;
-                        font-size: 18px;
-                        font-weight: bold;
-                    }
-                    .company-details p { 
-                        margin: 1px 0;
-                        font-size: 9px;
-                        color: #555;
-                    }
-                    .invoice-title { 
-                        text-align: right;
-                    }
-                    .invoice-title h2 { 
-                        margin: 0 0 8px 0; 
-                        color: #2c3e50;
-                        font-size: 20px;
-                        font-weight: bold;
-                    }
-                    .invoice-number, .invoice-date { 
-                        margin-bottom: 3px;
-                        font-size: 10px;
-                    }
-                    .invoice-number strong, .invoice-date strong {
-                        color: #555;
-                    }
-                    .billing-info { 
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 12px;
-                        gap: 10px;
-                    }
-                    .bill-to, .shipping-info { 
-                        flex: 1;
-                        padding: 8px;
-                        background: #f8f9fa;
-                        border-radius: 4px;
-                        border-left: 3px solid #3498db;
-                    }
-                    .bill-to h3, .shipping-info h3 { 
-                        margin: 0 0 6px 0;
-                        color: #2c3e50;
-                        font-size: 12px;
-                        font-weight: bold;
-                        padding-bottom: 4px;
-                        border-bottom: 1px solid #ddd;
-                    }
-                    .bill-to p, .shipping-info p { 
-                        margin: 3px 0;
-                        font-size: 9px;
-                        color: #555;
-                        line-height: 1.2;
-                    }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin-bottom: 10px;
-                        font-size: 9px;
-                    }
-                    th { 
-                        background-color: #2c3e50; 
-                        color: white;
-                        font-weight: bold;
-                        padding: 6px 4px;
-                        text-align: left;
-                        border: 1px solid #1a252f;
-                    }
-                    td { 
-                        padding: 5px 4px;
-                        border: 1px solid #ddd;
-                        text-align: left;
-                        vertical-align: top;
-                    }
-                    tbody tr:nth-child(even) {
-                        background-color: #f8f9fa;
-                    }
-                    .calculation-section { 
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 12px;
-                        gap: 10px;
-                    }
-                    .payment-calculation { 
-                        flex: 1;
-                        padding: 8px;
-                        background: #f8f9fa;
-                        border-radius: 4px;
-                        border-left: 3px solid #27ae60;
-                    }
-                    .payment-info { 
-                        flex: 1;
-                        padding: 8px;
-                        background: #f8f9fa;
-                        border-radius: 4px;
-                        border-left: 3px solid #e74c3c;
-                    }
-                    .payment-calculation h3, .payment-info h3 { 
-                        margin: 0 0 6px 0;
-                        color: #2c3e50;
-                        font-size: 12px;
-                        font-weight: bold;
-                        padding-bottom: 4px;
-                        border-bottom: 1px solid #ddd;
-                    }
-                    .payment-row { 
+                    /* Header */
+                    .invoice-header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        margin-bottom: 4px;
-                        padding: 3px 0;
-                        border-bottom: 1px solid #eee;
+                        border-bottom: 2px solid #444;
+                        padding-bottom: 15px;
+                        margin-bottom: 25px;
                     }
-                    .payment-row.total {
-                        border-bottom: 1.5px solid #2c3e50;
-                        font-weight: bold;
-                        font-size: 11px;
+                    .company-details {
+                        flex: 1;
+                    }
+                    .company-details h2 {
+                        margin: 0;
+                        color: #2c3e50;
+                        font-size: 26px;
+                    }
+                    .company-details p {
+                        margin: 3px 0;
+                        font-size: 13px;
+                    }
+                    .invoice-title {
+                        text-align: right;
+                    }
+                    .invoice-title h2 {
+                        margin: 0;
+                        color: #2c3e50;
+                        font-size: 24px;
+                        text-transform: uppercase;
+                    }
+                    .invoice-title div {
+                        font-size: 14px;
                         margin-top: 4px;
                     }
-                    .payment-row label {
-                        font-weight: 500;
-                        color: #555;
-                        font-size: 9px;
+                    /* Billing Info */
+                    .billing-info {
+                        margin-bottom: 20px;
                     }
-                    .payment-info p { 
-                        margin: 4px 0;
-                        font-size: 9px;
-                        color: #555;
-                        line-height: 1.2;
+                    .bill-to {
+                        border: 1px solid #555;
+                        padding: 6px 10px;
+                        border-radius: 6px;
+                        background: #f4f4f4;
+                        font-weight: 600;
+                        color: #222;
+                        line-height: 1.3;
                     }
-                    .payment-info strong {
-                        color: #2c3e50;
+                    .bill-to h3 {
+                        margin: 0 0 5px 0;
+                        color: #111;
+                        font-size: 14px;
+                        font-weight: 700;
+                        text-transform: uppercase;
                     }
-                    .signature-section { 
+                    .bill-to p {
+                        margin: 2px 0;
+                        font-size: 13px;
+                        color: #111;
+                        font-weight: 600;
+                    }
+
+                    /* Table */
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    th, td {
+                        border: 1px solid #ccc;
+                        text-align: center;
+                        padding: 8px;
+                        font-size: 13px;
+                    }
+                    th {
+                        background: #2c3e50;
+                        color: #fff;
+                    }
+                    /* Payment Summary */
+                    .calculation-section {
+                        margin-top: 25px;
+                        display: flex;
+                        justify-content: flex-end;
+                    }
+                    .payment-calculation {
+                        width: 300px;
+                        border: 1px solid #ccc;
+                        padding: 10px 15px;
+                        border-radius: 8px;
+                        background: #fdfdfd;
+                    }
+                    .payment-calculation h3 {
+                        margin-top: 0;
+                        text-align: center;
+                        font-size: 15px;
+                        background: #2c3e50;
+                        color: #fff;
+                        padding: 5px 0;
+                        border-radius: 6px;
+                    }
+                    .payment-row {
                         display: flex;
                         justify-content: space-between;
-                        margin-top: 15px;
-                        padding-top: 10px;
-                        border-top: 1.5px solid #ddd;
+                        margin: 6px 0;
+                        font-size: 13px;
                     }
-                    .declaration, .customer-signature, .company-signature { 
-                        flex: 1;
-                        text-align: center;
-                        padding: 0 5px;
-                    }
-                    .declaration p, .customer-signature p, .company-signature p { 
-                        margin: 4px 0;
-                        font-size: 8px;
-                        color: #555;
-                        line-height: 1.2;
-                    }
-                    .signature-line { 
-                        margin-top: 20px;
-                        padding-top: 4px;
-                        border-top: 1px solid #333;
+                    .payment-row.total {
                         font-weight: bold;
-                        color: #333;
-                        font-size: 9px;
+                        border-top: 1px solid #333;
+                        padding-top: 6px;
                     }
-                    .declaration {
-                        text-align: left;
-                    }
-                    .declaration p:first-child {
-                        font-weight: 500;
-                    }
-                    .declaration p:last-child {
-                        font-style: italic;
+                    .amount-return {
                         color: #e74c3c;
-                    }
-                    .note-box {
-                        margin-top: 6px;
-                        padding: 5px;
-                        background: #fff3cd;
-                        border-radius: 3px;
-                        border-left: 3px solid #ffc107;
-                        font-size: 8px;
-                        line-height: 1.2;
-                    }
-                    .return-box {
-                        margin-top: 6px;
-                        padding: 5px;
-                        background: #ffeaea;
-                        border-radius: 3px;
-                        border-left: 3px solid #dc3545;
-                        font-size: 8px;
-                        line-height: 1.2;
-                        color: #721c24;
-                    }
-                    .amount-positive {
-                        color: #27ae60;
                         font-weight: bold;
                     }
                     .amount-negative {
                         color: #e74c3c;
                         font-weight: bold;
                     }
-                    .amount-return {
-                        color: #dc3545;
+                    .amount-positive {
+                        color: #27ae60;
                         font-weight: bold;
+                    }
+                    /* Return Info Box */
+                    .return-box {
+                        margin-top: 20px;
+                        padding: 10px 15px;
+                        background: #fff4e6;
+                        border-left: 4px solid #f39c12;
+                        font-size: 13px;
+                        border-radius: 5px;
+                    }
+                    /* Signature Section */
+                    .signature-section {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 50px;
+                        font-size: 12px;
+                    }
+                    .signature-line {
+                        border-top: 1px solid #333;
+                        margin: 25px 0 5px;
+                        width: 160px;
+                    }
+                    .declaration {
+                        flex: 1;
+                    }
+                    .customer-signature, .company-signature {
+                        text-align: center;
+                        flex: 1;
+                    }
+                    img {
+                        height: 90px;
+                        width: auto;
+                        object-fit: contain;
                     }
                     @media print {
                         body {
                             margin: 0;
-                            padding: 0;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                        .invoice-container {
-                            padding: 8mm;
-                            box-shadow: none;
-                            border: none;
+                            padding: 20px;
                         }
                     }
                 </style>
@@ -276,24 +222,21 @@ class PDFGenerator {
                         <img src="image.png" alt="pr-image">
                         <div class="invoice-title">
                             <h2>TAX INVOICE</h2>
-                            <div class="invoice-number">
-                                <strong>Invoice No:</strong> ${invoiceData.invoiceNo}
-                            </div>
-                            <div class="invoice-date">
-                                <strong>Date:</strong> ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}
-                            </div>
+                            <div><strong>Invoice No:</strong> ${invoiceData.invoiceNo}</div>
+                            <div><strong>Date:</strong> ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}</div>
                         </div>
                     </div>
 
                     <!-- Billing Information -->
-                    <div class="billing-info">
+                        <div class="billing-info">
                         <div class="bill-to">
                             <h3>BILL TO</h3>
-                            <p><strong>Name:</strong> ${invoiceData.customerName}</p>
-                            <p><strong>Address:</strong> ${invoiceData.customerAddress}</p>
-                            <p><strong>Phone:</strong> ${invoiceData.customerPhone}</p>
+                            <p>Name: ${invoiceData.customerName}</p>
+                            <p>Address: ${invoiceData.customerAddress || '-'}</p>
+                            <p>Phone: ${invoiceData.customerPhone || '-'}</p>
                         </div>
                     </div>
+
 
                     <!-- Products Table -->
                     <table>
@@ -347,11 +290,15 @@ class PDFGenerator {
                             ` : ''}
                             <div class="payment-row">
                                 <label>Payment Method:</label>
-                                <span style="font-weight: bold; ${invoiceData.paymentMethod === 'cash' ? 'color: #27ae60;' : 'color: #3498db;'}">${invoiceData.paymentMethod === 'cash' ? 'CASH' : 'GPAY'}</span>
+                                <span style="font-weight: bold; ${invoiceData.paymentMethod === 'cash' ? 'color: #27ae60;' : 'color: #3498db;'}">
+                                    ${invoiceData.paymentMethod === 'cash' ? 'CASH' : 'GPAY'}
+                                </span>
                             </div>
-                            <div class="payment-row" style="border-bottom: none; margin-top: 2px;">
+                            <div class="payment-row" style="border-bottom: none;">
                                 <label>${totalReturns > 0 ? 'Adjusted Balance Due:' : 'Balance Due:'}</label>
-                                <span class="${adjustedBalanceDue > 0 ? 'amount-negative' : 'amount-positive'}">₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : invoiceData.balanceDue)}</span>
+                                <span class="${adjustedBalanceDue > 0 ? 'amount-negative' : 'amount-positive'}">
+                                    ₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : invoiceData.balanceDue)}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -373,26 +320,26 @@ class PDFGenerator {
                         </div>
                         <div class="customer-signature">
                             <p>Agreed and accepted</p>
-                            <p class="signature-line">CUSTOMER SIGNATURE</p>
-                            <p>Authorized Signatory</p>
+                            <p class="signature-line"></p>
+                            <p>CUSTOMER SIGNATURE</p>
                         </div>
                         <div class="company-signature">
                             <p>For PR FABRICS</p>
-                            <p class="signature-line">AUTHORIZED SIGNATORY</p>
-                            <p>Proprietor</p>
+                            <p class="signature-line"></p>
+                            <p>AUTHORIZED SIGNATORY</p>
                         </div>
                     </div>
                 </div>
             </body>
             </html>
         `);
-        
+
         printWindow.document.close();
         printWindow.focus();
-        
+
         // Wait for content to load then print
         setTimeout(() => {
             printWindow.print();
-        }, 500);
+        }, 600);
     }
 }
