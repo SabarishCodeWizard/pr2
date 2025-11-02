@@ -729,23 +729,28 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
         const message = `*PR FABRICS - ACCOUNT STATEMENT*
 *GST: 33CLJPG4331G1ZG*
 
-*Customer:* ${customerName}
-*Address:* ${customerAddress || 'Not specified'}
-*Total Invoices:* ${totalInvoices}
-*Total Current Bill Amount:* ₹${Utils.formatCurrency(totalCurrentBillAmount)}
-*Total Amount Paid:* ₹${Utils.formatCurrency(totalPaid)}
-${totalReturns > 0 ? `*Total Returns:* -₹${Utils.formatCurrency(totalReturns)}` : ''}
-*${totalReturns > 0 ? 'Adjusted Outstanding Balance:' : 'Outstanding Balance:'}* ₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : mostRecentInvoice.balanceDue)}
+*Customer Details:*
+Customer: ${customerName}
+Address: ${customerAddress || 'Not specified'}
+Total Invoices: ${totalInvoices}
 
 *Invoice Summary:*
 ${invoicesWithReturns.map(invoice => {
             const previousBalance = invoice.grandTotal - invoice.subtotal;
-            return `• Invoice #${invoice.invoiceNo} (${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}): 
-   Current: ₹${Utils.formatCurrency(invoice.subtotal)}${previousBalance > 0 ? ` | Prev Bal: ₹${Utils.formatCurrency(previousBalance)}` : ''}
-   | Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}
-   ${invoice.totalReturns > 0 ? `| Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
-   | Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}${invoice.totalReturns > 0 ? ' (Adjusted)' : ''}`;
-        }).join('\n')}
+            return `📋 *Invoice #${invoice.invoiceNo}*
+   Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
+   Current Bill: ₹${Utils.formatCurrency(invoice.subtotal)}
+   ${previousBalance > 0 ? `Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
+   Amount Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}
+   ${invoice.totalReturns > 0 ? `Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
+   ${invoice.totalReturns > 0 ? `*Adjusted Due: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` : `*Balance Due: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
+        }).join('\n\n')}
+
+*Account Summary:*
+Total Current Bill Amount: ₹${Utils.formatCurrency(totalCurrentBillAmount)}
+Total Amount Paid: ₹${Utils.formatCurrency(totalPaid)}
+${totalReturns > 0 ? `Total Returns: -₹${Utils.formatCurrency(totalReturns)}` : ''}
+${totalReturns > 0 ? `*Adjusted Outstanding Balance: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : `*Outstanding Balance: ₹${Utils.formatCurrency(mostRecentInvoice.balanceDue)}*`}
 
 ${totalReturns > 0 ? `
 *Return Summary:*
@@ -759,9 +764,6 @@ Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 
 _This is an automated statement. Please contact us for any queries._`;
 
-        // Generate PDF first
-        await generateCombinedPDFStatement(customerName, customerInvoices);
-
         // Open WhatsApp with the message
         openWhatsApp(customerPhone, message);
 
@@ -770,7 +772,6 @@ _This is an automated statement. Please contact us for any queries._`;
         alert('Error sharing statement. Please try again.');
     }
 }
-
 // Share individual invoice via WhatsApp
 async function shareInvoiceViaWhatsApp(invoiceNo) {
     try {
@@ -800,15 +801,6 @@ Customer: ${invoiceData.customerName}
 Address: ${invoiceData.customerAddress || 'Not specified'}
 Phone: ${invoiceData.customerPhone || 'Not specified'}
 
-*Amount Summary:*
-Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
-Previous Balance: ₹${Utils.formatCurrency(previousBalance)}
-Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
-Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}
-${totalReturns > 0 ? `Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
-${totalReturns > 0 ? `Adjusted Balance Due: ₹${Utils.formatCurrency(adjustedBalanceDue)}` : `Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}`}
-Payment Method: ${invoiceData.paymentMethod?.toUpperCase() || 'CASH'}
-
 *Product Details:*
 ${invoiceData.products.map((product, index) =>
             `${index + 1}. ${product.description} - Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
@@ -819,7 +811,18 @@ ${totalReturns > 0 ? `
 ${returns.map((returnItem, index) =>
             `${index + 1}. ${returnItem.description} - Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? ` (Reason: ${returnItem.reason})` : ''}`
         ).join('\n')}
+` : ''}
 
+*Account Summary:*
+Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
+Previous Balance: ₹${Utils.formatCurrency(previousBalance)}
+Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
+Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}
+${totalReturns > 0 ? `Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
+${totalReturns > 0 ? `Adjusted Balance Due: ₹${Utils.formatCurrency(adjustedBalanceDue)}` : `Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}`}
+Payment Method: ${invoiceData.paymentMethod?.toUpperCase() || 'CASH'}
+
+${totalReturns > 0 ? `
 *Return Summary:*
 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 ` : ''}
@@ -831,10 +834,6 @@ Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 
 _This is an automated invoice statement. Please contact us for any queries._`;
 
-        // Generate PDF first
-        const payments = await db.getPaymentsByInvoice(invoiceNo);
-        await generatePDFStatement(invoiceData, payments);
-
         // Open WhatsApp with the message
         openWhatsApp(invoiceData.customerPhone, message);
 
@@ -844,24 +843,71 @@ _This is an automated invoice statement. Please contact us for any queries._`;
     }
 }
 
-// Open WhatsApp with formatted message
+// One-click solution with automatic clipboard
 function openWhatsApp(phoneNumber, message) {
-    // Clean phone number (remove spaces, dashes, etc.)
-    const cleanPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+    // Clean phone number and add country code for India
+    let cleanPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+    
+    // Add country code if missing
+    if (cleanPhone && !cleanPhone.startsWith('91')) {
+        // Remove leading 0 if present and add country code
+        cleanPhone = cleanPhone.replace(/^0+/, '');
+        if (!cleanPhone.startsWith('91')) {
+            cleanPhone = '91' + cleanPhone;
+        }
+    }
 
     if (!cleanPhone) {
         alert('Customer phone number not found. Please check customer details.');
         return;
     }
 
-    // Format message for URL
+    // Validate phone number length (should be 12 digits: 91 + 10 digit number)
+    if (cleanPhone.length !== 12) {
+        alert(`Invalid phone number format. Please ensure it's a 10-digit Indian number. Current: ${cleanPhone}`);
+        return;
+    }
+
+    // Always copy to clipboard first
+    copyToClipboard(message);
+    
+    // Then open WhatsApp
     const encodedMessage = encodeURIComponent(message);
-
-    // Create WhatsApp URL
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    
+    const newWindow = window.open(whatsappUrl, '_blank');
+    
+    if (!newWindow) {
+        alert('Message copied to clipboard! Popup was blocked - please open WhatsApp manually and paste the message.');
+    } else {
+        setTimeout(() => {
+            alert('Message copied to clipboard! If not auto-pasted in WhatsApp, click in chat and press Ctrl+V (Windows) or Cmd+V (Mac).');
+        }, 1000);
+    }
+}
 
-    // Open in new tab
-    window.open(whatsappUrl, '_blank');
+// Enhanced clipboard function
+function copyToClipboard(text) {
+    return new Promise((resolve, reject) => {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(resolve).catch(reject);
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+            document.body.removeChild(textArea);
+        }
+    });
 }
 
 // Clear filters
@@ -1038,7 +1084,7 @@ async function generateStatement(invoiceNo) {
     }
 }
 
-// Generate PDF statement
+// Generate PDF statement with organized file naming
 async function generatePDFStatement(invoiceData, payments) {
     try {
         // Calculate returns for this invoice
@@ -1362,15 +1408,24 @@ async function generatePDFStatement(invoiceData, payments) {
         yPos += 4;
         doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
 
-        // Save the PDF
-        doc.save(`Statement_${invoiceData.invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`);
+        // Generate organized filename
+        const today = new Date();
+        const dateFolder = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const fileName = `Statement_${invoiceData.invoiceNo}_${invoiceData.customerName}_${dateFolder}.pdf`;
+        
+        // Save the PDF with organized filename
+        doc.save(fileName);
+        
+        // Show organization instructions
+        setTimeout(() => {
+            alert(`PDF saved as: ${fileName}\n\n💡 Organization Tip:\n1. Create a folder named: ${dateFolder}\n2. Move this file into that folder\n3. All statements from today will go in the same folder`);
+        }, 500);
 
     } catch (error) {
         console.error('Error generating PDF statement:', error);
         throw error;
     }
 }
-
 
 // In the payment table data generation, update to include returns
 function generatePaymentTableData(payments, grandTotal, totalReturns = 0) {

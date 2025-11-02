@@ -8,6 +8,10 @@ class PDFGenerator {
 
         const invoiceData = Utils.getFormData();
         
+        // Calculate returns for this invoice
+        const totalReturns = await Utils.calculateTotalReturns(invoiceData.invoiceNo);
+        const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
+        
         // Create a new window for PDF
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -222,12 +226,26 @@ class PDFGenerator {
                         font-size: 8px;
                         line-height: 1.2;
                     }
+                    .return-box {
+                        margin-top: 6px;
+                        padding: 5px;
+                        background: #ffeaea;
+                        border-radius: 3px;
+                        border-left: 3px solid #dc3545;
+                        font-size: 8px;
+                        line-height: 1.2;
+                        color: #721c24;
+                    }
                     .amount-positive {
                         color: #27ae60;
                         font-weight: bold;
                     }
                     .amount-negative {
                         color: #e74c3c;
+                        font-weight: bold;
+                    }
+                    .amount-return {
+                        color: #dc3545;
                         font-weight: bold;
                     }
                     @media print {
@@ -251,6 +269,7 @@ class PDFGenerator {
                     <div class="invoice-header">
                         <div class="company-details">
                             <h2>PR FABRICS</h2>
+                            <p>GST: 33CLJPG4331G1ZG</p>
                             <p>42/65, THIRUNEELAKANDA PURAM, 1ST STREET,</p>
                             <p>TIRUPUR 641-602 | CELL: 9952520181</p>
                         </div>
@@ -320,16 +339,30 @@ class PDFGenerator {
                                 <label>Amount Paid:</label>
                                 <span>₹${Utils.formatCurrency(invoiceData.amountPaid)}</span>
                             </div>
+                            ${totalReturns > 0 ? `
+                            <div class="payment-row">
+                                <label>Return Amount:</label>
+                                <span class="amount-return">-₹${Utils.formatCurrency(totalReturns)}</span>
+                            </div>
+                            ` : ''}
                             <div class="payment-row">
                                 <label>Payment Method:</label>
                                 <span style="font-weight: bold; ${invoiceData.paymentMethod === 'cash' ? 'color: #27ae60;' : 'color: #3498db;'}">${invoiceData.paymentMethod === 'cash' ? 'CASH' : 'GPAY'}</span>
                             </div>
                             <div class="payment-row" style="border-bottom: none; margin-top: 2px;">
-                                <label>Balance Due:</label>
-                                <span class="${invoiceData.balanceDue > 0 ? 'amount-negative' : 'amount-positive'}">₹${Utils.formatCurrency(invoiceData.balanceDue)}</span>
+                                <label>${totalReturns > 0 ? 'Adjusted Balance Due:' : 'Balance Due:'}</label>
+                                <span class="${adjustedBalanceDue > 0 ? 'amount-negative' : 'amount-positive'}">₹${Utils.formatCurrency(totalReturns > 0 ? adjustedBalanceDue : invoiceData.balanceDue)}</span>
                             </div>
                         </div>
                     </div>
+
+                    ${totalReturns > 0 ? `
+                    <!-- Return Information -->
+                    <div class="return-box">
+                        <strong>RETURN INFORMATION:</strong> This invoice has processed returns amounting to ₹${Utils.formatCurrency(totalReturns)}. 
+                        The balance due has been adjusted accordingly.
+                    </div>
+                    ` : ''}
 
                     <!-- Signature Section -->
                     <div class="signature-section">

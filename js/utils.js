@@ -142,48 +142,48 @@ class Utils {
         return true;
     }
 
-    // Get form data as object (synchronous version)
-    static getFormData() {
-        const products = [];
-        document.querySelectorAll('#productTableBody tr').forEach((row, index) => {
-            const description = row.querySelector('.product-description').value;
-            const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            const rate = parseFloat(row.querySelector('.rate').value) || 0;
+// Get form data as object (synchronous version)
+static getFormData() {
+    const products = [];
+    document.querySelectorAll('#productTableBody tr').forEach((row, index) => {
+        const description = row.querySelector('.product-description').value;
+        const qty = parseFloat(row.querySelector('.qty').value) || 0;
+        const rate = parseFloat(row.querySelector('.rate').value) || 0;
 
-            if (description) {
-                products.push({
-                    sno: index + 1,
-                    description: description,
-                    qty: qty,
-                    rate: rate,
-                    amount: qty * rate
-                });
-            }
-        });
+        if (description) {
+            products.push({
+                sno: index + 1,
+                description: description,
+                qty: qty,
+                rate: rate,
+                amount: qty * rate
+            });
+        }
+    });
 
-        const subtotal = Utils.calculateSubtotal();
-        const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
-        const totalAmount = subtotal + previousBalance;
-        const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
-        const paymentMethod = document.getElementById('paymentMethod').value;
-        const balanceDue = totalAmount - amountPaid;
+    const subtotal = Utils.calculateSubtotal();
+    const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
+    const totalAmount = subtotal + previousBalance;
+    const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const balanceDue = totalAmount - amountPaid;
 
-        return {
-            invoiceNo: document.getElementById('invoiceNo').value,
-            invoiceDate: document.getElementById('invoiceDate').value,
-            customerName: document.getElementById('customerName').value,
-            customerAddress: document.getElementById('customerAddress').value,
-            customerPhone: document.getElementById('customerPhone').value,
-            products: products,
-            subtotal: subtotal,
-            // Don't store previousBalance - we'll always calculate it dynamically
-            grandTotal: totalAmount,
-            amountPaid: amountPaid,
-            paymentMethod: paymentMethod,
-            balanceDue: balanceDue,
-            createdAt: new Date().toISOString()
-        };
-    }
+    return {
+        invoiceNo: document.getElementById('invoiceNo').value,
+        invoiceDate: document.getElementById('invoiceDate').value,
+        customerName: document.getElementById('customerName').value,
+        customerAddress: document.getElementById('customerAddress').value,
+        customerPhone: document.getElementById('customerPhone').value,
+        products: products,
+        subtotal: subtotal,
+        previousBalance: previousBalance, // ADD THIS LINE - Store previous balance
+        grandTotal: totalAmount,
+        amountPaid: amountPaid,
+        paymentMethod: paymentMethod,
+        balanceDue: balanceDue,
+        createdAt: new Date().toISOString()
+    };
+}
 
     // Calculate and set previous balance for new invoices
     static async calculateAndSetPreviousBalance() {
@@ -328,52 +328,57 @@ class Utils {
         }
     }
 
-    // Set form data from object
-    static async setFormData(data) {
-        document.getElementById('invoiceNo').value = data.invoiceNo || '';
-        document.getElementById('invoiceDate').value = data.invoiceDate || '';
-        document.getElementById('customerName').value = data.customerName || '';
-        document.getElementById('customerAddress').value = data.customerAddress || '';
-        document.getElementById('customerPhone').value = data.customerPhone || '';
-        document.getElementById('amountPaid').value = data.amountPaid || 0;
-        document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
+// Set form data from object
+static async setFormData(data) {
+    document.getElementById('invoiceNo').value = data.invoiceNo || '';
+    document.getElementById('invoiceDate').value = data.invoiceDate || '';
+    document.getElementById('customerName').value = data.customerName || '';
+    document.getElementById('customerAddress').value = data.customerAddress || '';
+    document.getElementById('customerPhone').value = data.customerPhone || '';
+    document.getElementById('amountPaid').value = data.amountPaid || 0;
+    document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
 
-        // Clear existing product rows
-        const tableBody = document.getElementById('productTableBody');
-        tableBody.innerHTML = '';
+    // Clear existing product rows
+    const tableBody = document.getElementById('productTableBody');
+    tableBody.innerHTML = '';
 
-        // Add product rows
-        if (data.products && data.products.length > 0) {
-            data.products.forEach((product, index) => {
-                const newRow = tableBody.insertRow();
-                newRow.innerHTML = `
-                <td>${index + 1}</td>
-                <td><input type="text" class="product-description" value="${product.description}"></td>
-                <td><input type="number" class="qty" value="${product.qty}"></td>
-                <td><input type="number" class="rate" value="${product.rate}"></td>
-                <td class="amount">${Utils.formatCurrency(product.amount)}</td>
-                <td><button class="remove-row">X</button></td>
-            `;
-            });
-        } else {
-            // Add one empty row if no products
+    // Add product rows
+    if (data.products && data.products.length > 0) {
+        data.products.forEach((product, index) => {
             const newRow = tableBody.insertRow();
             newRow.innerHTML = `
-            <td>1</td>
-            <td><input type="text" class="product-description"></td>
-            <td><input type="number" class="qty" value="0"></td>
-            <td><input type="number" class="rate" value="0.00"></td>
-            <td class="amount">0.00</td>
+            <td>${index + 1}</td>
+            <td><input type="text" class="product-description" value="${product.description}"></td>
+            <td><input type="number" class="qty" value="${product.qty}"></td>
+            <td><input type="number" class="rate" value="${product.rate}"></td>
+            <td class="amount">${Utils.formatCurrency(product.amount)}</td>
             <td><button class="remove-row">X</button></td>
         `;
-        }
-
-        // Always calculate previous balance dynamically
-        await Utils.calculateAndSetPreviousBalance();
-
-        // Update current calculations
-        Utils.updateCalculations();
+        });
+    } else {
+        // Add one empty row if no products
+        const newRow = tableBody.insertRow();
+        newRow.innerHTML = `
+        <td>1</td>
+        <td><input type="text" class="product-description"></td>
+        <td><input type="number" class="qty" value="0"></td>
+        <td><input type="number" class="rate" value="0.00"></td>
+        <td class="amount">0.00</td>
+        <td><button class="remove-row">X</button></td>
+    `;
     }
+
+    // Set previous balance from data if available, otherwise calculate dynamically
+    if (data.previousBalance !== undefined) {
+        document.getElementById('previousBalance').textContent = Utils.formatCurrency(data.previousBalance);
+    } else {
+        // Always calculate previous balance dynamically if not available in data
+        await Utils.calculateAndSetPreviousBalance();
+    }
+
+    // Update current calculations
+    Utils.updateCalculations();
+}
 
 
     // Update all calculations (synchronous)
