@@ -49,14 +49,25 @@ class PDFGenerator {
                     /* Header */
                     .invoice-header {
                         display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                        align-items: center;   /* Centers image vertically */
+                        justify-content: flex-start;  /* Keeps image on left */
                         border-bottom: 2px solid #444;
                         padding-bottom: 15px;
                         margin-bottom: 25px;
+                        text-align: left;
+                        gap: 20px; /* Adds spacing between image and text */
                     }
-                    .company-details {
-                        flex: 1;
+                    .invoice-header img {
+                        height: 90px;
+                        width: auto;
+                        object-fit: contain;
+                    }
+                    .company-details, .invoice-title {
+                        text-align: left;
+                    }
+                    .invoice-title {
+                        margin-left: auto; /* Pushes invoice title to right end */
+                        text-align: right;
                     }
                     .company-details h2 {
                         margin: 0;
@@ -66,9 +77,6 @@ class PDFGenerator {
                     .company-details p {
                         margin: 3px 0;
                         font-size: 13px;
-                    }
-                    .invoice-title {
-                        text-align: right;
                     }
                     .invoice-title h2 {
                         margin: 0;
@@ -215,9 +223,9 @@ class PDFGenerator {
                     <div class="invoice-header">
                         <div class="company-details">
                             <h2>PR FABRICS</h2>
-                            <p>GST: 33CLJPG4331G1ZG</p>
                             <p>42/65, THIRUNEELAKANDA PURAM, 1ST STREET,</p>
                             <p>TIRUPUR 641-602 | CELL: 9952520181</p>
+                            <p>GSTIN: <b>33CLJPG4331G1ZG</b></p>
                         </div>
                         <img src="image.png" alt="pr-image">
                         <div class="invoice-title">

@@ -727,7 +727,7 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
 
         // Create WhatsApp message with returns information
         const message = `*PR FABRICS - ACCOUNT STATEMENT*
-*GST: 33CLJPG4331G1ZG*
+*GSTIN: 33CLJPG4331G1ZG*
 
 *Customer Details:*
 Customer: ${customerName}
@@ -792,7 +792,7 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
 
         // Create WhatsApp message with returns information
         const message = `*PR FABRICS - INVOICE STATEMENT*
-*GST: 33CLJPG4331G1ZG*
+*GSTIN: 33CLJPG4331G1ZG*
 
 *Invoice Details:*
 Invoice #: ${invoiceData.invoiceNo}
