@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -9,26 +10,48 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            enableRemoteModule: false
+            preload: path.join(__dirname, 'preload.js')
         },
-        show: false, // Don't show until ready
+        show: false,
         titleBarStyle: 'default'
     });
 
-    // Load login page first
     win.loadFile('login.html');
     win.setTitle("PR Fabrics - Login");
 
-    // Show window when ready to prevent visual flash
     win.once('ready-to-show', () => {
         win.show();
     });
 
-    // Handle navigation to ensure authentication
-    win.webContents.on('will-navigate', (event, navigationUrl) => {
-        // You can add additional navigation controls here if needed
-    });
+    return win;
 }
+
+// Simple PDF saving - save as HTML that can be printed as PDF
+ipcMain.handle('save-pdf', async (event, htmlContent, filename) => {
+    try {
+        const { filePath } = await dialog.showSaveDialog({
+            defaultPath: filename,
+            filters: [
+                { name: 'HTML Files', extensions: ['html'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (filePath) {
+            // Save as HTML file
+            fs.writeFileSync(filePath, htmlContent);
+            
+            // Optional: Open the file after saving
+            shell.openExternal(`file://${filePath}`);
+            
+            return { success: true, path: filePath };
+        }
+        return { success: false, error: 'No file path selected' };
+    } catch (error) {
+        console.error('Save error:', error);
+        return { success: false, error: error.message };
+    }
+});
 
 app.whenReady().then(() => {
     createWindow();
@@ -40,4 +63,4 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
-})
+});

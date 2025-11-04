@@ -1,15 +1,17 @@
 {
-  "name": "rsk2",
+  "name": "pr-fabrics",
   "version": "1.0.0",
   "description": "PR Fabrics Desktop Web App",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-packager . \"PR Fabrics\" --platform=win32 --arch=x64 --overwrite --icon=image.ico"
   },
-  "keywords": ["electron", "desktop", "html", "pr fabrics"],
+  "keywords": ["electron", "desktop", "invoice", "pr fabrics"],
   "author": "Sabarish R",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^39.0.0"
+    "electron": "^39.0.0",
+    "electron-packager": "^17.1.2"
   }
 }
