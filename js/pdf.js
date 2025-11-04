@@ -163,7 +163,7 @@ static getImageBase64() {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Invoice ${invoiceData.invoiceNo}</title>
+                <title>PR ${invoiceData.invoiceNo}</title>
                 <style>
                     body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -389,7 +389,6 @@ static getImageBase64() {
                             <h3>BILL TO</h3>
                             <p>Name: ${invoiceData.customerName}</p>
                             <p>Address: ${invoiceData.customerAddress || '-'}</p>
-                            <p>Phone: ${invoiceData.customerPhone || '-'}</p>
                         </div>
                     </div>
 
