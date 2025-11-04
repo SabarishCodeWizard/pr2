@@ -317,7 +317,7 @@ static getImageBase64() {
                         font-weight: bold;
                     }
                     .amount-negative {
-                        color: #e74c3c;
+                        color: #111;
                         font-weight: bold;
                     }
                     .amount-positive {
