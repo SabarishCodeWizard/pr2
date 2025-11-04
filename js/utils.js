@@ -30,6 +30,33 @@ class Utils {
         };
     }
 
+
+    // Calculate total return amount for an invoice
+    static async calculateTotalReturns(invoiceNo) {
+        try {
+            const returns = await db.getReturnsByInvoice(invoiceNo);
+            return returns.reduce((total, returnItem) => total + returnItem.returnAmount, 0);
+        } catch (error) {
+            console.error('Error calculating returns for invoice:', invoiceNo, error);
+            return 0; // Return 0 if there's an error
+        }
+    }
+
+    // Update invoice with return amounts
+    static async updateInvoiceWithReturns(invoiceNo) {
+        try {
+            const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
+            const invoiceData = await db.getInvoice(invoiceNo);
+
+            if (invoiceData) {
+                invoiceData.totalReturns = totalReturns;
+                invoiceData.adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
+                await db.saveInvoice(invoiceData);
+            }
+        } catch (error) {
+            console.error('Error updating invoice with returns:', error);
+        }
+    }
     // Calculate customer's previous balance
     // Calculate customer's previous balance (only the most recent balance)
     static async calculateCustomerBalance(customerName, currentInvoiceNo = null) {
@@ -58,16 +85,17 @@ class Utils {
                 return numB - numA;
             });
 
-            // Get the most recent invoice's balance due
+            // Get the most recent invoice's adjusted balance due
             const mostRecentInvoice = customerInvoices[0];
-            const balanceCarriedForward = mostRecentInvoice.balanceDue;
+            const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
+            const adjustedBalanceDue = mostRecentInvoice.balanceDue - totalReturns;
 
             // Calculate total of all previous bills (for display only)
             const totalPreviousBills = customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
 
             return {
                 totalPreviousBills,
-                balanceCarriedForward,
+                balanceCarriedForward: adjustedBalanceDue, // Use adjusted balance
                 invoiceCount: customerInvoices.length,
                 lastInvoiceNo: mostRecentInvoice.invoiceNo
             };
@@ -114,48 +142,48 @@ class Utils {
         return true;
     }
 
-    // Get form data as object (synchronous version)
-    static getFormData() {
-        const products = [];
-        document.querySelectorAll('#productTableBody tr').forEach((row, index) => {
-            const description = row.querySelector('.product-description').value;
-            const qty = parseFloat(row.querySelector('.qty').value) || 0;
-            const rate = parseFloat(row.querySelector('.rate').value) || 0;
+// Get form data as object (synchronous version)
+static getFormData() {
+    const products = [];
+    document.querySelectorAll('#productTableBody tr').forEach((row, index) => {
+        const description = row.querySelector('.product-description').value;
+        const qty = parseFloat(row.querySelector('.qty').value) || 0;
+        const rate = parseFloat(row.querySelector('.rate').value) || 0;
 
-            if (description) {
-                products.push({
-                    sno: index + 1,
-                    description: description,
-                    qty: qty,
-                    rate: rate,
-                    amount: qty * rate
-                });
-            }
-        });
+        if (description) {
+            products.push({
+                sno: index + 1,
+                description: description,
+                qty: qty,
+                rate: rate,
+                amount: qty * rate
+            });
+        }
+    });
 
-        const subtotal = Utils.calculateSubtotal();
-        const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
-        const totalAmount = subtotal + previousBalance;
-        const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
-        const paymentMethod = document.getElementById('paymentMethod').value;
-        const balanceDue = totalAmount - amountPaid;
+    const subtotal = Utils.calculateSubtotal();
+    const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
+    const totalAmount = subtotal + previousBalance;
+    const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const balanceDue = totalAmount - amountPaid;
 
-        return {
-            invoiceNo: document.getElementById('invoiceNo').value,
-            invoiceDate: document.getElementById('invoiceDate').value,
-            customerName: document.getElementById('customerName').value,
-            customerAddress: document.getElementById('customerAddress').value,
-            customerPhone: document.getElementById('customerPhone').value,
-            products: products,
-            subtotal: subtotal,
-            // Don't store previousBalance - we'll always calculate it dynamically
-            grandTotal: totalAmount,
-            amountPaid: amountPaid,
-            paymentMethod: paymentMethod,
-            balanceDue: balanceDue,
-            createdAt: new Date().toISOString()
-        };
-    }
+    return {
+        invoiceNo: document.getElementById('invoiceNo').value,
+        invoiceDate: document.getElementById('invoiceDate').value,
+        customerName: document.getElementById('customerName').value,
+        customerAddress: document.getElementById('customerAddress').value,
+        customerPhone: document.getElementById('customerPhone').value,
+        products: products,
+        subtotal: subtotal,
+        previousBalance: previousBalance, // ADD THIS LINE - Store previous balance
+        grandTotal: totalAmount,
+        amountPaid: amountPaid,
+        paymentMethod: paymentMethod,
+        balanceDue: balanceDue,
+        createdAt: new Date().toISOString()
+    };
+}
 
     // Calculate and set previous balance for new invoices
     static async calculateAndSetPreviousBalance() {
@@ -196,9 +224,14 @@ class Utils {
             // If we're creating a new invoice, find the balance from the most recent existing invoice
             if (!currentInvoiceNo || !customerInvoices.find(inv => inv.invoiceNo === currentInvoiceNo)) {
                 const mostRecentInvoice = customerInvoices[customerInvoices.length - 1];
+
+                // Calculate adjusted balance considering returns
+                const totalReturns = await Utils.calculateTotalReturns(mostRecentInvoice.invoiceNo);
+                const adjustedBalance = mostRecentInvoice.balanceDue - totalReturns;
+
                 return {
                     totalPreviousBills: customerInvoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0),
-                    balanceCarriedForward: mostRecentInvoice.balanceDue,
+                    balanceCarriedForward: adjustedBalance, // Use adjusted balance instead of original balance
                     invoiceCount: customerInvoices.length
                 };
             }
@@ -219,8 +252,14 @@ class Utils {
             let runningBalance = 0;
             for (let i = 0; i < currentInvoiceIndex; i++) {
                 const invoice = customerInvoices[i];
+
+                // Calculate adjusted balance for each invoice considering returns
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const adjustedBalanceDue = invoice.balanceDue - totalReturns;
+
                 runningBalance += invoice.grandTotal; // Add invoice total
                 runningBalance -= invoice.amountPaid; // Subtract payments
+                runningBalance -= totalReturns; // Subtract returns
             }
 
             return {
@@ -235,102 +274,111 @@ class Utils {
         }
     }
 
+    // Update all subsequent invoices when a payment or return is made
+    static async updateSubsequentInvoices(customerName, updatedInvoiceNo) {
+        try {
+            const invoices = await db.getAllInvoices();
 
-    // Update all subsequent invoices when a payment is made
-static async updateSubsequentInvoices(customerName, updatedInvoiceNo) {
-    try {
-        const invoices = await db.getAllInvoices();
-        
-        // Get all invoices for this customer after the updated one
-        const customerInvoices = invoices
-            .filter(invoice => invoice.customerName === customerName)
-            .sort((a, b) => {
-                const numA = parseInt(a.invoiceNo) || 0;
-                const numB = parseInt(b.invoiceNo) || 0;
-                return numA - numB;
-            });
-        
-        const updatedInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === updatedInvoiceNo);
-        
-        if (updatedInvoiceIndex === -1 || updatedInvoiceIndex === customerInvoices.length - 1) {
-            return; // No subsequent invoices to update
+            // Get all invoices for this customer after the updated one
+            const customerInvoices = invoices
+                .filter(invoice => invoice.customerName === customerName)
+                .sort((a, b) => {
+                    const numA = parseInt(a.invoiceNo) || 0;
+                    const numB = parseInt(b.invoiceNo) || 0;
+                    return numA - numB;
+                });
+
+            const updatedInvoiceIndex = customerInvoices.findIndex(inv => inv.invoiceNo === updatedInvoiceNo);
+
+            if (updatedInvoiceIndex === -1 || updatedInvoiceIndex === customerInvoices.length - 1) {
+                return; // No subsequent invoices to update
+            }
+
+            // Update all invoices after the changed one
+            for (let i = updatedInvoiceIndex + 1; i < customerInvoices.length; i++) {
+                const invoice = customerInvoices[i];
+
+                // Recalculate the previous balance for this invoice (considering returns)
+                const previousBalanceInfo = await Utils.calculatePreviousBalanceAtTime(customerName, invoice.invoiceNo);
+                const previousBalance = previousBalanceInfo.balanceCarriedForward;
+
+                // Recalculate the totals
+                const subtotal = invoice.products.reduce((sum, product) => sum + product.amount, 0);
+                const totalAmount = subtotal + previousBalance;
+
+                // Calculate returns for this invoice
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const balanceDue = totalAmount - invoice.amountPaid - totalReturns;
+
+                // Update the invoice
+                invoice.subtotal = subtotal;
+                invoice.grandTotal = totalAmount;
+                invoice.balanceDue = balanceDue;
+                invoice.totalReturns = totalReturns;
+                invoice.adjustedBalanceDue = balanceDue;
+
+                // Save the updated invoice
+                await db.saveInvoice(invoice);
+            }
+
+            console.log(`Updated ${customerInvoices.length - updatedInvoiceIndex - 1} subsequent invoices`);
+
+        } catch (error) {
+            console.error('Error updating subsequent invoices:', error);
         }
-        
-        // Update all invoices after the changed one
-        for (let i = updatedInvoiceIndex + 1; i < customerInvoices.length; i++) {
-            const invoice = customerInvoices[i];
-            
-            // Recalculate the previous balance for this invoice
-            const previousBalanceInfo = await Utils.calculatePreviousBalanceAtTime(customerName, invoice.invoiceNo);
-            const previousBalance = previousBalanceInfo.balanceCarriedForward;
-            
-            // Recalculate the totals
-            const subtotal = invoice.products.reduce((sum, product) => sum + product.amount, 0);
-            const totalAmount = subtotal + previousBalance;
-            const balanceDue = totalAmount - invoice.amountPaid;
-            
-            // Update the invoice
-            invoice.subtotal = subtotal;
-            invoice.grandTotal = totalAmount;
-            invoice.balanceDue = balanceDue;
-            
-            // Save the updated invoice
-            await db.saveInvoice(invoice);
-        }
-        
-        console.log(`Updated ${customerInvoices.length - updatedInvoiceIndex - 1} subsequent invoices`);
-        
-    } catch (error) {
-        console.error('Error updating subsequent invoices:', error);
     }
-}
 
-    // Set form data from object
-    static async setFormData(data) {
-        document.getElementById('invoiceNo').value = data.invoiceNo || '';
-        document.getElementById('invoiceDate').value = data.invoiceDate || '';
-        document.getElementById('customerName').value = data.customerName || '';
-        document.getElementById('customerAddress').value = data.customerAddress || '';
-        document.getElementById('customerPhone').value = data.customerPhone || '';
-        document.getElementById('amountPaid').value = data.amountPaid || 0;
-        document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
+// Set form data from object
+static async setFormData(data) {
+    document.getElementById('invoiceNo').value = data.invoiceNo || '';
+    document.getElementById('invoiceDate').value = data.invoiceDate || '';
+    document.getElementById('customerName').value = data.customerName || '';
+    document.getElementById('customerAddress').value = data.customerAddress || '';
+    document.getElementById('customerPhone').value = data.customerPhone || '';
+    document.getElementById('amountPaid').value = data.amountPaid || 0;
+    document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
 
-        // Clear existing product rows
-        const tableBody = document.getElementById('productTableBody');
-        tableBody.innerHTML = '';
+    // Clear existing product rows
+    const tableBody = document.getElementById('productTableBody');
+    tableBody.innerHTML = '';
 
-        // Add product rows
-        if (data.products && data.products.length > 0) {
-            data.products.forEach((product, index) => {
-                const newRow = tableBody.insertRow();
-                newRow.innerHTML = `
-                <td>${index + 1}</td>
-                <td><input type="text" class="product-description" value="${product.description}"></td>
-                <td><input type="number" class="qty" value="${product.qty}"></td>
-                <td><input type="number" class="rate" value="${product.rate}"></td>
-                <td class="amount">${Utils.formatCurrency(product.amount)}</td>
-                <td><button class="remove-row">X</button></td>
-            `;
-            });
-        } else {
-            // Add one empty row if no products
+    // Add product rows
+    if (data.products && data.products.length > 0) {
+        data.products.forEach((product, index) => {
             const newRow = tableBody.insertRow();
             newRow.innerHTML = `
-            <td>1</td>
-            <td><input type="text" class="product-description"></td>
-            <td><input type="number" class="qty" value="0"></td>
-            <td><input type="number" class="rate" value="0.00"></td>
-            <td class="amount">0.00</td>
+            <td>${index + 1}</td>
+            <td><input type="text" class="product-description" value="${product.description}"></td>
+            <td><input type="number" class="qty" value="${product.qty}"></td>
+            <td><input type="number" class="rate" value="${product.rate}"></td>
+            <td class="amount">${Utils.formatCurrency(product.amount)}</td>
             <td><button class="remove-row">X</button></td>
         `;
-        }
-
-        // Always calculate previous balance dynamically
-        await Utils.calculateAndSetPreviousBalance();
-
-        // Update current calculations
-        Utils.updateCalculations();
+        });
+    } else {
+        // Add one empty row if no products
+        const newRow = tableBody.insertRow();
+        newRow.innerHTML = `
+        <td>1</td>
+        <td><input type="text" class="product-description"></td>
+        <td><input type="number" class="qty" value="0"></td>
+        <td><input type="number" class="rate" value="0.00"></td>
+        <td class="amount">0.00</td>
+        <td><button class="remove-row">X</button></td>
+    `;
     }
+
+    // Set previous balance from data if available, otherwise calculate dynamically
+    if (data.previousBalance !== undefined) {
+        document.getElementById('previousBalance').textContent = Utils.formatCurrency(data.previousBalance);
+    } else {
+        // Always calculate previous balance dynamically if not available in data
+        await Utils.calculateAndSetPreviousBalance();
+    }
+
+    // Update current calculations
+    Utils.updateCalculations();
+}
 
 
     // Update all calculations (synchronous)

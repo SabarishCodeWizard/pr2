@@ -2,7 +2,7 @@
 class Database {
     constructor() {
         this.dbName = 'BillingDB';
-        this.version = 1;
+        this.version = 2; // Incremented version to 2
         this.db = null;
     }
 
@@ -24,20 +24,40 @@ class Database {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
+                const oldVersion = event.oldVersion;
+                const newVersion = event.newVersion;
 
-                // Create object store for invoices
+                console.log(`Upgrading database from version ${oldVersion} to ${newVersion}`);
+
+                // Create object store for invoices if it doesn't exist
                 if (!db.objectStoreNames.contains('invoices')) {
                     const invoiceStore = db.createObjectStore('invoices', { keyPath: 'invoiceNo' });
                     invoiceStore.createIndex('customerName', 'customerName', { unique: false });
                     invoiceStore.createIndex('invoiceDate', 'invoiceDate', { unique: false });
+                    console.log('Created invoices object store');
                 }
 
-                // Create object store for payments
+                // Create object store for payments if it doesn't exist
                 if (!db.objectStoreNames.contains('payments')) {
                     const paymentStore = db.createObjectStore('payments', { keyPath: 'id', autoIncrement: true });
                     paymentStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
                     paymentStore.createIndex('paymentDate', 'paymentDate', { unique: false });
+                    console.log('Created payments object store');
                 }
+
+                // Create object store for returns - this is new in version 2
+                if (!db.objectStoreNames.contains('returns')) {
+                    const returnStore = db.createObjectStore('returns', { keyPath: 'id', autoIncrement: true });
+                    returnStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
+                    returnStore.createIndex('returnDate', 'returnDate', { unique: false });
+                    returnStore.createIndex('customerName', 'customerName', { unique: false });
+                    console.log('Created returns object store');
+                }
+            };
+
+            request.onblocked = () => {
+                console.error('Database upgrade blocked');
+                alert('Please close all other tabs with this app to update the database.');
             };
         });
     }
@@ -148,6 +168,74 @@ class Database {
                 console.error('Error deleting invoice');
                 reject(request.error);
             };
+        });
+    }
+
+    // Save return record
+    async saveReturn(returnData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['returns'], 'readwrite');
+            const store = transaction.objectStore('returns');
+            const request = store.put(returnData);
+
+            request.onsuccess = () => {
+                console.log('Return saved successfully');
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                console.error('Error saving return');
+                reject(request.error);
+            };
+        });
+    }
+
+    // Get all returns for an invoice
+    async getReturnsByInvoice(invoiceNo) {
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db.transaction(['returns'], 'readonly');
+                const store = transaction.objectStore('returns');
+                const index = store.index('invoiceNo');
+                const request = index.getAll(invoiceNo);
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+
+                request.onerror = () => {
+                    console.error('Error getting returns:', request.error);
+                    reject(request.error);
+                };
+            } catch (error) {
+                console.error('Transaction error:', error);
+                // If returns store doesn't exist, return empty array
+                resolve([]);
+            }
+        });
+    }
+
+    // Get all returns
+    async getAllReturns() {
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db.transaction(['returns'], 'readonly');
+                const store = transaction.objectStore('returns');
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+
+                request.onerror = () => {
+                    console.error('Error getting all returns:', request.error);
+                    reject(request.error);
+                };
+            } catch (error) {
+                console.error('Transaction error:', error);
+                // If returns store doesn't exist, return empty array
+                resolve([]);
+            }
         });
     }
 }

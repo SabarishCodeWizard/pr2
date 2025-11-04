@@ -1,0 +1,181 @@
+/* -------------------------------------------
+   PR Fabrics - Login Page (Professional Style)
+   Author: Sabarish R
+---------------------------------------------*/
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 20px;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 40px 35px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 1s ease;
+}
+
+/* Logo Section */
+.logo-section {
+    margin-bottom: 30px;
+}
+
+.logo-img {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    border: 2px solid #ffffff30;
+}
+
+h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #d1d5db;
+    letter-spacing: 0.3px;
+}
+
+/* Input Fields */
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 45px 12px 40px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: #fff;
+    outline: none;
+    transition: 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.input-group input::placeholder {
+    color: #9ca3af;
+}
+
+.input-group input:focus {
+    border-color: #38bdf8;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.input-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+/* Error Message */
+.error-message {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 15px;
+    font-size: 0.85rem;
+    gap: 6px;
+}
+
+/* Button */
+.login-btn {
+    position: relative;
+    width: 100%;
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 500;
+    padding: 12px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(56, 189, 248, 0.3);
+}
+
+.btn-loader {
+    display: none;
+}
+
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #fff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Footer */
+.footer {
+    margin-top: 30px;
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+/* Animations */
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 30px 25px;
+    }
+    h1 {
+        font-size: 1.4rem;
+    }
+}

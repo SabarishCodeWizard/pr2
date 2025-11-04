@@ -1,5 +1,47 @@
+// Authentication check for all pages
+function checkAuthentication() {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    const loginTime = localStorage.getItem('loginTime');
+    
+    // Check if user is authenticated and session is valid (24 hours)
+    if (!isAuthenticated || isAuthenticated !== 'true') {
+        redirectToLogin();
+        return false;
+    }
+    
+    // Optional: Check if login session is still valid (24 hours)
+    if (loginTime) {
+        const loginDate = new Date(loginTime);
+        const currentDate = new Date();
+        const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24) {
+            // Session expired
+            localStorage.clear();
+            redirectToLogin();
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function redirectToLogin() {
+    window.location.href = 'login.html';
+}
+
+function logout() {
+    localStorage.clear();
+    redirectToLogin();
+}
+
 // Main application logic
 document.addEventListener('DOMContentLoaded', async function () {
+
+    if (!checkAuthentication()) {
+        return;
+    }
+
     // Initialize database
     await db.init();
 
@@ -126,13 +168,13 @@ function resetForm() {
     }
 }
 
-// Logout function
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        // In a real application, you would clear session/tokens here
-        window.location.href = 'login.html'; // Redirect to login page
-    }
-}
+// // Logout function
+// function logout() {
+//     if (confirm('Are you sure you want to logout?')) {
+//         // In a real application, you would clear session/tokens here
+//         window.location.href = 'login.html'; // Redirect to login page
+//     }
+// }
 
 // Load invoice for editing
 async function loadInvoiceForEditing(invoiceNo) {
@@ -162,5 +204,5 @@ document.addEventListener('click', function (e) {
 // Logout functionality
 document.getElementById('logoutBtn').addEventListener('click', function () {
     sessionStorage.removeItem('isLoggedIn');
-    window.location.href = 'https://prfabrics.vercel.app/login.html';
+    window.location.href = 'login.html';
 });

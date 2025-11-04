@@ -1,0 +1,15 @@
+{
+  "name": "rsk2",
+  "version": "1.0.0",
+  "description": "PR Fabrics Desktop Web App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": ["electron", "desktop", "html", "pr fabrics"],
+  "author": "Sabarish R",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^39.0.0"
+  }
+}
