@@ -2344,18 +2344,9 @@ async function deleteInvoice(invoiceNo) {
     }
 }
 
-<<<<<<< HEAD
 // // Logout function
 // function logout() {
 //     if (confirm('Are you sure you want to logout?')) {
 //         window.location.href = 'login.html';
 //     }
 // }
-=======
-// Logout function
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        window.location.href = 'login.html';
-    }
-}
->>>>>>> 23ac3ec05f1af8ce9d49a993825a4e225bcce9fb
