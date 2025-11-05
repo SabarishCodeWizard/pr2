@@ -1,9 +1,19 @@
 /* -------------------------------------------
    PR Fabrics - Login Page (Professional Style)
-   Author: Sabarish R
+   Theme: Dark Aesthetic (Neon Purple)
 ---------------------------------------------*/
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --color-bg: #030007; /* Almost black for body background */
+    --color-card-bg: #100722; /* Dark indigo for card */
+    --color-accent-main: #6b21a8; /* Deep purple */
+    --color-accent-vibrant: #a855f7; /* Vibrant purple (glow, button, underline) */
+    --color-text-light: #e5e7eb; /* Light text for contrast */
+    --color-text-secondary: #9ca3af; /* Light secondary text */
+    --shadow-neon: 0 0 20px rgba(168, 85, 255, 0.4);
+}
 
 * {
     margin: 0;
@@ -14,11 +24,13 @@
 
 body {
     min-height: 100vh;
-    background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+    background: var(--color-bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: var(--color-text-light);
+    /* Subtle background glow effect */
+    box-shadow: inset 0 0 100px rgba(168, 85, 255, 0.1);
 }
 
 .login-container {
@@ -30,77 +42,98 @@ body {
 }
 
 .login-card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
-    padding: 40px 35px;
     width: 100%;
-    max-width: 380px;
-    text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    animation: fadeIn 1s ease;
+    max-width: 420px;
+    background: var(--color-card-bg);
+    border-radius: 18px;
+    padding: 40px 35px;
+    /* Neon border/glow */
+    border: 1px solid var(--color-accent-vibrant);
+    box-shadow: var(--shadow-neon);
+    animation: fadeIn 0.8s ease;
 }
 
 /* Logo Section */
 .logo-section {
-    margin-bottom: 30px;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.logo {
+    margin-bottom: 20px;
 }
 
 .logo-img {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    margin-bottom: 10px;
-    border: 2px solid #ffffff30;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 20%;
+    /* background: var(--color-accent-main); */
+    padding: 15px;
+    box-shadow: 0 0 25px rgba(168, 85, 255, 0.5);
 }
 
-h1 {
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: #fff;
-    letter-spacing: 0.5px;
+.logo-section h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--color-text-light);
+    margin-bottom: 8px;
 }
 
 .subtitle {
-    font-size: 0.9rem;
-    color: #d1d5db;
-    letter-spacing: 0.3px;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    font-weight: 400;
+}
+
+/* Login Form */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 /* Input Fields */
 .input-group {
     position: relative;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .input-group input {
     width: 100%;
-    padding: 12px 45px 12px 40px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    color: #fff;
+    padding: 14px 40px 14px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(156, 163, 175, 0.3);
+    border-radius: 10px;
+    color: var(--color-text-light);
     outline: none;
-    transition: 0.3s ease;
-    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    backdrop-filter: blur(10px);
 }
 
 .input-group input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-secondary);
+    font-weight: 300;
 }
 
 .input-group input:focus {
-    border-color: #38bdf8;
-    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--color-accent-vibrant);
+    background: rgba(168, 85, 255, 0.05);
+    box-shadow: 0 0 15px rgba(168, 85, 255, 0.2);
 }
 
 .input-icon {
     position: absolute;
     top: 50%;
-    left: 12px;
+    right: 15px;
     transform: translateY(-50%);
-    color: #9ca3af;
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
+}
+
+.input-group input:focus ~ .input-icon {
+    color: var(--color-accent-vibrant);
 }
 
 /* Error Message */
@@ -108,56 +141,92 @@ h1 {
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(239, 68, 68, 0.15);
+    background: rgba(239, 68, 68, 0.1);
     color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    border-radius: 10px;
-    padding: 8px;
+    border: 1px solid #f8717140;
+    border-radius: 8px;
+    padding: 12px;
     margin-bottom: 15px;
     font-size: 0.85rem;
-    gap: 6px;
+    font-weight: 500;
+    gap: 8px;
+}
+
+.error-message.show {
+    display: flex;
 }
 
 /* Button */
 .login-btn {
     position: relative;
     width: 100%;
-    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    background: var(--color-accent-vibrant);
     border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-weight: 500;
-    padding: 12px;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 16px;
     cursor: pointer;
-    transition: 0.3s ease;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 10px;
+    /* Button glow effect */
+    box-shadow: 0 5px 20px rgba(168, 85, 255, 0.5);
 }
 
 .login-btn:hover {
+    background: #c084fc; /* Lighter shade on hover */
     transform: translateY(-2px);
-    box-shadow: 0 5px 18px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 8px 25px rgba(168, 85, 255, 0.7);
 }
 
+.login-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(168, 85, 255, 0.4);
+}
+
+/* Button Loader */
 .btn-loader {
     display: none;
+    margin-left: 10px;
+}
+
+.btn-loader.show {
+    display: block;
 }
 
 .spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #fff;
-    border-top: 2px solid transparent;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.6s linear infinite;
 }
 
 /* Footer */
 .footer {
-    margin-top: 30px;
-    font-size: 0.8rem;
-    color: #9ca3af;
+    margin-top: 35px;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.footer a {
+    color: var(--color-accent-vibrant);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.footer a:hover {
+    color: #c084fc;
+    text-decoration: underline;
 }
 
 /* Animations */
@@ -166,16 +235,36 @@ h1 {
 }
 
 @keyframes fadeIn {
-    0% { opacity: 0; transform: scale(0.95); }
+    0% { opacity: 0; transform: scale(0.98); }
     100% { opacity: 1; transform: scale(1); }
 }
 
 /* Responsive */
 @media (max-width: 480px) {
+    .login-container {
+        padding: 15px;
+    }
+    
     .login-card {
         padding: 30px 25px;
+        max-width: 100%;
     }
-    h1 {
-        font-size: 1.4rem;
+    
+    .logo-img {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .logo-section h1 {
+        font-size: 1.9rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .input-group input {
+        padding: 12px 40px 12px 12px;
+        font-size: 0.95rem;
     }
 }
