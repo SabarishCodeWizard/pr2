@@ -473,6 +473,122 @@ class Utils {
         });
     }
 
+
+
+    // Get the highest invoice number from all invoices
+    static async getHighestInvoiceNumber() {
+        try {
+            const invoices = await db.getAllInvoices();
+
+            if (invoices.length === 0) {
+                return {
+                    highestNumber: 0,
+                    highestInvoiceNo: null
+                };
+            }
+
+            // Extract numeric parts from invoice numbers and find the highest
+            let highestNumber = 0;
+            let highestInvoiceNo = null;
+
+            invoices.forEach(invoice => {
+                if (invoice.invoiceNo) {
+                    // Try to extract numeric part from invoice number
+                    const numericMatch = invoice.invoiceNo.match(/\d+/);
+                    if (numericMatch) {
+                        const currentNumber = parseInt(numericMatch[0]);
+                        if (currentNumber > highestNumber) {
+                            highestNumber = currentNumber;
+                            highestInvoiceNo = invoice.invoiceNo;
+                        }
+                    }
+                }
+            });
+
+            return {
+                highestNumber,
+                highestInvoiceNo
+            };
+        } catch (error) {
+            console.error('Error getting highest invoice number:', error);
+            return { highestNumber: 0, highestInvoiceNo: null };
+        }
+    }
+
+    // Generate next invoice number suggestion
+    static async generateNextInvoiceNumber() {
+        try {
+            const { highestNumber, highestInvoiceNo } = await Utils.getHighestInvoiceNumber();
+
+            if (highestNumber === 0) {
+                // No invoices yet, start with 1 or a default
+                return {
+                    lastInvoiceNo: 'No invoices yet',
+                    nextInvoiceNo: '1',
+                    nextNumber: 1
+                };
+            }
+
+            // Generate next number
+            const nextNumber = highestNumber + 1;
+
+            // Try to maintain the same format as the last invoice
+            let nextInvoiceNo;
+            if (highestInvoiceNo && highestInvoiceNo.match(/[A-Za-z]/)) {
+                // If last invoice has letters, try to preserve the format
+                const prefixMatch = highestInvoiceNo.match(/^[A-Za-z]+/);
+                const suffixMatch = highestInvoiceNo.match(/[A-Za-z]+$/);
+
+                if (prefixMatch && suffixMatch) {
+                    nextInvoiceNo = `${prefixMatch[0]}${nextNumber}${suffixMatch[0]}`;
+                } else if (prefixMatch) {
+                    nextInvoiceNo = `${prefixMatch[0]}${nextNumber}`;
+                } else if (suffixMatch) {
+                    nextInvoiceNo = `${nextNumber}${suffixMatch[0]}`;
+                } else {
+                    nextInvoiceNo = nextNumber.toString();
+                }
+            } else {
+                // Pure numeric or no special format detected
+                nextInvoiceNo = nextNumber.toString();
+            }
+
+            return {
+                lastInvoiceNo: highestInvoiceNo,
+                nextInvoiceNo: nextInvoiceNo,
+                nextNumber: nextNumber
+            };
+        } catch (error) {
+            console.error('Error generating next invoice number:', error);
+            return {
+                lastInvoiceNo: 'Error',
+                nextInvoiceNo: '1',
+                nextNumber: 1
+            };
+        }
+    }
+
+    // Update invoice number suggestions in the UI
+    static async updateInvoiceNumberSuggestions() {
+        try {
+            const suggestions = await Utils.generateNextInvoiceNumber();
+
+            // Update the UI
+            document.getElementById('lastInvoiceNo').textContent = suggestions.lastInvoiceNo;
+            document.getElementById('nextInvoiceNo').textContent = suggestions.nextInvoiceNo;
+
+            // Store the suggested number for later use
+            document.getElementById('nextInvoiceNo').dataset.suggestedNumber = suggestions.nextInvoiceNo;
+
+            return suggestions;
+        } catch (error) {
+            console.error('Error updating invoice number suggestions:', error);
+            document.getElementById('lastInvoiceNo').textContent = 'Error';
+            document.getElementById('nextInvoiceNo').textContent = '1';
+        }
+    }
+
+
     // Update customer balance display
     static updateCustomerBalanceDisplay(balanceInfo) {
         const balanceInfoDiv = document.getElementById('customerBalanceInfo');

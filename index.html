@@ -38,7 +38,21 @@
                     <h2>PR FABRICS</h2>
                     <p>42/65, THIRUNEELAKANDA PURAM, 1ST STREET,</p>
                     <p>TIRUPUR 641-602. CELL NO: 9952520181</p>
-                    <p>GSTIN: 33CLJPG4331G1ZG</p>
+                    <p><b>GSTIN: 33CLJPG4331G1ZG</b></p>
+                    <!-- Add this section for invoice number suggestions -->
+                    <div class="invoice-number-suggestions">
+                        <div class="suggestion-item">
+                            <span class="suggestion-label">Last Invoice:</span>
+                            <span class="suggestion-value" id="lastInvoiceNo">-</span>
+                        </div>
+                        <div class="suggestion-item">
+                            <span class="suggestion-label">Suggested Next:</span>
+                            <span class="suggestion-value" id="nextInvoiceNo">-</span>
+                        </div>
+                        <button id="applySuggestion" class="btn-apply-suggestion">
+                            <i class="fas fa-magic"></i> Apply Suggestion
+                        </button>
+                    </div>
                 </div>
                 <img src="image.png" alt="pr-image">
                 <div class="invoice-title">

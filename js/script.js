@@ -45,8 +45,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialize database
     await db.init();
 
+    // Load invoice number suggestions
+    await Utils.updateInvoiceNumberSuggestions();
+
+
     // Set current date as default for invoice date
     document.getElementById('invoiceDate').valueAsDate = new Date();
+
+
+    // Add event listener for apply suggestion button
+    document.getElementById('applySuggestion').addEventListener('click', applySuggestedInvoiceNumber);
 
     // Add event listeners
     document.getElementById('addRow').addEventListener('click', addProductRow);
@@ -87,51 +95,85 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
-    // Also save customer when saving the bill
-    // Modify the existing saveBill function to include customer saving
-    async function saveBill() {
-        if (!Utils.validateForm()) {
-            return;
-        }
 
-        try {
-            const invoiceData = await Utils.getFormData();
-            const isEditing = !!invoiceData.invoiceNo;
-
-            await db.saveInvoice(invoiceData);
-
-            // Save/update customer details
-            const phone = document.getElementById('customerPhone').value.trim();
-            const name = document.getElementById('customerName').value.trim();
-            const address = document.getElementById('customerAddress').value.trim();
-
-            if (phone && phone.length >= 10) {
-                await Utils.saveCustomerDetails(name, address, phone);
-            }
-
-            alert('Bill saved successfully!');
-
-            // Rest of your existing saveBill code...
-            if (invoiceData.amountPaid > 0) {
-                const paymentData = {
-                    invoiceNo: invoiceData.invoiceNo,
-                    paymentDate: new Date().toISOString().split('T')[0],
-                    amount: invoiceData.amountPaid,
-                    paymentMethod: invoiceData.paymentMethod,
-                    paymentType: 'initial'
-                };
-                await db.savePayment(paymentData);
-            }
-
-            if (isEditing) {
-                await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
-            }
-
-        } catch (error) {
-            console.error('Error saving bill:', error);
-            alert('Error saving bill. Please try again.');
-        }
+// Also update the saveBill function to refresh suggestions after saving
+async function saveBill() {
+    if (!Utils.validateForm()) {
+        return;
     }
+
+    try {
+        const invoiceData = await Utils.getFormData();
+        const isEditing = !!invoiceData.invoiceNo;
+
+        await db.saveInvoice(invoiceData);
+        
+        // Save/update customer details
+        const phone = document.getElementById('customerPhone').value.trim();
+        const name = document.getElementById('customerName').value.trim();
+        const address = document.getElementById('customerAddress').value.trim();
+        
+        if (phone && phone.length >= 10) {
+            await Utils.saveCustomerDetails(name, address, phone);
+        }
+        
+        alert('Bill saved successfully!');
+
+        // Refresh invoice number suggestions after saving
+        await Utils.updateInvoiceNumberSuggestions();
+
+        // Rest of your existing saveBill code...
+        if (invoiceData.amountPaid > 0) {
+            const paymentData = {
+                invoiceNo: invoiceData.invoiceNo,
+                paymentDate: new Date().toISOString().split('T')[0],
+                amount: invoiceData.amountPaid,
+                paymentMethod: invoiceData.paymentMethod,
+                paymentType: 'initial'
+            };
+            await db.savePayment(paymentData);
+        }
+
+        if (isEditing) {
+            await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
+        }
+
+    } catch (error) {
+        console.error('Error saving bill:', error);
+        alert('Error saving bill. Please try again.');
+    }
+}
+
+// Also update resetForm to refresh suggestions
+function resetForm() {
+    if (confirm('Are you sure you want to reset the form? All unsaved data will be lost.')) {
+        Utils.resetForm();
+        // Refresh suggestions after reset
+        setTimeout(() => {
+            Utils.updateInvoiceNumberSuggestions();
+        }, 100);
+    }
+}
+
+
+    // Apply suggested invoice number
+function applySuggestedInvoiceNumber() {
+    const suggestedNumber = document.getElementById('nextInvoiceNo').dataset.suggestedNumber;
+    if (suggestedNumber && suggestedNumber !== '-') {
+        document.getElementById('invoiceNo').value = suggestedNumber;
+        
+        // Show confirmation feedback
+        const applyBtn = document.getElementById('applySuggestion');
+        const originalText = applyBtn.innerHTML;
+        applyBtn.innerHTML = '<i class="fas fa-check"></i> Applied!';
+        applyBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        
+        setTimeout(() => {
+            applyBtn.innerHTML = originalText;
+            applyBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        }, 2000);
+    }
+}
 
     // Add event listener for customer name changes
     document.getElementById('customerName').addEventListener('input', function () {
@@ -231,12 +273,7 @@ async function saveBill() {
     }
 }
 
-// Reset form
-function resetForm() {
-    if (confirm('Are you sure you want to reset the form? All unsaved data will be lost.')) {
-        Utils.resetForm();
-    }
-}
+
 
 // // Logout function
 // function logout() {

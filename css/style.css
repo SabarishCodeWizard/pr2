@@ -919,3 +919,46 @@ input:focus, select:focus, textarea:focus {
 .input-with-indicator {
     position: relative;
 }
+
+
+/* Invoice Number Suggestions - Simple Style */
+.invoice-number-suggestions {
+    margin-top: 8px;
+    padding: 8px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.suggestion-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.suggestion-label {
+    font-size: 12px;
+    color: #666;
+}
+
+.suggestion-value {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+}
+
+.btn-apply-suggestion {
+    width: 100%;
+    padding: 6px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.btn-apply-suggestion:hover {
+    background: #0056b3;
+}
