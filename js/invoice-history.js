@@ -220,7 +220,7 @@ async function generateCombinedStatement(customerName) {
 }
 
 
-// Generate combined PDF statement for all customer invoices
+// Generate combined PDF statement for all customer invoices - SIMPLE & PROFESSIONAL
 async function generateCombinedPDFStatement(customerName, invoices) {
     try {
         const { jsPDF } = window.jspdf;
@@ -232,98 +232,37 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         const margin = 20;
         const contentWidth = pageWidth - (margin * 2);
 
-        // Professional color scheme - Corporate & Trustworthy
-        const primaryColor = [30, 64, 124]; // Deep navy blue - trust & professionalism
-        const secondaryColor = [0, 94, 184]; // Corporate blue - reliability
-        const accentColor = [220, 80, 60]; // Coral red - attention to important figures
-        const darkGray = [60, 60, 60]; // Professional dark gray
-        const mediumGray = [120, 120, 120]; // Medium gray
-        const lightGray = [248, 248, 250]; // Very light gray for backgrounds
-        const successGreen = [0, 128, 0]; // Professional green for payments
-        const warningRed = [184, 29, 19]; // Professional red for returns
+        // Simple color scheme
+        const primaryColor = [0, 0, 0]; // Black
+        const accentColor = [0, 100, 0]; // Dark Green
+        const grayColor = [100, 100, 100]; // Gray
 
-        // Add diagonal watermark background
-        doc.setTextColor(240, 240, 240);
-        doc.setFontSize(80);
-        doc.setFont('helvetica', 'bold');
-        doc.setGState(new doc.GState({ opacity: 0.05 })); // Very subtle
-        
-        // Diagonal watermark text repeated across the page
-        const watermarkText = "PR FABRICS";
-        const angle = 45; // Diagonal angle
-        const spacing = 80;
-        
-        for (let x = -pageWidth; x < pageWidth * 2; x += spacing) {
-            for (let y = -pageHeight; y < pageHeight * 2; y += spacing) {
-                doc.saveGraphicsState();
-                doc.text(watermarkText, x, y, { angle: angle });
-                doc.restoreGraphicsState();
-            }
-        }
-        
-        // Reset graphics state for normal content
-        doc.setGState(new doc.GState({ opacity: 1 }));
-
-        // Add professional header with gradient effect
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 45, 'F');
-        
-        // Add subtle pattern to header
-        doc.setFillColor(255, 255, 255, 0.1);
-        for (let i = 0; i < pageWidth; i += 8) {
-            doc.rect(i, 0, 4, 45, 'F');
-        }
-        
-        // Company logo area with professional border
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(255, 255, 255, 0.3);
-        doc.setLineWidth(1);
-        doc.roundedRect(margin, 12, 28, 22, 3, 3, 'FD');
-        
-        // Company name in header with professional typography
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('PR FABRICS', margin + 32, 22);
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(220, 220, 220);
-        doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET', margin + 32, 27);
-        doc.text('TIRUPUR 641-602 | Cell: 9952520181', margin + 32, 31);
-        doc.text('Email: info@prfabrics.com', margin + 32, 35);
-        
-        // Combined Account Statement title with accent underline
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('COMBINED ACCOUNT STATEMENT', pageWidth / 2, 50, { align: 'center' });
-        
-        // Underline for title
-        doc.setDrawColor(...accentColor);
-        doc.setLineWidth(1.5);
-        doc.line(pageWidth / 2 - 60, 52, pageWidth / 2 + 60, 52);
-        
-        yPos = 65;
-
-        // Add statement info in professional card style
-        doc.setFillColor(...lightGray);
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(margin, yPos, contentWidth, 25, 4, 4, 'FD');
-        
-        doc.setFontSize(10);
+        // HEADER
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text('STATEMENT INFORMATION', margin + 10, yPos + 8);
+        doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
         
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
-        doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin + 10, yPos + 14);
-        doc.text(`Customer: ${customerName}`, margin + 10, yPos + 19);
-        doc.text(`Total Invoices: ${invoices.length}`, margin + contentWidth/2, yPos + 14);
+        doc.setTextColor(...grayColor);
+        doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos + 5, { align: 'center' });
+        doc.text('Cell: 9952520181 | GSTIN: 33CLJPG4331G1ZG', pageWidth / 2, yPos + 10, { align: 'center' });
         
-        yPos += 35;
+        yPos += 20;
+
+        // TITLE
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('COMBINED ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
+        
+        // Underline
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth / 2 - 50, yPos + 2, pageWidth / 2 + 50, yPos + 2);
+        
+        yPos += 15;
 
         // Sort invoices by invoice number (newest first)
         invoices.sort((a, b) => {
@@ -344,347 +283,282 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             })
         );
 
-        // Calculate totals correctly with returns
+        // Get customer details from the most recent invoice
+        const mostRecentInvoice = invoicesWithReturns[0];
+        const customerPhone = mostRecentInvoice.customerPhone || 'Not specified';
+        const customerAddress = mostRecentInvoice.customerAddress || 'Not specified';
+
+        // Calculate totals
         const totalCurrentBillAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.subtotal, 0);
-        const totalAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.grandTotal, 0);
         const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
         const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
-        
-        // Get adjusted balance from the most recent invoice
-        const mostRecentInvoice = invoicesWithReturns[0];
         const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
 
-        // Add account summary in prominent financial card
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(...accentColor);
-        doc.setLineWidth(1);
-        doc.roundedRect(margin, yPos, contentWidth, 60, 5, 5, 'FD');
-        
-        // Add subtle background pattern to summary card
-        doc.setFillColor(250, 250, 252);
-        for (let i = margin + 5; i < margin + contentWidth - 5; i += 15) {
-            doc.rect(i, yPos + 5, 10, 50, 'F');
-        }
-        
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text('ACCOUNT SUMMARY', margin + 10, yPos + 12);
-        yPos += 20;
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
-
-        // Total Current Bill Amount
-        doc.text('Total Current Bill Amount:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(totalCurrentBillAmount)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 9;
-
-        // Total Amount Paid
-        doc.text('Total Amount Paid:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 9;
-
-        // Total Returns (if any)
-        if (totalReturns > 0) {
-            doc.text('Total Returns:', margin + 12, yPos);
-            doc.setTextColor(...warningRed);
-            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-            doc.setTextColor(...darkGray);
-            yPos += 9;
-        }
-
-        // Add professional separator line before final balance
-        doc.setDrawColor(...mediumGray);
-        doc.setLineWidth(0.5);
-        doc.line(margin + 12, yPos, pageWidth - margin - 12, yPos);
-        yPos += 6;
-
-        // Outstanding Balance - professionally emphasized
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        if (totalReturns > 0) {
-            doc.setTextColor(...accentColor);
-            doc.text('ADJUSTED OUTSTANDING BALANCE:', margin + 12, yPos);
-            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        } else {
-            doc.setTextColor(...primaryColor);
-            doc.text('OUTSTANDING BALANCE:', margin + 12, yPos);
-            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        }
-        yPos += 25;
-
-        // Check if we need a new page
-        if (yPos > 200) {
-            doc.addPage();
-            yPos = 20;
-        }
-
-        // Add invoice list header with professional styling
-        doc.setFillColor(...secondaryColor);
-        doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
-        
+        // STATEMENT INFORMATION SECTION
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('INVOICE DETAILS', margin + 10, yPos + 6.5);
-        yPos += 14;
+        doc.setTextColor(...primaryColor);
+        doc.text('STATEMENT INFORMATION', margin, yPos);
+        yPos += 7;
 
-        // Create invoice summary table with returns
-        const invoiceTableHeaders = totalReturns > 0 
-            ? [['Invoice No', 'Date', 'Current Bill', 'Amount Paid', 'Returns', 'Balance Due', 'Status']]
-            : [['Invoice No', 'Date', 'Current Bill', 'Amount Paid', 'Balance Due', 'Status']];
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...grayColor);
+        
+        doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
+        yPos += 4;
+        
+        // Calculate statement period
+        const invoiceDates = invoicesWithReturns.map(inv => new Date(inv.invoiceDate));
+        const oldestDate = new Date(Math.min(...invoiceDates));
+        const newestDate = new Date(Math.max(...invoiceDates));
+        const statementPeriod = `${oldestDate.toLocaleDateString('en-IN')} to ${newestDate.toLocaleDateString('en-IN')}`;
+        doc.text(`Statement Period: ${statementPeriod}`, margin, yPos);
+        yPos += 4;
+        
+        doc.text(`Total Invoices: ${invoices.length}`, margin, yPos);
+        yPos += 4;
+        
+        // Invoice numbers
+        const invoiceNumbers = invoicesWithReturns.map(inv => inv.invoiceNo);
+        const invoiceNumbersText = invoiceNumbers.length <= 3 
+            ? invoiceNumbers.join(', ')
+            : `${invoiceNumbers.slice(0, 3).join(', ')}... (+${invoiceNumbers.length - 3} more)`;
+        doc.text(`Invoice Numbers: ${invoiceNumbersText}`, margin, yPos);
+        yPos += 10;
 
-        const invoiceTableData = invoicesWithReturns.map(invoice => {
-            const baseData = [
-                invoice.invoiceNo,
-                new Date(invoice.invoiceDate).toLocaleDateString('en-IN'),
-                Utils.formatCurrency(invoice.subtotal),
-                Utils.formatCurrency(invoice.amountPaid)
-            ];
+        // CUSTOMER INFORMATION SECTION
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('CUSTOMER INFORMATION', margin, yPos);
+        yPos += 7;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...grayColor);
+        
+        doc.text(`Name: ${customerName}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Phone: ${customerPhone}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Address: ${customerAddress}`, margin, yPos);
+        yPos += 10;
+
+        // Process each invoice separately
+        for (let i = 0; i < invoicesWithReturns.length; i++) {
+            const invoice = invoicesWithReturns[i];
             
-            if (totalReturns > 0) {
-                baseData.push(
-                    Utils.formatCurrency(invoice.totalReturns),
-                    Utils.formatCurrency(invoice.adjustedBalanceDue),
-                    invoice.adjustedBalanceDue === 0 ? 'Paid' : 'Pending'
-                );
-            } else {
-                baseData.push(
-                    Utils.formatCurrency(invoice.balanceDue),
-                    invoice.balanceDue === 0 ? 'Paid' : 'Pending'
-                );
-            }
-            
-            return baseData;
-        });
-
-        // Add total row
-        if (totalReturns > 0) {
-            invoiceTableData.push([
-                'TOTAL',
-                '',
-                Utils.formatCurrency(totalCurrentBillAmount),
-                Utils.formatCurrency(totalPaid),
-                Utils.formatCurrency(totalReturns),
-                Utils.formatCurrency(adjustedBalanceDue),
-                ''
-            ]);
-        } else {
-            invoiceTableData.push([
-                'TOTAL',
-                '',
-                Utils.formatCurrency(totalCurrentBillAmount),
-                Utils.formatCurrency(totalPaid),
-                Utils.formatCurrency(adjustedBalanceDue),
-                ''
-            ]);
-        }
-
-        const columnStyles = totalReturns > 0 
-            ? {
-                0: { cellWidth: 20, halign: 'center' },
-                1: { cellWidth: 20, halign: 'center' },
-                2: { cellWidth: 20, halign: 'right' },
-                3: { cellWidth: 20, halign: 'right' },
-                4: { cellWidth: 18, halign: 'right' },
-                5: { cellWidth: 20, halign: 'right' },
-                6: { cellWidth: 15, halign: 'center' }
-            }
-            : {
-                0: { cellWidth: 22, halign: 'center' },
-                1: { cellWidth: 22, halign: 'center' },
-                2: { cellWidth: 22, halign: 'right' },
-                3: { cellWidth: 22, halign: 'right' },
-                4: { cellWidth: 22, halign: 'right' },
-                5: { cellWidth: 18, halign: 'center' }
-            };
-
-        doc.autoTable({
-            startY: yPos,
-            head: invoiceTableHeaders,
-            body: invoiceTableData,
-            theme: 'grid',
-            headStyles: {
-                fillColor: primaryColor,
-                textColor: 255,
-                fontStyle: 'bold',
-                fontSize: 9,
-                cellPadding: 4
-            },
-            bodyStyles: {
-                fontSize: 8,
-                cellPadding: 3,
-                lineColor: [220, 220, 220],
-                lineWidth: 0.1
-            },
-            alternateRowStyles: {
-                fillColor: [250, 250, 252]
-            },
-            columnStyles: columnStyles,
-            margin: { left: margin, right: margin },
-            didDrawCell: function (data) {
-                // Highlight total row
-                if (data.row.index === invoiceTableData.length - 1) {
-                    doc.setFillColor(240, 240, 240);
-                    doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                    doc.setFont('helvetica', 'bold');
-                }
-
-                // Color returns column in professional red
-                if (totalReturns > 0 && data.column.index === 4 && data.cell.raw !== '') {
-                    doc.setTextColor(...warningRed);
-                }
-                // Color balance due in accent red if pending
-                else if ((totalReturns > 0 && data.column.index === 5 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0) ||
-                         (!totalReturns && data.column.index === 4 && data.cell.raw !== '' && parseFloat(data.cell.raw) > 0)) {
-                    doc.setTextColor(...accentColor);
-                }
-                // Color status column
-                else if ((totalReturns > 0 && data.column.index === 6) || (!totalReturns && data.column.index === 5)) {
-                    if (data.cell.raw === 'Paid') {
-                        doc.setTextColor(...successGreen);
-                    } else {
-                        doc.setTextColor(...accentColor);
-                    }
-                } else {
-                    doc.setTextColor(...darkGray);
-                }
-            }
-        });
-
-        yPos = doc.lastAutoTable.finalY + 15;
-
-        // Add return details section if there are returns
-        if (totalReturns > 0) {
-            // Check if we need a new page
-            if (yPos > 180) {
+            // Check if we need a new page before starting a new invoice
+            if (yPos > 240) {
                 doc.addPage();
                 yPos = 20;
             }
 
-            // Return header with professional warning color
-            doc.setFillColor(255, 245, 245);
-            doc.setDrawColor(...warningRed);
-            doc.setLineWidth(0.5);
-            doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'FD');
-            
+            // INVOICE HEADER
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...warningRed);
-            doc.text('RETURN DETAILS', margin + 10, yPos + 6.5);
-            yPos += 14;
+            doc.setTextColor(...primaryColor);
+            doc.text(`INVOICE #${invoice.invoiceNo} - ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}`, margin, yPos);
+            yPos += 6;
 
-            // Get all returns for this customer
-            const allReturns = await db.getAllReturns();
-            const customerReturns = allReturns.filter(returnItem => 
-                returnItem.customerName.toLowerCase().includes(customerName.toLowerCase())
-            );
+            // Simple underline for invoice header
+            doc.setDrawColor(...grayColor);
+            doc.setLineWidth(0.3);
+            doc.line(margin, yPos, margin + 60, yPos);
+            yPos += 8;
 
-            if (customerReturns.length > 0) {
-                const returnTableHeaders = [['Invoice No', 'Date', 'Product', 'Qty', 'Rate (₹)', 'Amount (₹)', 'Reason']];
-                const returnTableData = customerReturns.map(returnItem => [
-                    returnItem.invoiceNo,
-                    new Date(returnItem.returnDate).toLocaleDateString('en-IN'),
-                    returnItem.description,
-                    returnItem.qty.toString(),
-                    Utils.formatCurrency(returnItem.rate),
-                    Utils.formatCurrency(returnItem.returnAmount),
-                    returnItem.reason || 'N/A'
-                ]);
+            // Invoice details table
+            const invoiceTableHeaders = [['S.No.', 'Description', 'Qty', 'Rate', 'Amount']];
+            const invoiceTableData = invoice.products.map((product, index) => [
+                (index + 1).toString(),
+                product.description,
+                product.qty.toString(),
+                Utils.formatCurrency(product.rate),
+                Utils.formatCurrency(product.amount)
+            ]);
 
-                // Add total return row
-                returnTableData.push([
-                    'TOTAL',
-                    '',
-                    '',
-                    '',
-                    '',
-                    Utils.formatCurrency(totalReturns),
-                    ''
-                ]);
+            doc.autoTable({
+                startY: yPos,
+                head: invoiceTableHeaders,
+                body: invoiceTableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [240, 240, 240],
+                    textColor: primaryColor,
+                    fontStyle: 'bold',
+                    fontSize: 8,
+                    cellPadding: 3,
+                    lineWidth: 0.3
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    lineColor: [220, 220, 220],
+                    lineWidth: 0.1
+                },
+                columnStyles: {
+                    0: { cellWidth: 12, halign: 'center' },
+                    1: { cellWidth: 'auto', halign: 'left' },
+                    2: { cellWidth: 15, halign: 'center' },
+                    3: { cellWidth: 20, halign: 'right' },
+                    4: { cellWidth: 22, halign: 'right' }
+                },
+                margin: { left: margin, right: margin },
+                styles: {
+                    lineColor: [200, 200, 200],
+                    lineWidth: 0.2
+                }
+            });
 
-                doc.autoTable({
-                    startY: yPos,
-                    head: returnTableHeaders,
-                    body: returnTableData,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: warningRed,
-                        textColor: 255,
-                        fontStyle: 'bold',
-                        fontSize: 8,
-                        cellPadding: 3
-                    },
-                    bodyStyles: {
-                        fontSize: 7,
-                        cellPadding: 2,
-                        lineColor: [220, 200, 200],
-                        lineWidth: 0.1
-                    },
-                    alternateRowStyles: {
-                        fillColor: [255, 250, 250]
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 20, halign: 'center' },
-                        1: { cellWidth: 20, halign: 'center' },
-                        2: { cellWidth: 'auto', halign: 'left' },
-                        3: { cellWidth: 15, halign: 'center' },
-                        4: { cellWidth: 18, halign: 'right' },
-                        5: { cellWidth: 18, halign: 'right' },
-                        6: { cellWidth: 25, halign: 'left' }
-                    },
-                    margin: { left: margin, right: margin },
-                    didDrawCell: function (data) {
-                        // Highlight total row
-                        if (data.row.index === returnTableData.length - 1) {
-                            doc.setFillColor(255, 235, 235);
-                            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                            doc.setFont('helvetica', 'bold');
-                        }
-                        
-                        // Color return amounts in professional red
-                        if (data.column.index === 5 && data.cell.raw !== '') {
-                            doc.setTextColor(...warningRed);
-                        } else {
-                            doc.setTextColor(...darkGray);
-                        }
-                    }
-                });
+            yPos = doc.lastAutoTable.finalY + 8;
 
-                yPos = doc.lastAutoTable.finalY + 15;
+            // Check if we need a new page before invoice summary
+            if (yPos > 220) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            // INVOICE SUMMARY
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+
+            let summaryY = yPos;
+            
+            // Current Bill Amount
+            doc.text('Current Bill Amount:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(invoice.subtotal)}`, pageWidth - margin, summaryY, { align: 'right' });
+            summaryY += 4;
+
+            // Previous Balance
+            const previousBalance = invoice.grandTotal - invoice.subtotal;
+            if (previousBalance > 0) {
+                doc.text('Previous Balance:', margin, summaryY);
+                doc.text(`₹${Utils.formatCurrency(previousBalance)}`, pageWidth - margin, summaryY, { align: 'right' });
+                summaryY += 4;
+            }
+
+            // Total Amount
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Amount:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(invoice.grandTotal)}`, pageWidth - margin, summaryY, { align: 'right' });
+            summaryY += 4;
+
+            // Amount Paid
+            doc.setFont('helvetica', 'normal');
+            doc.text('Amount Paid:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(invoice.amountPaid)}`, pageWidth - margin, summaryY, { align: 'right' });
+            summaryY += 4;
+
+            // Returns (if any)
+            if (invoice.totalReturns > 0) {
+                doc.text('Returns:', margin, summaryY);
+                doc.text(`-₹${Utils.formatCurrency(invoice.totalReturns)}`, pageWidth - margin, summaryY, { align: 'right' });
+                summaryY += 4;
+            }
+
+            // Balance Due
+            doc.setFont('helvetica', 'bold');
+            if (invoice.totalReturns > 0) {
+                doc.text('Adjusted Balance Due:', margin, summaryY);
+                doc.text(`₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}`, pageWidth - margin, summaryY, { align: 'right' });
+            } else {
+                doc.text('Balance Due:', margin, summaryY);
+                doc.text(`₹${Utils.formatCurrency(invoice.balanceDue)}`, pageWidth - margin, summaryY, { align: 'right' });
+            }
+
+            yPos = summaryY + 12;
+
+            // Add spacing between invoices
+            if (i < invoicesWithReturns.length - 1) {
+                // Simple separator line between invoices
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineWidth(0.2);
+                doc.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 8;
             }
         }
 
-        // Add professional footer with company branding
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
-        
-        // Add subtle pattern to footer
-        doc.setFillColor(255, 255, 255, 0.1);
-        for (let i = 0; i < pageWidth; i += 6) {
-            doc.rect(i, pageHeight - 25, 3, 25, 'F');
+        // Check if we need a new page for account summary
+        if (yPos > 180) {
+            doc.addPage();
+            yPos = 20;
         }
-        
+
+        // FINAL ACCOUNT SUMMARY
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('ACCOUNT SUMMARY', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+
+        // Underline for summary title
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth / 2 - 30, yPos, pageWidth / 2 + 30, yPos);
+        yPos += 10;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...grayColor);
+
+        // Total Current Bill Amount
+        doc.text('Total Current Bill Amount:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalCurrentBillAmount)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
+
+        // Total Amount Paid
+        doc.text('Total Amount Paid:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(totalPaid)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
+
+        // Total Returns (if any)
+        if (totalReturns > 0) {
+            doc.text('Total Returns:', margin, yPos);
+            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin, yPos, { align: 'right' });
+            yPos += 6;
+        }
+
+        // Separator line before final balance
+        doc.setDrawColor(...grayColor);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 6;
+
+        // Outstanding Balance
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        if (totalReturns > 0) {
+            doc.setTextColor(...accentColor);
+            doc.text('ADJUSTED OUTSTANDING BALANCE:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        } else {
+            doc.setTextColor(...primaryColor);
+            doc.text('OUTSTANDING BALANCE:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
+        }
+
+        // FOOTER
+        yPos = pageHeight - 20;
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(220, 220, 220);
-        doc.text('This is a computer-generated combined statement. No signature is required.', pageWidth / 2, pageHeight - 18, { align: 'center' });
-        doc.text('For any queries, please contact: 9952520181 | info@prfabrics.com', pageWidth / 2, pageHeight - 13, { align: 'center' });
-        doc.text(`Generated on: ${new Date().toLocaleString('en-IN')} | PR FABRICS - Trusted Textile Partner`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        doc.setTextColor(...grayColor);
+        doc.text('This is a computer-generated statement. No signature is required.', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text('For any queries, please contact: 9952520181', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
 
-        // Generate organized filename
+        // Generate filename and save
         const today = new Date();
         const dateFolder = today.toISOString().split('T')[0];
-        const fileName = `Combined_Statement_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateFolder}.pdf`;
+        const fileName = `Statement_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateFolder}.pdf`;
         
-        // Save the PDF with organized filename
         doc.save(fileName);
 
-        // Show organization instructions
         setTimeout(() => {
-            alert(`Combined PDF saved as: ${fileName}\n\n💡 Organization Tip:\n1. Create a folder named: ${dateFolder}\n2. Move this file into that folder\n3. All statements from today will go in the same folder`);
+            alert(`Combined statement saved as: ${fileName}`);
         }, 500);
 
     } catch (error) {
@@ -692,8 +566,6 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         throw error;
     }
 }
-
-
 
 // Load and display recent invoices (last 5 by invoice number)
 async function loadRecentInvoices() {
@@ -1526,7 +1398,7 @@ async function generateStatement(invoiceNo) {
 
 
 
-// Generate PDF statement with organized file naming
+// Generate PDF statement with organized file naming - SIMPLE & PROFESSIONAL
 async function generatePDFStatement(invoiceData, payments) {
     try {
         // Calculate returns for this invoice
@@ -1544,133 +1416,75 @@ async function generatePDFStatement(invoiceData, payments) {
         const margin = 20;
         const contentWidth = pageWidth - (margin * 2);
 
-        // Professional color scheme - Corporate & Trustworthy
-        const primaryColor = [30, 64, 124]; // Deep navy blue - trust & professionalism
-        const secondaryColor = [0, 94, 184]; // Corporate blue - reliability
-        const accentColor = [220, 80, 60]; // Coral red - attention to important figures
-        const darkGray = [60, 60, 60]; // Professional dark gray
-        const mediumGray = [120, 120, 120]; // Medium gray
-        const lightGray = [248, 248, 250]; // Very light gray for backgrounds
-        const successGreen = [0, 128, 0]; // Professional green for payments
-        const warningRed = [184, 29, 19]; // Professional red for returns
+        // Simple color scheme
+        const primaryColor = [0, 0, 0]; // Black
+        const accentColor = [0, 100, 0]; // Dark Green
+        const grayColor = [100, 100, 100]; // Gray
 
-        // Add diagonal watermark background
-        doc.setTextColor(240, 240, 240);
-        doc.setFontSize(80);
+        // HEADER
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.setGState(new doc.GState({ opacity: 0.05 })); // Very subtle
-        
-        // Diagonal watermark text repeated across the page
-        const watermarkText = "PR FABRICS";
-        const angle = 45; // Diagonal angle
-        const spacing = 80;
-        
-        for (let x = -pageWidth; x < pageWidth * 2; x += spacing) {
-            for (let y = -pageHeight; y < pageHeight * 2; y += spacing) {
-                doc.saveGraphicsState();
-                doc.text(watermarkText, x, y, { angle: angle });
-                doc.restoreGraphicsState();
-            }
-        }
-        
-        // Reset graphics state for normal content
-        doc.setGState(new doc.GState({ opacity: 1 }));
-
-        // Add professional header with gradient effect
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 45, 'F');
-        
-        // Add subtle pattern to header
-        doc.setFillColor(255, 255, 255, 0.1);
-        for (let i = 0; i < pageWidth; i += 8) {
-            doc.rect(i, 0, 4, 45, 'F');
-        }
-        
-        // Company logo area with professional border
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(255, 255, 255, 0.3);
-        doc.setLineWidth(1);
-        doc.roundedRect(margin, 12, 28, 22, 3, 3, 'FD');
-        
-        // Company name in header with professional typography
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('PR FABRICS', margin + 32, 22);
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(220, 220, 220);
-        doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET', margin + 32, 27);
-        doc.text('TIRUPUR 641-602 | Cell: 9952520181', margin + 32, 31);
-        doc.text('Email: info@prfabrics.com', margin + 32, 35);
-        
-        // Account Statement title with accent underline
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('ACCOUNT STATEMENT', pageWidth / 2, 50, { align: 'center' });
-        
-        // Underline for title
-        doc.setDrawColor(...accentColor);
-        doc.setLineWidth(1.5);
-        doc.line(pageWidth / 2 - 45, 52, pageWidth / 2 + 45, 52);
-        
-        yPos = 65;
-
-        // Add statement info in professional card style
-        doc.setFillColor(...lightGray);
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(margin, yPos, contentWidth, 22, 4, 4, 'FD');
+        doc.setTextColor(...primaryColor);
+        doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
         
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text('STATEMENT INFORMATION', margin + 10, yPos + 8);
-        
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
-        doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin + 10, yPos + 14);
-        doc.text(`Statement Period: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')}`, margin + 10, yPos + 19);
+        doc.setTextColor(...grayColor);
+        doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos + 5, { align: 'center' });
+        doc.text('Cell: 9952520181 | GSTIN: 33CLJPG4331G1ZG', pageWidth / 2, yPos + 10, { align: 'center' });
         
-        yPos += 32;
+        yPos += 20;
 
-        // Add customer information in modern card
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(...secondaryColor);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(margin, yPos, contentWidth, 38, 4, 4, 'FD');
-        
-        doc.setFontSize(12);
+        // TITLE
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text('CUSTOMER INFORMATION', margin + 10, yPos + 10);
+        doc.text('ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
         
-        // Two column layout for customer info
+        // Underline
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth / 2 - 40, yPos + 2, pageWidth / 2 + 40, yPos + 2);
+        
+        yPos += 15;
+
+        // STATEMENT INFORMATION
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('STATEMENT INFORMATION', margin, yPos);
+        yPos += 7;
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
+        doc.setTextColor(...grayColor);
         
-        const col1 = margin + 10;
-        const col2 = margin + contentWidth / 2;
+        doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Statement Period: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
+        yPos += 10;
+
+        // CUSTOMER INFORMATION
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('CUSTOMER INFORMATION', margin, yPos);
+        yPos += 7;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...grayColor);
         
-        doc.text(`Name:`, col1, yPos + 17);
-        doc.text(`${invoiceData.customerName}`, col1 + 15, yPos + 17);
-        
-        doc.text(`Invoice No:`, col2, yPos + 17);
-        doc.text(`${invoiceData.invoiceNo}`, col2 + 20, yPos + 17);
-        
-        doc.text(`Address:`, col1, yPos + 24);
-        doc.text(`${invoiceData.customerAddress}`, col1 + 18, yPos + 24);
-        
-        doc.text(`Invoice Date:`, col2, yPos + 24);
-        doc.text(`${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}`, col2 + 25, yPos + 24);
-        
-        doc.text(`Phone:`, col1, yPos + 31);
-        doc.text(`${invoiceData.customerPhone}`, col1 + 15, yPos + 31);
-        
-        yPos += 48;
+        doc.text(`Name: ${invoiceData.customerName}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Invoice No: ${invoiceData.invoiceNo}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Address: ${invoiceData.customerAddress || 'Not specified'}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Phone: ${invoiceData.customerPhone || 'Not specified'}`, margin, yPos);
+        yPos += 4;
+        doc.text(`Invoice Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}`, margin, yPos);
+        yPos += 10;
 
         // Check if we need a new page
         if (yPos > 240) {
@@ -1678,18 +1492,21 @@ async function generatePDFStatement(invoiceData, payments) {
             yPos = 20;
         }
 
-        // Add invoice details header with professional gradient
-        doc.setFillColor(...secondaryColor);
-        doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
-        
+        // INVOICE DETAILS
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('INVOICE DETAILS', margin + 10, yPos + 6.5);
-        yPos += 14;
+        doc.setTextColor(...primaryColor);
+        doc.text('INVOICE DETAILS', margin, yPos);
+        yPos += 6;
 
-        // Create invoice details table with professional styling
-        const invoiceTableHeaders = [['S.No.', 'Description', 'Qty', 'Rate (₹)', 'Amount (₹)']];
+        // Simple underline
+        doc.setDrawColor(...grayColor);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, margin + 40, yPos);
+        yPos += 8;
+
+        // Create invoice details table
+        const invoiceTableHeaders = [['S.No.', 'Description', 'Qty', 'Rate', 'Amount']];
         const invoiceTableData = invoiceData.products.map((product, index) => [
             (index + 1).toString(),
             product.description,
@@ -1704,29 +1521,25 @@ async function generatePDFStatement(invoiceData, payments) {
             body: invoiceTableData,
             theme: 'grid',
             headStyles: {
-                fillColor: primaryColor,
-                textColor: 255,
+                fillColor: [240, 240, 240],
+                textColor: primaryColor,
                 fontStyle: 'bold',
-                fontSize: 9,
-                cellPadding: 4,
-                halign: 'center',
+                fontSize: 8,
+                cellPadding: 3,
                 lineWidth: 0.3
             },
             bodyStyles: {
                 fontSize: 8,
-                cellPadding: 3,
+                cellPadding: 2,
                 lineColor: [220, 220, 220],
                 lineWidth: 0.1
             },
-            alternateRowStyles: {
-                fillColor: [250, 250, 252]
-            },
             columnStyles: {
-                0: { cellWidth: 18, halign: 'center' },
+                0: { cellWidth: 12, halign: 'center' },
                 1: { cellWidth: 'auto', halign: 'left' },
-                2: { cellWidth: 22, halign: 'center' },
-                3: { cellWidth: 32, halign: 'right' },
-                4: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+                2: { cellWidth: 15, halign: 'center' },
+                3: { cellWidth: 20, halign: 'right' },
+                4: { cellWidth: 22, halign: 'right' }
             },
             margin: { left: margin, right: margin },
             styles: {
@@ -1735,7 +1548,7 @@ async function generatePDFStatement(invoiceData, payments) {
             }
         });
 
-        yPos = doc.lastAutoTable.finalY + 15;
+        yPos = doc.lastAutoTable.finalY + 10;
 
         // Check if we need a new page
         if (yPos > 200) {
@@ -1743,94 +1556,88 @@ async function generatePDFStatement(invoiceData, payments) {
             yPos = 20;
         }
 
-        // Add invoice summary in professional financial card
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(180, 180, 180);
-        doc.setLineWidth(0.5);
-        doc.roundedRect(margin, yPos, contentWidth, 45, 4, 4, 'FD');
-        
-        doc.setFontSize(12);
+        // INVOICE SUMMARY
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text('INVOICE SUMMARY', margin + 10, yPos + 10);
-        yPos += 15;
+        doc.text('INVOICE SUMMARY', margin, yPos);
+        yPos += 7;
 
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
+        doc.setTextColor(...grayColor);
 
+        let summaryY = yPos;
+        
         // Current Bill Amount
-        doc.text('Current Bill Amount:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.subtotal)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 7;
-
-        // Add subtle separator line
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.2);
-        doc.line(margin + 12, yPos - 1, pageWidth - margin - 12, yPos - 1);
+        doc.text('Current Bill Amount:', margin, summaryY);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.subtotal)}`, pageWidth - margin, summaryY, { align: 'right' });
+        summaryY += 4;
 
         // Previous Balance
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
-        doc.text('Previous Balance:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(previousBalance)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 7;
-
-        // Add thicker separator before total
-        doc.setDrawColor(180, 180, 180);
-        doc.setLineWidth(0.5);
-        doc.line(margin + 12, yPos, pageWidth - margin - 12, yPos);
-        yPos += 5;
-
-        // Total Amount with professional emphasis
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(...accentColor);
-        doc.text('TOTAL AMOUNT:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 15;
-
-        // Check if we need a new page
-        if (yPos > 220) {
-            doc.addPage();
-            yPos = 20;
+        if (previousBalance > 0) {
+            doc.text('Previous Balance:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(previousBalance)}`, pageWidth - margin, summaryY, { align: 'right' });
+            summaryY += 4;
         }
+
+        // Total Amount
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Amount:', margin, summaryY);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin, summaryY, { align: 'right' });
+        summaryY += 4;
+
+        // Amount Paid
+        doc.setFont('helvetica', 'normal');
+        doc.text('Amount Paid:', margin, summaryY);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.amountPaid)}`, pageWidth - margin, summaryY, { align: 'right' });
+        summaryY += 4;
+
+        // Returns (if any)
+        if (totalReturns > 0) {
+            doc.text('Returns:', margin, summaryY);
+            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin, summaryY, { align: 'right' });
+            summaryY += 4;
+        }
+
+        // Balance Due
+        doc.setFont('helvetica', 'bold');
+        if (totalReturns > 0) {
+            doc.text('Adjusted Balance Due:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, summaryY, { align: 'right' });
+        } else {
+            doc.text('Balance Due:', margin, summaryY);
+            doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin, summaryY, { align: 'right' });
+        }
+
+        yPos = summaryY + 12;
 
         // Add return information if applicable
         if (totalReturns > 0) {
-            // Return header with professional warning color
-            doc.setFillColor(255, 245, 245);
-            doc.setDrawColor(...warningRed);
-            doc.setLineWidth(0.5);
-            doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'FD');
-            
+            // Check if we need a new page
+            if (yPos > 220) {
+                doc.addPage();
+                yPos = 20;
+            }
+
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...warningRed);
-            doc.text('RETURN INFORMATION', margin + 10, yPos + 6.5);
-            yPos += 14;
+            doc.setTextColor(...primaryColor);
+            doc.text('RETURN INFORMATION', margin, yPos);
+            yPos += 7;
 
             // Get return details
             const returns = await db.getReturnsByInvoice(invoiceData.invoiceNo);
             
             if (returns.length > 0) {
-                const returnTableHeaders = [['Date', 'Product', 'Qty', 'Rate (₹)', 'Amount (₹)', 'Reason']];
+                const returnTableHeaders = [['Date', 'Product', 'Qty', 'Rate', 'Amount']];
                 const returnTableData = returns.map((returnItem, index) => [
                     new Date(returnItem.returnDate).toLocaleDateString('en-IN'),
                     returnItem.description,
                     returnItem.qty.toString(),
                     Utils.formatCurrency(returnItem.rate),
-                    Utils.formatCurrency(returnItem.returnAmount),
-                    returnItem.reason || 'N/A'
-                ]);
-
-                // Add total return row
-                returnTableData.push([
-                    'TOTAL',
-                    '',
-                    '',
-                    '',
-                    Utils.formatCurrency(totalReturns),
-                    ''
+                    Utils.formatCurrency(returnItem.returnAmount)
                 ]);
 
                 doc.autoTable({
@@ -1839,8 +1646,8 @@ async function generatePDFStatement(invoiceData, payments) {
                     body: returnTableData,
                     theme: 'grid',
                     headStyles: {
-                        fillColor: warningRed,
-                        textColor: 255,
+                        fillColor: [240, 240, 240],
+                        textColor: primaryColor,
                         fontStyle: 'bold',
                         fontSize: 8,
                         cellPadding: 3
@@ -1848,60 +1655,38 @@ async function generatePDFStatement(invoiceData, payments) {
                     bodyStyles: {
                         fontSize: 7,
                         cellPadding: 2,
-                        lineColor: [220, 200, 200],
+                        lineColor: [220, 220, 220],
                         lineWidth: 0.1
-                    },
-                    alternateRowStyles: {
-                        fillColor: [255, 250, 250]
                     },
                     columnStyles: {
                         0: { cellWidth: 22, halign: 'center' },
                         1: { cellWidth: 'auto', halign: 'left' },
-                        2: { cellWidth: 18, halign: 'center' },
-                        3: { cellWidth: 22, halign: 'right' },
-                        4: { cellWidth: 22, halign: 'right' },
-                        5: { cellWidth: 32, halign: 'left' }
+                        2: { cellWidth: 15, halign: 'center' },
+                        3: { cellWidth: 20, halign: 'right' },
+                        4: { cellWidth: 22, halign: 'right' }
                     },
-                    margin: { left: margin, right: margin },
-                    didDrawCell: function (data) {
-                        // Highlight total row
-                        if (data.row.index === returnTableData.length - 1) {
-                            doc.setFillColor(255, 235, 235);
-                            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                            doc.setFont('helvetica', 'bold');
-                        }
-                        
-                        // Color return amounts in professional red
-                        if (data.column.index === 4 && data.cell.raw !== '') {
-                            doc.setTextColor(...warningRed);
-                        } else {
-                            doc.setTextColor(...darkGray);
-                        }
-                    }
+                    margin: { left: margin, right: margin }
                 });
 
-                yPos = doc.lastAutoTable.finalY + 15;
-            }
-
-            // Check if we need a new page after returns
-            if (yPos > 200) {
-                doc.addPage();
-                yPos = 20;
+                yPos = doc.lastAutoTable.finalY + 10;
             }
         }
 
-        // Add payment history header
-        doc.setFillColor(...secondaryColor);
-        doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
-        
+        // Check if we need a new page for payment history
+        if (yPos > 200) {
+            doc.addPage();
+            yPos = 20;
+        }
+
+        // PAYMENT HISTORY
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('PAYMENT HISTORY', margin + 10, yPos + 6.5);
-        yPos += 14;
+        doc.setTextColor(...primaryColor);
+        doc.text('PAYMENT HISTORY', margin, yPos);
+        yPos += 7;
 
         // Create payment history table
-        const paymentTableHeaders = [['Date', 'Description', 'Amount (₹)', 'Balance (₹)']];
+        const paymentTableHeaders = [['Date', 'Description', 'Amount', 'Balance']];
         const paymentTableData = generatePaymentTableData(payments, invoiceData.grandTotal, totalReturns);
 
         doc.autoTable({
@@ -1910,133 +1695,108 @@ async function generatePDFStatement(invoiceData, payments) {
             body: paymentTableData,
             theme: 'grid',
             headStyles: {
-                fillColor: primaryColor,
-                textColor: 255,
+                fillColor: [240, 240, 240],
+                textColor: primaryColor,
                 fontStyle: 'bold',
-                fontSize: 9,
-                cellPadding: 4
+                fontSize: 8,
+                cellPadding: 3
             },
             bodyStyles: {
                 fontSize: 8,
-                cellPadding: 3,
+                cellPadding: 2,
                 lineColor: [220, 220, 220],
                 lineWidth: 0.1
             },
-            alternateRowStyles: {
-                fillColor: [250, 250, 252]
-            },
             columnStyles: {
-                0: { cellWidth: 32, halign: 'center' },
+                0: { cellWidth: 25, halign: 'center' },
                 1: { cellWidth: 'auto', halign: 'left' },
-                2: { cellWidth: 32, halign: 'right' },
-                3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+                2: { cellWidth: 25, halign: 'right' },
+                3: { cellWidth: 25, halign: 'right' }
             },
-            margin: { left: margin, right: margin },
-            didDrawCell: function (data) {
-                // Color negative amounts (payments) in professional green
-                if (data.column.index === 2 && data.cell.raw.includes('-')) {
-                    doc.setTextColor(...successGreen);
-                } else {
-                    doc.setTextColor(...darkGray);
-                }
-            }
+            margin: { left: margin, right: margin }
         });
 
         yPos = doc.lastAutoTable.finalY + 15;
 
-        // Check if we need a new page
+        // Check if we need a new page for account summary
         if (yPos > 180) {
             doc.addPage();
             yPos = 20;
         }
 
-        // Add account summary in prominent financial card
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(...accentColor);
-        doc.setLineWidth(1);
-        doc.roundedRect(margin, yPos, contentWidth, 65, 5, 5, 'FD');
-        
-        // Add subtle background pattern to summary card
-        doc.setFillColor(250, 250, 252);
-        for (let i = margin + 5; i < margin + contentWidth - 5; i += 15) {
-            doc.rect(i, yPos + 5, 10, 55, 'F');
-        }
-        
-        doc.setFontSize(14);
+        // ACCOUNT SUMMARY
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text('ACCOUNT SUMMARY', margin + 10, yPos + 12);
-        yPos += 20;
+        doc.text('ACCOUNT SUMMARY', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 8;
+
+        // Underline for summary title
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth / 2 - 30, yPos, pageWidth / 2 + 30, yPos);
+        yPos += 10;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...darkGray);
+        doc.setTextColor(...grayColor);
 
         // Invoice Amount
-        doc.text('Invoice Amount:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 9;
+        doc.text('Invoice Amount:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.grandTotal)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
 
         // Total Paid
-        doc.text('Total Paid:', margin + 12, yPos);
-        doc.text(`₹${Utils.formatCurrency(invoiceData.amountPaid)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-        yPos += 9;
+        doc.text('Total Paid:', margin, yPos);
+        doc.text(`₹${Utils.formatCurrency(invoiceData.amountPaid)}`, pageWidth - margin, yPos, { align: 'right' });
+        yPos += 6;
 
         // Return Amount (if applicable)
         if (totalReturns > 0) {
-            doc.text('Return Amount:', margin + 12, yPos);
-            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin - 12, yPos, { align: 'right' });
-            yPos += 9;
+            doc.text('Return Amount:', margin, yPos);
+            doc.text(`-₹${Utils.formatCurrency(totalReturns)}`, pageWidth - margin, yPos, { align: 'right' });
+            yPos += 6;
         }
 
-        // Add professional separator line before final balance
-        doc.setDrawColor(...mediumGray);
-        doc.setLineWidth(0.5);
-        doc.line(margin + 12, yPos, pageWidth - margin - 12, yPos);
+        // Separator line before final balance
+        doc.setDrawColor(...grayColor);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 6;
 
-        // Outstanding Balance - professionally emphasized
+        // Outstanding Balance
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         if (totalReturns > 0) {
             doc.setTextColor(...accentColor);
-            doc.text('ADJUSTED BALANCE DUE:', margin + 12, yPos);
-            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin - 12, yPos, { align: 'right' });
+            doc.text('ADJUSTED BALANCE DUE:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(adjustedBalanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
         } else {
             doc.setTextColor(...primaryColor);
-            doc.text('OUTSTANDING BALANCE:', margin + 12, yPos);
-            doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin - 12, yPos, { align: 'right' });
+            doc.text('OUTSTANDING BALANCE:', margin, yPos);
+            doc.text(`₹${Utils.formatCurrency(invoiceData.balanceDue)}`, pageWidth - margin, yPos, { align: 'right' });
         }
-        yPos += 20;
 
-        // Add professional footer with company branding
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
-        
-        // Add subtle pattern to footer
-        doc.setFillColor(255, 255, 255, 0.1);
-        for (let i = 0; i < pageWidth; i += 6) {
-            doc.rect(i, pageHeight - 25, 3, 25, 'F');
-        }
-        
+        // FOOTER
+        yPos = pageHeight - 20;
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(220, 220, 220);
-        doc.text('This is a computer-generated statement. No signature is required.', pageWidth / 2, pageHeight - 18, { align: 'center' });
-        doc.text('For any queries, please contact: 9952520181 | info@prfabrics.com', pageWidth / 2, pageHeight - 13, { align: 'center' });
-        doc.text(`Generated on: ${new Date().toLocaleString('en-IN')} | PR FABRICS - Trusted Textile Partner`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        doc.setTextColor(...grayColor);
+        doc.text('This is a computer-generated statement. No signature is required.', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text('For any queries, please contact: 9952520181', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 4;
+        doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, pageWidth / 2, yPos, { align: 'center' });
 
-        // Generate organized filename
+        // Generate filename and save
         const today = new Date();
-        const dateFolder = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const dateFolder = today.toISOString().split('T')[0];
         const fileName = `Statement_${invoiceData.invoiceNo}_${invoiceData.customerName}_${dateFolder}.pdf`;
         
-        // Save the PDF with organized filename
         doc.save(fileName);
         
-        // Show organization instructions
         setTimeout(() => {
-            alert(`PDF saved as: ${fileName}\n\n💡 Organization Tip:\n1. Create a folder named: ${dateFolder}\n2. Move this file into that folder\n3. All statements from today will go in the same folder`);
+            alert(`Statement saved as: ${fileName}`);
         }, 500);
 
     } catch (error) {
