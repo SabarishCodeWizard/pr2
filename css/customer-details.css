@@ -1124,3 +1124,100 @@ td {
     }
 }
 
+
+
+
+/* Phone Number Styling
+.phone-number {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    position: relative;
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.phone-number:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+} */
+
+/* .phone-number.phone-revealed {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+    font-weight: bold;
+}
+
+.phone-number::after {
+    content: '👁️';
+    margin-left: 5px;
+    font-size: 0.8em;
+    opacity: 0.6;
+}
+
+.phone-number.phone-revealed::after {
+    content: '✓';
+    color: #28a745;
+} */
+
+/* Tooltip for phone numbers */
+/* .phone-number {
+    position: relative;
+}
+
+.phone-number::before {
+    content: 'Click to reveal full number';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+
+.phone-number:hover::before {
+    opacity: 1;
+}
+
+.phone-number.phone-revealed::before {
+    content: 'Click to hide number';
+} */
+
+
+
+/* Popup Phone Styling */
+/* .phone-display {
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #f8f9fa;
+    display: inline-block;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+}
+
+.phone-display:hover {
+    background: #e9ecef;
+}
+
+.phone-display.phone-revealed {
+    background: #d4edda;
+    color: #155724;
+    font-weight: bold;
+} */
+
+
+

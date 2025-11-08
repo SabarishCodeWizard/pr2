@@ -2,19 +2,19 @@
 function checkAuthentication() {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
     const loginTime = localStorage.getItem('loginTime');
-    
+
     // Check if user is authenticated and session is valid (24 hours)
     if (!isAuthenticated || isAuthenticated !== 'true') {
         redirectToLogin();
         return false;
     }
-    
+
     // Optional: Check if login session is still valid (24 hours)
     if (loginTime) {
         const loginDate = new Date(loginTime);
         const currentDate = new Date();
         const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-        
+
         if (hoursDiff > 24) {
             // Session expired
             localStorage.clear();
@@ -22,7 +22,7 @@ function checkAuthentication() {
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (!checkAuthentication()) {
         return;
     }
-    
+
     // Initialize database
     await db.init();
 
@@ -251,7 +251,7 @@ function updateStatistics(customers) {
     }
 }
 
-// Update the displayCustomers function to include WhatsApp button
+// Update the displayCustomers function to hide phone numbers
 function displayCustomers(customers) {
     const tableBody = document.getElementById('customerTableBody');
     const noCustomers = document.getElementById('noCustomers');
@@ -270,6 +270,9 @@ function displayCustomers(customers) {
         // Only show WhatsApp button if customer has balance and phone number
         const showWhatsApp = customerBalance > 0 && customer.phone;
 
+        // Format phone number to show only last 3 digits
+        const formattedPhone = customer.phone ? formatPhoneNumber(customer.phone) : 'N/A';
+
         return `
         <tr>
             <td>
@@ -279,7 +282,9 @@ function displayCustomers(customers) {
                     ${customer.totalReturns > 0 ? `<span class="customer-return-badge" title="This customer has returns">🔄</span>` : ''}
                 </div>
             </td>
-            <td>${customer.phone || 'N/A'}</td>
+            <td class="phone-number" title="Click to reveal full number" onclick="togglePhoneNumber(this, '${customer.phone || ''}')">
+                ${formattedPhone}
+            </td>
             <td title="${customer.address || 'N/A'}">
                 ${customer.address ? (customer.address.length > 30 ? customer.address.substring(0, 30) + '...' : customer.address) : 'N/A'}
             </td>
@@ -318,6 +323,52 @@ function displayCustomers(customers) {
     `}).join('');
 }
 
+// Add this utility function to format phone numbers
+function formatPhoneNumber(phone) {
+    if (!phone) return 'N/A';
+
+    // Remove all non-digit characters
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    if (cleanPhone.length <= 3) {
+        return cleanPhone;
+    }
+
+    // Show last 3 digits, mask the rest with asterisks
+    const visibleDigits = 3;
+    const maskedPart = '*'.repeat(cleanPhone.length - visibleDigits);
+    const visiblePart = cleanPhone.slice(-visibleDigits);
+
+    return maskedPart + visiblePart;
+}
+
+// Add function to toggle phone number visibility
+function togglePhoneNumber(element, fullPhoneNumber) {
+    if (!fullPhoneNumber || fullPhoneNumber === 'N/A') return;
+
+    const currentText = element.textContent;
+    const cleanFullPhone = fullPhoneNumber.replace(/\D/g, '');
+
+    // If currently showing masked version, show full number
+    if (currentText.includes('*')) {
+        element.textContent = cleanFullPhone;
+        element.classList.add('phone-revealed');
+
+        // Auto hide after 5 seconds
+        setTimeout(() => {
+            if (element.classList.contains('phone-revealed')) {
+                element.textContent = formatPhoneNumber(fullPhoneNumber);
+                element.classList.remove('phone-revealed');
+            }
+        }, 5000);
+    } else {
+        // If showing full number, mask it
+        element.textContent = formatPhoneNumber(fullPhoneNumber);
+        element.classList.remove('phone-revealed');
+    }
+}
+
+
 // View specific invoice - redirect to invoice-history page with search filter
 function viewInvoice(invoiceNo) {
     // Redirect to invoice-history page with the invoice number as search parameter
@@ -335,6 +386,11 @@ async function showInvoicePopup(invoiceNo, element) {
         const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
 
+
+        // Format phone number for display
+        const formattedPhone = invoiceData.customerPhone ? formatPhoneNumber(invoiceData.customerPhone) : 'N/A';
+
+
         // Create popup element
         const popup = document.createElement('div');
         popup.className = 'invoice-popup';
@@ -348,7 +404,11 @@ async function showInvoicePopup(invoiceNo, element) {
                     <div class="customer-info">
                         <strong>${invoiceData.customerName}</strong>
                         <div class="customer-details">
-                            ${invoiceData.customerPhone ? `<div>📞 ${invoiceData.customerPhone}</div>` : ''}
+                            ${invoiceData.customerPhone ? `
+                                <div class="phone-display" onclick="togglePopupPhone(this, '${invoiceData.customerPhone}')">
+                                    📞 ${formattedPhone}
+                                </div>
+                            ` : ''}
                             ${invoiceData.customerAddress ? `<div>📍 ${invoiceData.customerAddress}</div>` : ''}
                         </div>
                     </div>
@@ -460,6 +520,21 @@ async function showInvoicePopup(invoiceNo, element) {
 
     } catch (error) {
         console.error('Error loading invoice details:', error);
+    }
+}
+
+
+// Add function for toggling phone in popup
+function togglePopupPhone(element, fullPhoneNumber) {
+    const currentText = element.textContent.replace('📞 ', '');
+    const cleanFullPhone = fullPhoneNumber.replace(/\D/g, '');
+    
+    if (currentText.includes('*')) {
+        element.textContent = '📞 ' + cleanFullPhone;
+        element.classList.add('phone-revealed');
+    } else {
+        element.textContent = '📞 ' + formatPhoneNumber(fullPhoneNumber);
+        element.classList.remove('phone-revealed');
     }
 }
 
@@ -881,3 +956,275 @@ function sendWhatsAppReminder(phoneNumber, message) {
     console.log(`WhatsApp reminder sent to ${customer.name}: ${phoneNumber}`);
 }
 
+// Export customers to CSV
+async function exportCustomers() {
+    try {
+        const invoices = await db.getAllInvoices();
+        const customers = await processCustomerData(invoices);
+
+        if (customers.length === 0) {
+            alert('No customer data to export.');
+            return;
+        }
+
+        // Create CSV content
+        let csvContent = 'Customer Name,Phone,Address,Total Invoices,Total Amount,Amount Paid,Returns,Balance Due,Last Invoice,Last Invoice Date\n';
+
+        customers.forEach(customer => {
+            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
+            
+            const row = [
+                `"${customer.name.replace(/"/g, '""')}"`,
+                `"${customer.phone || 'N/A'}"`,
+                `"${(customer.address || 'N/A').replace(/"/g, '""')}"`,
+                customer.totalInvoices,
+                customer.totalCurrentBillAmount,
+                customer.amountPaid,
+                customer.totalReturns,
+                customerBalance,
+                customer.lastInvoiceNo || 'N/A',
+                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
+            ].join(',');
+
+            csvContent += row + '\n';
+        });
+
+        // Create and download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.setAttribute('href', url);
+        link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Show success message
+        showExportSuccess(customers.length);
+
+    } catch (error) {
+        console.error('Error exporting customers:', error);
+        alert('Error exporting customer data. Please try again.');
+    }
+}
+
+// Show export success message
+function showExportSuccess(customerCount) {
+    // Create success notification
+    const notification = document.createElement('div');
+    notification.className = 'export-notification success';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-check-circle"></i>
+            <div class="notification-text">
+                <strong>Export Successful!</strong>
+                <p>Exported ${customerCount} customers to CSV file</p>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Enhanced Export with Options (Alternative Version)
+async function exportCustomersWithOptions() {
+    try {
+        const invoices = await db.getAllInvoices();
+        const customers = await processCustomerData(invoices);
+
+        if (customers.length === 0) {
+            alert('No customer data to export.');
+            return;
+        }
+
+        // Show export options modal
+        showExportOptionsModal(customers);
+
+    } catch (error) {
+        console.error('Error exporting customers:', error);
+        alert('Error exporting customer data. Please try again.');
+    }
+}
+
+// Show export options modal
+function showExportOptionsModal(customers) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="export-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-download"></i> Export Customer Data</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="option-group">
+                        <label>Export Format:</label>
+                        <select id="exportFormat" class="export-select">
+                            <option value="csv">CSV (Excel)</option>
+                            <option value="json">JSON</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label>Include Columns:</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="phone" checked> Phone Numbers
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="address" checked> Address
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="invoices" checked> Invoice Details
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="returns" checked> Return Information
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="export-preview">
+                        <label>Data Summary:</label>
+                        <div class="preview-stats">
+                            <div class="stat"><strong>${customers.length}</strong> Customers</div>
+                            <div class="stat"><strong>${customers.reduce((sum, c) => sum + c.totalInvoices, 0)}</strong> Total Invoices</div>
+                            <div class="stat"><strong>₹${Utils.formatCurrency(customers.reduce((sum, c) => sum + c.totalCurrentBillAmount, 0))}</strong> Total Amount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelExport">Cancel</button>
+                <button class="btn-primary" id="confirmExport">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listeners for export modal
+    const closeBtn = modal.querySelector('.close-modal');
+    const cancelBtn = modal.querySelector('#cancelExport');
+    const confirmBtn = modal.querySelector('#confirmExport');
+
+    closeBtn.addEventListener('click', () => modal.remove());
+    cancelBtn.addEventListener('click', () => modal.remove());
+    
+    confirmBtn.addEventListener('click', () => {
+        const format = modal.querySelector('#exportFormat').value;
+        const selectedColumns = Array.from(modal.querySelectorAll('input[name="exportColumns"]:checked'))
+            .map(input => input.value);
+        
+        modal.remove();
+        performExport(customers, format, selectedColumns);
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+// Perform the actual export based on options
+function performExport(customers, format, columns) {
+    let content, mimeType, fileExtension;
+
+    if (format === 'csv') {
+        // Generate CSV based on selected columns
+        let csvContent = 'Customer Name';
+        
+        if (columns.includes('phone')) csvContent += ',Phone';
+        if (columns.includes('address')) csvContent += ',Address';
+        csvContent += ',Total Invoices,Total Amount,Amount Paid';
+        if (columns.includes('returns')) csvContent += ',Returns';
+        csvContent += ',Balance Due,Last Invoice,Last Invoice Date\n';
+
+        customers.forEach(customer => {
+            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
+            
+            let row = [`"${customer.name.replace(/"/g, '""')}"`];
+            
+            if (columns.includes('phone')) row.push(`"${customer.phone || 'N/A'}"`);
+            if (columns.includes('address')) row.push(`"${(customer.address || 'N/A').replace(/"/g, '""')}"`);
+            
+            row.push(
+                customer.totalInvoices,
+                customer.totalCurrentBillAmount,
+                customer.amountPaid
+            );
+            
+            if (columns.includes('returns')) row.push(customer.totalReturns);
+            
+            row.push(
+                customerBalance,
+                customer.lastInvoiceNo || 'N/A',
+                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
+            );
+
+            csvContent += row.join(',') + '\n';
+        });
+
+        content = csvContent;
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+    } else {
+        // JSON export
+        const exportData = customers.map(customer => {
+            const data = {
+                name: customer.name,
+                totalInvoices: customer.totalInvoices,
+                totalAmount: customer.totalCurrentBillAmount,
+                amountPaid: customer.amountPaid,
+                balanceDue: customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns,
+                lastInvoiceNo: customer.lastInvoiceNo,
+                lastInvoiceDate: customer.lastInvoiceDate
+            };
+
+            if (columns.includes('phone')) data.phone = customer.phone;
+            if (columns.includes('address')) data.address = customer.address;
+            if (columns.includes('returns')) data.returns = customer.totalReturns;
+            if (columns.includes('invoices')) data.invoiceNumbers = customer.allInvoiceNumbers;
+
+            return data;
+        });
+
+        content = JSON.stringify(exportData, null, 2);
+        mimeType = 'application/json;charset=utf-8;';
+        fileExtension = 'json';
+    }
+
+    // Download file
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.${fileExtension}`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showExportSuccess(customers.length);
+}
