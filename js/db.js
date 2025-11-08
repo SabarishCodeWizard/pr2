@@ -37,6 +37,14 @@ class Database {
                     console.log('Created invoices object store');
                 }
 
+                // Add this in the onupgradeneeded method after the returns store creation
+                if (!db.objectStoreNames.contains('customers')) {
+                    const customerStore = db.createObjectStore('customers', { keyPath: 'phone' });
+                    customerStore.createIndex('name', 'name', { unique: false });
+                    customerStore.createIndex('phone', 'phone', { unique: true });
+                    console.log('Created customers object store');
+                }
+
                 // Create object store for payments if it doesn't exist
                 if (!db.objectStoreNames.contains('payments')) {
                     const paymentStore = db.createObjectStore('payments', { keyPath: 'id', autoIncrement: true });
@@ -80,6 +88,81 @@ class Database {
             };
         });
     }
+
+
+
+    // Save customer to database
+    async saveCustomer(customerData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['customers'], 'readwrite');
+            const store = transaction.objectStore('customers');
+            const request = store.put(customerData);
+
+            request.onsuccess = () => {
+                console.log('Customer saved successfully');
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                console.error('Error saving customer');
+                reject(request.error);
+            };
+        });
+    }
+
+    // Get customer by phone number
+    async getCustomer(phone) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['customers'], 'readonly');
+            const store = transaction.objectStore('customers');
+            const request = store.get(phone);
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    }
+
+    // Get all customers
+    async getAllCustomers() {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['customers'], 'readonly');
+            const store = transaction.objectStore('customers');
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+        });
+    }
+
+    // Delete customer
+    async deleteCustomer(phone) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(['customers'], 'readwrite');
+            const store = transaction.objectStore('customers');
+            const request = store.delete(phone);
+
+            request.onsuccess = () => {
+                console.log('Customer deleted successfully');
+                resolve();
+            };
+
+            request.onerror = () => {
+                console.error('Error deleting customer');
+                reject(request.error);
+            };
+        });
+    }
+
 
     // Get all invoices
     async getAllInvoices() {

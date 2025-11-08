@@ -896,3 +896,26 @@ input:focus, select:focus, textarea:focus {
     border-radius: 4px;
 }
 
+/* Customer auto-fill styles */
+.customer-found {
+    border-color: #4CAF50 !important;
+    background-color: #f8fff8 !important;
+}
+
+.customer-not-found {
+    border-color: #ff9800 !important;
+    background-color: #fff8f8 !important;
+}
+
+.auto-fill-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4CAF50;
+    font-size: 16px;
+}
+
+.input-with-indicator {
+    position: relative;
+}

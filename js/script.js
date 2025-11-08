@@ -2,19 +2,19 @@
 function checkAuthentication() {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
     const loginTime = localStorage.getItem('loginTime');
-    
+
     // Check if user is authenticated and session is valid (24 hours)
     if (!isAuthenticated || isAuthenticated !== 'true') {
         redirectToLogin();
         return false;
     }
-    
+
     // Optional: Check if login session is still valid (24 hours)
     if (loginTime) {
         const loginDate = new Date(loginTime);
         const currentDate = new Date();
         const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-        
+
         if (hoursDiff > 24) {
             // Session expired
             localStorage.clear();
@@ -22,7 +22,7 @@ function checkAuthentication() {
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -62,6 +62,76 @@ document.addEventListener('DOMContentLoaded', async function () {
             Utils.updateCalculations();
         }
     });
+
+    // Add phone number input event listener for auto-fill
+    document.getElementById('customerPhone').addEventListener('input', function (e) {
+        const phone = e.target.value.trim();
+
+        // Debounce the auto-fill check
+        clearTimeout(this.autoFillTimeout);
+        this.autoFillTimeout = setTimeout(async () => {
+            if (phone.length >= 10) { // Wait for complete phone number
+                await Utils.checkCustomerByPhone(phone);
+            }
+        }, 800);
+    });
+
+    // Save customer details when form is saved or when leaving phone field
+    document.getElementById('customerPhone').addEventListener('blur', function () {
+        const phone = this.value.trim();
+        const name = document.getElementById('customerName').value.trim();
+        const address = document.getElementById('customerAddress').value.trim();
+
+        if (phone && phone.length >= 10 && (name || address)) {
+            Utils.saveCustomerDetails(name, address, phone);
+        }
+    });
+
+    // Also save customer when saving the bill
+    // Modify the existing saveBill function to include customer saving
+    async function saveBill() {
+        if (!Utils.validateForm()) {
+            return;
+        }
+
+        try {
+            const invoiceData = await Utils.getFormData();
+            const isEditing = !!invoiceData.invoiceNo;
+
+            await db.saveInvoice(invoiceData);
+
+            // Save/update customer details
+            const phone = document.getElementById('customerPhone').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const address = document.getElementById('customerAddress').value.trim();
+
+            if (phone && phone.length >= 10) {
+                await Utils.saveCustomerDetails(name, address, phone);
+            }
+
+            alert('Bill saved successfully!');
+
+            // Rest of your existing saveBill code...
+            if (invoiceData.amountPaid > 0) {
+                const paymentData = {
+                    invoiceNo: invoiceData.invoiceNo,
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    amount: invoiceData.amountPaid,
+                    paymentMethod: invoiceData.paymentMethod,
+                    paymentType: 'initial'
+                };
+                await db.savePayment(paymentData);
+            }
+
+            if (isEditing) {
+                await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
+            }
+
+        } catch (error) {
+            console.error('Error saving bill:', error);
+            alert('Error saving bill. Please try again.');
+        }
+    }
 
     // Add event listener for customer name changes
     document.getElementById('customerName').addEventListener('input', function () {
