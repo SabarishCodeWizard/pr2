@@ -275,10 +275,14 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         const invoicesWithReturns = await Promise.all(
             invoices.map(async (invoice) => {
                 const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
+                const payments = await db.getPaymentsByInvoice(invoice.invoiceNo);
                 return {
                     ...invoice,
                     totalReturns,
-                    adjustedBalanceDue: invoice.balanceDue - totalReturns
+                    adjustedBalanceDue: invoice.balanceDue - totalReturns,
+                    returns,
+                    payments
                 };
             })
         );
@@ -469,6 +473,108 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             }
 
             yPos = summaryY + 12;
+
+            // Add return information if applicable for this invoice
+            if (invoice.totalReturns > 0 && invoice.returns && invoice.returns.length > 0) {
+                // Check if we need a new page
+                if (yPos > 200) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...primaryColor);
+                doc.text('RETURN INFORMATION', margin, yPos);
+                yPos += 7;
+
+                const returnTableHeaders = [['Date', 'Product', 'Qty', 'Rate', 'Amount']];
+                const returnTableData = invoice.returns.map((returnItem, index) => [
+                    new Date(returnItem.returnDate).toLocaleDateString('en-IN'),
+                    returnItem.description,
+                    returnItem.qty.toString(),
+                    Utils.formatCurrency(returnItem.rate),
+                    Utils.formatCurrency(returnItem.returnAmount)
+                ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: returnTableHeaders,
+                    body: returnTableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [240, 240, 240],
+                        textColor: primaryColor,
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        cellPadding: 3
+                    },
+                    bodyStyles: {
+                        fontSize: 7,
+                        cellPadding: 2,
+                        lineColor: [220, 220, 220],
+                        lineWidth: 0.1
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 22, halign: 'center' },
+                        1: { cellWidth: 'auto', halign: 'left' },
+                        2: { cellWidth: 15, halign: 'center' },
+                        3: { cellWidth: 20, halign: 'right' },
+                        4: { cellWidth: 22, halign: 'right' }
+                    },
+                    margin: { left: margin, right: margin }
+                });
+
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+
+            // Add payment history for this invoice
+            if (invoice.payments && invoice.payments.length > 0) {
+                // Check if we need a new page for payment history
+                if (yPos > 200) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...primaryColor);
+                doc.text('PAYMENT HISTORY', margin, yPos);
+                yPos += 7;
+
+                // Create payment history table for this invoice
+                const paymentTableHeaders = [['Date', 'Description', 'Amount', 'Balance']];
+                const paymentTableData = generatePaymentTableData(invoice.payments, invoice.grandTotal, invoice.totalReturns);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: paymentTableHeaders,
+                    body: paymentTableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [240, 240, 240],
+                        textColor: primaryColor,
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        cellPadding: 3
+                    },
+                    bodyStyles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        lineColor: [220, 220, 220],
+                        lineWidth: 0.1
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 25, halign: 'center' },
+                        1: { cellWidth: 'auto', halign: 'left' },
+                        2: { cellWidth: 25, halign: 'right' },
+                        3: { cellWidth: 25, halign: 'right' }
+                    },
+                    margin: { left: margin, right: margin }
+                });
+
+                yPos = doc.lastAutoTable.finalY + 15;
+            }
 
             // Add spacing between invoices
             if (i < invoicesWithReturns.length - 1) {
