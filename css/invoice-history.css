@@ -2610,3 +2610,30 @@ body {
         transform: translateY(0);
     }
 }
+
+.btn-clear {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-clear:hover {
+    background-color: #5a6268;
+}
+
+.customer-search {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.customer-search input {
+    flex: 1;
+    min-width: 200px;
+}

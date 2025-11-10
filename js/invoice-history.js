@@ -2,19 +2,19 @@
 function checkAuthentication() {
     const isAuthenticated = localStorage.getItem('isAuthenticated');
     const loginTime = localStorage.getItem('loginTime');
-    
+
     // Check if user is authenticated and session is valid (24 hours)
     if (!isAuthenticated || isAuthenticated !== 'true') {
         redirectToLogin();
         return false;
     }
-    
+
     // Optional: Check if login session is still valid (24 hours)
     if (loginTime) {
         const loginDate = new Date(loginTime);
         const currentDate = new Date();
         const hoursDiff = (currentDate - loginDate) / (1000 * 60 * 60);
-        
+
         if (hoursDiff > 24) {
             // Session expired
             localStorage.clear();
@@ -22,7 +22,7 @@ function checkAuthentication() {
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
     document.getElementById('logoutBtn').addEventListener('click', logout);
     document.getElementById('generateCustomerStatement').addEventListener('click', searchCustomerInvoices);
+    document.getElementById('clearCustomerStatement').addEventListener('click', clearCustomerStatement);
 });
 
 
@@ -165,8 +166,8 @@ async function displayCustomerStatementResults(customerName, invoices) {
             
             <div class="customer-invoices-list">
                 ${invoicesWithReturns.map(invoice => {
-                    const previousBalance = invoice.grandTotal - invoice.subtotal;
-                    return `
+        const previousBalance = invoice.grandTotal - invoice.subtotal;
+        return `
                     <div class="customer-invoice-item">
                         <div class="customer-invoice-info">
                             <strong>Invoice #${invoice.invoiceNo}</strong> - 
@@ -242,13 +243,13 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
         doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos + 5, { align: 'center' });
         doc.text('Cell: 9952520181 | GSTIN: 33CLJPG4331G1ZG', pageWidth / 2, yPos + 10, { align: 'center' });
-        
+
         yPos += 20;
 
         // TITLE
@@ -256,12 +257,12 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text('COMBINED ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
-        
+
         // Underline
         doc.setDrawColor(...accentColor);
         doc.setLineWidth(0.5);
         doc.line(pageWidth / 2 - 50, yPos + 2, pageWidth / 2 + 50, yPos + 2);
-        
+
         yPos += 15;
 
         // Sort invoices by invoice number (newest first)
@@ -308,10 +309,10 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
-        
+
         doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
         yPos += 4;
-        
+
         // Calculate statement period
         const invoiceDates = invoicesWithReturns.map(inv => new Date(inv.invoiceDate));
         const oldestDate = new Date(Math.min(...invoiceDates));
@@ -319,13 +320,13 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         const statementPeriod = `${oldestDate.toLocaleDateString('en-IN')} to ${newestDate.toLocaleDateString('en-IN')}`;
         doc.text(`Statement Period: ${statementPeriod}`, margin, yPos);
         yPos += 4;
-        
+
         doc.text(`Total Invoices: ${invoices.length}`, margin, yPos);
         yPos += 4;
-        
+
         // Invoice numbers
         const invoiceNumbers = invoicesWithReturns.map(inv => inv.invoiceNo);
-        const invoiceNumbersText = invoiceNumbers.length <= 3 
+        const invoiceNumbersText = invoiceNumbers.length <= 3
             ? invoiceNumbers.join(', ')
             : `${invoiceNumbers.slice(0, 3).join(', ')}... (+${invoiceNumbers.length - 3} more)`;
         doc.text(`Invoice Numbers: ${invoiceNumbersText}`, margin, yPos);
@@ -341,7 +342,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
-        
+
         doc.text(`Name: ${customerName}`, margin, yPos);
         yPos += 4;
         doc.text(`Phone: ${customerPhone}`, margin, yPos);
@@ -352,7 +353,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         // Process each invoice separately
         for (let i = 0; i < invoicesWithReturns.length; i++) {
             const invoice = invoicesWithReturns[i];
-            
+
             // Check if we need a new page before starting a new invoice
             if (yPos > 240) {
                 doc.addPage();
@@ -429,7 +430,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
             doc.setTextColor(...grayColor);
 
             let summaryY = yPos;
-            
+
             // Current Bill Amount
             doc.text('Current Bill Amount:', margin, summaryY);
             doc.text(`₹${Utils.formatCurrency(invoice.subtotal)}`, pageWidth - margin, summaryY, { align: 'right' });
@@ -660,7 +661,7 @@ async function generateCombinedPDFStatement(customerName, invoices) {
         const today = new Date();
         const dateFolder = today.toISOString().split('T')[0];
         const fileName = `Statement_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateFolder}.pdf`;
-        
+
         doc.save(fileName);
 
         setTimeout(() => {
@@ -772,7 +773,7 @@ async function loadInvoices() {
             // First sort by date (newest first)
             const dateCompare = new Date(b.invoiceDate) - new Date(a.invoiceDate);
             if (dateCompare !== 0) return dateCompare;
-            
+
             // If same date, sort by invoice number (highest first)
             const numA = parseInt(a.invoiceNo) || 0;
             const numB = parseInt(b.invoiceNo) || 0;
@@ -791,7 +792,7 @@ async function getDateWiseStatistics() {
     try {
         const invoices = await db.getAllInvoices();
         const groupedInvoices = groupInvoicesByDate(invoices);
-        
+
         return {
             totalDays: groupedInvoices.length,
             dateGroups: groupedInvoices,
@@ -944,7 +945,7 @@ async function saveReturn(invoiceNo) {
         const invoiceData = await db.getInvoice(invoiceNo);
         const returnDate = document.getElementById('returnDate').value;
         const returnItems = document.querySelectorAll('.return-item');
-        
+
         if (!returnDate) {
             alert('Please select a return date.');
             return;
@@ -979,7 +980,7 @@ async function saveReturn(invoiceNo) {
                 const selectedOption = descriptionSelect.options[descriptionSelect.selectedIndex];
                 const maxQty = parseFloat(selectedOption.dataset.maxqty) || 0;
                 const alreadyReturnedQty = await getAlreadyReturnedQty(invoiceNo, description);
-                
+
                 if ((qty + alreadyReturnedQty) > maxQty) {
                     alert(`Cannot return ${qty} items. Only ${maxQty - alreadyReturnedQty} items available for return for "${description}".`);
                     return;
@@ -1001,7 +1002,7 @@ async function saveReturn(invoiceNo) {
         // Validate that return amount doesn't exceed current balance
         const currentReturns = await Utils.calculateTotalReturns(invoiceNo);
         const currentBalance = invoiceData.balanceDue - currentReturns;
-        
+
         if (totalReturnAmount > currentBalance) {
             alert(`Return amount (₹${Utils.formatCurrency(totalReturnAmount)}) cannot exceed current balance (₹${Utils.formatCurrency(currentBalance)})`);
             return;
@@ -1025,7 +1026,7 @@ async function saveReturn(invoiceNo) {
         await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
 
         alert(`Return processed successfully! Total return amount: ₹${Utils.formatCurrency(totalReturnAmount)}`);
-        
+
         // Close dialog and refresh
         document.querySelector('.return-dialog-overlay').remove();
         loadInvoices();
@@ -1040,10 +1041,10 @@ async function saveReturn(invoiceNo) {
 async function getAlreadyReturnedQty(invoiceNo, productDescription) {
     try {
         const returns = await db.getReturnsByInvoice(invoiceNo);
-        const productReturns = returns.filter(returnItem => 
+        const productReturns = returns.filter(returnItem =>
             returnItem.description === productDescription
         );
-        
+
         return productReturns.reduce((total, returnItem) => total + returnItem.qty, 0);
     } catch (error) {
         console.error('Error getting already returned quantity:', error);
@@ -1055,10 +1056,10 @@ async function getAlreadyReturnedQty(invoiceNo, productDescription) {
 // Add this new function to group invoices by date
 function groupInvoicesByDate(invoices) {
     const groupedInvoices = {};
-    
+
     invoices.forEach(invoice => {
         const invoiceDate = new Date(invoice.invoiceDate).toLocaleDateString('en-IN');
-        
+
         if (!groupedInvoices[invoiceDate]) {
             groupedInvoices[invoiceDate] = {
                 date: invoiceDate,
@@ -1066,11 +1067,11 @@ function groupInvoicesByDate(invoices) {
                 totalInvoices: 0
             };
         }
-        
+
         groupedInvoices[invoiceDate].invoices.push(invoice);
         groupedInvoices[invoiceDate].totalInvoices++;
     });
-    
+
     // Convert to array and sort by date (newest first)
     return Object.values(groupedInvoices).sort((a, b) => {
         return new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-'));
@@ -1089,7 +1090,7 @@ async function displayInvoices(invoices) {
 
     // Group invoices by date
     const groupedInvoices = groupInvoicesByDate(invoices);
-    
+
     let htmlContent = '';
 
     // Generate HTML for each date group
@@ -1099,7 +1100,7 @@ async function displayInvoices(invoices) {
             group.invoices.map(async (invoice) => {
                 const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
                 const adjustedBalanceDue = invoice.balanceDue - totalReturns;
-                
+
                 return {
                     ...invoice,
                     totalReturns,
@@ -1134,7 +1135,7 @@ async function displayInvoices(invoices) {
                 <div class="invoice-info">
                     <h3>Invoice #${invoice.invoiceNo}</h3>
                     <p><strong>Customer:</strong> ${invoice.customerName}</p>
-                    <p><strong>Time:</strong> ${new Date(invoice.invoiceDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                    
                     <p><strong>Current Bill Amount:</strong> ₹${Utils.formatCurrency(invoice.subtotal)}</p>
                     <p><strong>Previous Balance:</strong> ₹${Utils.formatCurrency(previousBillAmount)}</p>
                     <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
@@ -1225,12 +1226,12 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
         const totalCurrentBillAmount = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.subtotal, 0);
         const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
         const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
-        
+
         // Calculate payment breakdown totals
         const totalCashPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.cash || 0), 0);
         const totalUpiPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.upi || 0), 0);
         const totalAccountPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.account || 0), 0);
-        
+
         // Get adjusted balance from the most recent invoice
         const mostRecentInvoice = invoicesWithReturns[0];
         const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
@@ -1255,7 +1256,7 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
 
 ${invoicesWithReturns.map((invoice, index) => {
             const previousBalance = invoice.grandTotal - invoice.subtotal;
-            
+
             // Build payment breakdown for each invoice
             let paymentDetails = '';
             if (invoice.paymentBreakdown) {
@@ -1267,14 +1268,14 @@ ${invoicesWithReturns.map((invoice, index) => {
             }
 
             // Build product details
-            const productDetails = invoice.products && invoice.products.length > 0 ? 
-                `\n📦 *PRODUCTS:*\n${invoice.products.map((product, index) => 
+            const productDetails = invoice.products && invoice.products.length > 0 ?
+                `\n📦 *PRODUCTS:*\n${invoice.products.map((product, index) =>
                     `   ${index + 1}. ${product.description}\n      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
                 ).join('\n')}` : '';
 
             // Build return details
-            const returnDetails = invoice.returns && invoice.returns.length > 0 ? 
-                `\n🔄 *RETURNS:*\n${invoice.returns.map((returnItem, index) => 
+            const returnDetails = invoice.returns && invoice.returns.length > 0 ?
+                `\n🔄 *RETURNS:*\n${invoice.returns.map((returnItem, index) =>
                     `   ${index + 1}. ${returnItem.description}\n      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
                 ).join('\n')}` : '';
 
@@ -1290,9 +1291,9 @@ ${invoicesWithReturns.map((invoice, index) => {
 
 ${productDetails}${returnDetails}
 
-${invoice.totalReturns > 0 ? 
-`✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` : 
-`✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
+${invoice.totalReturns > 0 ?
+                    `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` :
+                    `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
         }).join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1307,9 +1308,9 @@ ${totalUpiPaid > 0 ? `   📱 UPI: ₹${Utils.formatCurrency(totalUpiPaid)}` : '
 ${totalAccountPaid > 0 ? `   🏦 Account: ₹${Utils.formatCurrency(totalAccountPaid)}` : ''}
 ${totalReturns > 0 ? `🔄 Total Returns: -₹${Utils.formatCurrency(totalReturns)}` : ''}
 
-${totalReturns > 0 ? 
-`✅ *ADJUSTED OUTSTANDING BALANCE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : 
-`✅ *OUTSTANDING BALANCE: ₹${Utils.formatCurrency(mostRecentInvoice.balanceDue)}*`}
+${totalReturns > 0 ?
+                `✅ *ADJUSTED OUTSTANDING BALANCE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` :
+                `✅ *OUTSTANDING BALANCE: ₹${Utils.formatCurrency(mostRecentInvoice.balanceDue)}*`}
 
 ${totalReturns > 0 ? `
 *RETURN SUMMARY*
@@ -1319,9 +1320,9 @@ ${totalReturns > 0 ? `
 
 *INVOICE NUMBERS*
 ────────────────────────────────
-${invoicesWithReturns.map(invoice => 
-            `• #${invoice.invoiceNo} - ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}`
-        ).join('\n')}
+${invoicesWithReturns.map(invoice =>
+                    `• #${invoice.invoiceNo} - ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}`
+                ).join('\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1357,7 +1358,7 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
         const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
-        
+
         // Get detailed return information
         const returns = await db.getReturnsByInvoice(invoiceNo);
 
@@ -1368,7 +1369,7 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
             if (invoiceData.paymentBreakdown.cash > 0) paymentMethods.push(`💵 Cash: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.cash)}`);
             if (invoiceData.paymentBreakdown.upi > 0) paymentMethods.push(`📱 UPI: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.upi)}`);
             if (invoiceData.paymentBreakdown.account > 0) paymentMethods.push(`🏦 Account: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.account)}`);
-            
+
             if (paymentMethods.length > 0) {
                 paymentBreakdownMessage = `\n💳 ${paymentMethods.join(' | ')}`;
             }
@@ -1420,9 +1421,9 @@ ${previousBalance > 0 ? `📊 Previous Balance: ₹${Utils.formatCurrency(previo
 ✅ Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}${paymentBreakdownMessage}
 ${totalReturns > 0 ? `🔄 Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
 
-${totalReturns > 0 ? 
-`✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : 
-`✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoiceData.balanceDue)}*`}
+${totalReturns > 0 ?
+                `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` :
+                `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoiceData.balanceDue)}*`}
 
 ${totalReturns > 0 ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1457,7 +1458,7 @@ _This is an automated invoice statement. Please contact us for any queries._`;
 function openWhatsApp(phoneNumber, message) {
     // Clean phone number and add country code for India
     let cleanPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
-    
+
     // Add country code if missing
     if (cleanPhone && !cleanPhone.startsWith('91')) {
         // Remove leading 0 if present and add country code
@@ -1480,13 +1481,13 @@ function openWhatsApp(phoneNumber, message) {
 
     // Always copy to clipboard first
     copyToClipboard(message);
-    
+
     // Then open WhatsApp
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-    
+
     const newWindow = window.open(whatsappUrl, '_blank');
-    
+
     if (!newWindow) {
         alert('Message copied to clipboard! Popup was blocked - please open WhatsApp manually and paste the message.');
     } else {
@@ -1623,11 +1624,11 @@ async function addPayment(invoiceNo) {
     // Add focus styles to inputs
     const paymentInputs = paymentDialog.querySelectorAll('input[type="number"]');
     paymentInputs.forEach(input => {
-        input.addEventListener('focus', function() {
+        input.addEventListener('focus', function () {
             this.style.borderColor = '#007bff';
             this.style.boxShadow = '0 0 0 2px rgba(0, 123, 255, 0.25)';
         });
-        input.addEventListener('blur', function() {
+        input.addEventListener('blur', function () {
             this.style.borderColor = '#ced4da';
             this.style.boxShadow = 'none';
         });
@@ -1734,18 +1735,18 @@ async function addPayment(invoiceNo) {
                     await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
 
                     document.body.removeChild(paymentDialog);
-                    
+
                     // Show success message with payment breakdown
                     let successMessage = `Payment of ₹${Utils.formatCurrency(totalPayment)} added successfully!`;
                     const paymentMethods = [];
                     if (cashAmount > 0) paymentMethods.push(`Cash: ₹${Utils.formatCurrency(cashAmount)}`);
                     if (upiAmount > 0) paymentMethods.push(`UPI: ₹${Utils.formatCurrency(upiAmount)}`);
                     if (accountAmount > 0) paymentMethods.push(`Account: ₹${Utils.formatCurrency(accountAmount)}`);
-                    
+
                     if (paymentMethods.length > 0) {
                         successMessage += `\nBreakdown: ${paymentMethods.join(', ')}`;
                     }
-                    
+
                     alert(successMessage);
                     loadInvoices(); // Refresh the list
                     resolve(true);
@@ -1800,7 +1801,7 @@ async function generatePDFStatement(invoiceData, payments) {
         // Calculate returns for this invoice
         const totalReturns = await Utils.calculateTotalReturns(invoiceData.invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
-        
+
         // Create PDF document
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
@@ -1822,13 +1823,13 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text('PR FABRICS', pageWidth / 2, yPos, { align: 'center' });
-        
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
         doc.text('42/65, THIRUNEELAKANDA PURAM, 1ST STREET, TIRUPUR 641-602', pageWidth / 2, yPos + 5, { align: 'center' });
         doc.text('Cell: 9952520181 | GSTIN: 33CLJPG4331G1ZG', pageWidth / 2, yPos + 10, { align: 'center' });
-        
+
         yPos += 20;
 
         // TITLE
@@ -1836,12 +1837,12 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text('ACCOUNT STATEMENT', pageWidth / 2, yPos, { align: 'center' });
-        
+
         // Underline
         doc.setDrawColor(...accentColor);
         doc.setLineWidth(0.5);
         doc.line(pageWidth / 2 - 40, yPos + 2, pageWidth / 2 + 40, yPos + 2);
-        
+
         yPos += 15;
 
         // STATEMENT INFORMATION
@@ -1854,7 +1855,7 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
-        
+
         doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
         yPos += 4;
         doc.text(`Statement Period: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')} to ${new Date().toLocaleDateString('en-IN')}`, margin, yPos);
@@ -1870,7 +1871,7 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...grayColor);
-        
+
         doc.text(`Name: ${invoiceData.customerName}`, margin, yPos);
         yPos += 4;
         doc.text(`Invoice No: ${invoiceData.invoiceNo}`, margin, yPos);
@@ -1964,7 +1965,7 @@ async function generatePDFStatement(invoiceData, payments) {
         doc.setTextColor(...grayColor);
 
         let summaryY = yPos;
-        
+
         // Current Bill Amount
         doc.text('Current Bill Amount:', margin, summaryY);
         doc.text(`₹${Utils.formatCurrency(invoiceData.subtotal)}`, pageWidth - margin, summaryY, { align: 'right' });
@@ -2025,7 +2026,7 @@ async function generatePDFStatement(invoiceData, payments) {
 
             // Get return details
             const returns = await db.getReturnsByInvoice(invoiceData.invoiceNo);
-            
+
             if (returns.length > 0) {
                 const returnTableHeaders = [['Date', 'Product', 'Qty', 'Rate', 'Amount']];
                 const returnTableData = returns.map((returnItem, index) => [
@@ -2188,9 +2189,9 @@ async function generatePDFStatement(invoiceData, payments) {
         const today = new Date();
         const dateFolder = today.toISOString().split('T')[0];
         const fileName = `Statement_${invoiceData.invoiceNo}_${invoiceData.customerName}_${dateFolder}.pdf`;
-        
+
         doc.save(fileName);
-        
+
         setTimeout(() => {
             alert(`Statement saved as: ${fileName}`);
         }, 500);
@@ -2361,10 +2362,10 @@ async function addReturn(invoiceNo) {
 function addReturnItemFromDialog() {
     const returnDialog = document.querySelector('.return-dialog');
     if (!returnDialog) return;
-    
+
     const productsData = returnDialog.dataset.products;
     const originalProducts = productsData ? JSON.parse(productsData) : [];
-    
+
     addReturnItem(originalProducts);
 }
 
@@ -2490,7 +2491,7 @@ async function saveReturn(invoiceNo) {
         const invoiceData = await db.getInvoice(invoiceNo);
         const returnDate = document.getElementById('returnDate').value;
         const returnItems = document.querySelectorAll('.return-item');
-        
+
         if (!returnDate) {
             alert('Please select a return date.');
             return;
@@ -2525,7 +2526,7 @@ async function saveReturn(invoiceNo) {
                 const selectedOption = descriptionSelect.options[descriptionSelect.selectedIndex];
                 const maxQty = parseFloat(selectedOption.dataset.maxqty) || 0;
                 const alreadyReturnedQty = await getAlreadyReturnedQty(invoiceNo, description);
-                
+
                 if ((qty + alreadyReturnedQty) > maxQty) {
                     alert(`Cannot return ${qty} items. Only ${maxQty - alreadyReturnedQty} items available for return for "${description}".`);
                     return;
@@ -2547,7 +2548,7 @@ async function saveReturn(invoiceNo) {
         // Validate that return amount doesn't exceed current balance
         const currentReturns = await Utils.calculateTotalReturns(invoiceNo);
         const currentBalance = invoiceData.balanceDue - currentReturns;
-        
+
         if (totalReturnAmount > currentBalance) {
             alert(`Return amount (₹${Utils.formatCurrency(totalReturnAmount)}) cannot exceed current balance (₹${Utils.formatCurrency(currentBalance)})`);
             return;
@@ -2571,7 +2572,7 @@ async function saveReturn(invoiceNo) {
         await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
 
         alert(`Return processed successfully! Total return amount: ₹${Utils.formatCurrency(totalReturnAmount)}`);
-        
+
         // Close dialog and refresh
         document.querySelector('.return-dialog-overlay').remove();
         loadInvoices();
@@ -2587,10 +2588,10 @@ async function saveReturn(invoiceNo) {
 async function getAlreadyReturnedQty(invoiceNo, productDescription) {
     try {
         const returns = await db.getReturnsByInvoice(invoiceNo);
-        const productReturns = returns.filter(returnItem => 
+        const productReturns = returns.filter(returnItem =>
             returnItem.description === productDescription
         );
-        
+
         return productReturns.reduce((total, returnItem) => total + returnItem.qty, 0);
     } catch (error) {
         console.error('Error getting already returned quantity:', error);
@@ -2681,6 +2682,14 @@ async function deleteInvoice(invoiceNo) {
         }
     }
 }
+
+
+// Clear customer statement search and results
+function clearCustomerStatement() {
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('customerStatementResults').innerHTML = '';
+}
+
 
 // // Logout function
 // function logout() {
