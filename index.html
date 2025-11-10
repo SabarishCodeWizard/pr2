@@ -148,7 +148,7 @@
                 <button id="addRow">Add Product</button>
             </div>
 
-            <!-- Update the calculation section -->
+            <!-- Replace the entire payment calculation section with this -->
             <div class="calculation-section">
                 <div class="payment-calculation">
                     <div class="payment-row">
@@ -163,25 +163,51 @@
                         <label>Total Amount Due:</label>
                         <span id="grandTotal">0.00</span>
                     </div>
-                    <div class="payment-row">
-                        <label>Amount Paid (This Bill):</label>
-                        <input type="number" id="amountPaid" value="0" class="payment-input">
+
+                    <!-- Multiple Payment Methods Section -->
+                    <div class="multiple-payments-section">
+                        <h4>Payment Methods</h4>
+
+                        <!-- Cash Payment -->
+                        <div class="payment-method-row">
+                            <div class="payment-method-label">
+                                <i class="fas fa-money-bill-wave"></i>
+                                CASH:
+                            </div>
+                            <input type="number" id="cashPaid" value="0" class="payment-input" placeholder="0.00">
+                        </div>
+
+                        <!-- UPI Payment -->
+                        <div class="payment-method-row">
+                            <div class="payment-method-label">
+                                <i class="fas fa-mobile-alt"></i>
+                                UPI:
+                            </div>
+                            <input type="number" id="upiPaid" value="0" class="payment-input" placeholder="0.00">
+                        </div>
+
+                        <!-- Account/Other Payment -->
+                        <div class="payment-method-row">
+                            <div class="payment-method-label">
+                                <i class="fas fa-university"></i>
+                                ACCOUNT:
+                            </div>
+                            <input type="number" id="accountPaid" value="0" class="payment-input" placeholder="0.00">
+                        </div>
+
+                        <!-- Total Paid Display -->
+                        <div class="payment-row total-paid">
+                            <label>Total Amount Paid:</label>
+                            <span id="totalAmountPaid">0.00</span>
+                        </div>
                     </div>
-                    <div class="payment-row">
-                        <label>Payment Method:</label>
-                        <select id="paymentMethod" class="payment-select">
-                            <option value="cash">CASH</option>
-                            <option value="gpay">UPI</option>
-                            <option value="gpay">Account</option>
-                        </select>
-                    </div>
+
                     <div class="payment-row">
                         <label>New Balance Due:</label>
                         <span id="balanceDue">0.00</span>
                     </div>
                 </div>
             </div>
-
 
             <div class="signature-section">
                 <div class="declaration">

@@ -62,6 +62,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.getElementById('saveBill').addEventListener('click', saveBill);
     document.getElementById('resetForm').addEventListener('click', resetForm);
     document.getElementById('logoutBtn').addEventListener('click', logout);
+      // Add event listeners for payment inputs
+    document.getElementById('cashPaid').addEventListener('input', Utils.updateCalculations);
+    document.getElementById('upiPaid').addEventListener('input', Utils.updateCalculations);
+    document.getElementById('accountPaid').addEventListener('input', Utils.updateCalculations);
+
 
     // Add event listeners for dynamic calculations
     document.getElementById('productTableBody').addEventListener('input', function (e) {
@@ -96,7 +101,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
 
-// Also update the saveBill function to refresh suggestions after saving
 async function saveBill() {
     if (!Utils.validateForm()) {
         return;
@@ -119,20 +123,50 @@ async function saveBill() {
         
         alert('Bill saved successfully!');
 
+        // Save individual payments
+        const paymentBreakdown = invoiceData.paymentBreakdown;
+        const totalPaid = invoiceData.amountPaid;
+
+        if (totalPaid > 0) {
+            // Save cash payment
+            if (paymentBreakdown.cash > 0) {
+                const cashPaymentData = {
+                    invoiceNo: invoiceData.invoiceNo,
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    amount: paymentBreakdown.cash,
+                    paymentMethod: 'cash',
+                    paymentType: 'initial'
+                };
+                await db.savePayment(cashPaymentData);
+            }
+
+            // Save UPI payment
+            if (paymentBreakdown.upi > 0) {
+                const upiPaymentData = {
+                    invoiceNo: invoiceData.invoiceNo,
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    amount: paymentBreakdown.upi,
+                    paymentMethod: 'gpay',
+                    paymentType: 'initial'
+                };
+                await db.savePayment(upiPaymentData);
+            }
+
+            // Save account payment
+            if (paymentBreakdown.account > 0) {
+                const accountPaymentData = {
+                    invoiceNo: invoiceData.invoiceNo,
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    amount: paymentBreakdown.account,
+                    paymentMethod: 'account',
+                    paymentType: 'initial'
+                };
+                await db.savePayment(accountPaymentData);
+            }
+        }
+
         // Refresh invoice number suggestions after saving
         await Utils.updateInvoiceNumberSuggestions();
-
-        // Rest of your existing saveBill code...
-        if (invoiceData.amountPaid > 0) {
-            const paymentData = {
-                invoiceNo: invoiceData.invoiceNo,
-                paymentDate: new Date().toISOString().split('T')[0],
-                amount: invoiceData.amountPaid,
-                paymentMethod: invoiceData.paymentMethod,
-                paymentType: 'initial'
-            };
-            await db.savePayment(paymentData);
-        }
 
         if (isEditing) {
             await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
@@ -185,7 +219,7 @@ function applySuggestedInvoiceNumber() {
     });
 
 
-    document.getElementById('amountPaid').addEventListener('input', Utils.updateCalculations);
+    // document.getElementById('amountPaid').addEventListener('input', Utils.updateCalculations);
 
     // Check if we're editing an existing invoice
     const urlParams = new URLSearchParams(window.location.search);

@@ -142,7 +142,7 @@ class Utils {
         return true;
     }
 
-    // Get form data as object (synchronous version)
+    // Update getFormData method to include payment breakdown
     static getFormData() {
         const products = [];
         document.querySelectorAll('#productTableBody tr').forEach((row, index) => {
@@ -164,9 +164,11 @@ class Utils {
         const subtotal = Utils.calculateSubtotal();
         const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
         const totalAmount = subtotal + previousBalance;
-        const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
-        const paymentMethod = document.getElementById('paymentMethod').value;
-        const balanceDue = totalAmount - amountPaid;
+
+        // Get payment breakdown
+        const paymentBreakdown = Utils.getPaymentBreakdown();
+        const totalAmountPaid = Utils.calculateTotalPaid();
+        const balanceDue = totalAmount - totalAmountPaid;
 
         return {
             invoiceNo: document.getElementById('invoiceNo').value,
@@ -176,15 +178,14 @@ class Utils {
             customerPhone: document.getElementById('customerPhone').value,
             products: products,
             subtotal: subtotal,
-            previousBalance: previousBalance, // ADD THIS LINE - Store previous balance
+            previousBalance: previousBalance,
             grandTotal: totalAmount,
-            amountPaid: amountPaid,
-            paymentMethod: paymentMethod,
+            paymentBreakdown: paymentBreakdown, // Store individual payment methods
+            amountPaid: totalAmountPaid, // Total paid
             balanceDue: balanceDue,
             createdAt: new Date().toISOString()
         };
     }
-
     // Calculate and set previous balance for new invoices
     static async calculateAndSetPreviousBalance() {
         const customerName = document.getElementById('customerName').value;
@@ -405,8 +406,18 @@ class Utils {
         document.getElementById('customerName').value = data.customerName || '';
         document.getElementById('customerAddress').value = data.customerAddress || '';
         document.getElementById('customerPhone').value = data.customerPhone || '';
-        document.getElementById('amountPaid').value = data.amountPaid || 0;
-        document.getElementById('paymentMethod').value = data.paymentMethod || 'cash';
+
+        // Set payment breakdown if available, otherwise set defaults
+        if (data.paymentBreakdown) {
+            document.getElementById('cashPaid').value = data.paymentBreakdown.cash || 0;
+            document.getElementById('upiPaid').value = data.paymentBreakdown.upi || 0;
+            document.getElementById('accountPaid').value = data.paymentBreakdown.account || 0;
+        } else {
+            // For backward compatibility with old invoices
+            document.getElementById('cashPaid').value = data.amountPaid || 0;
+            document.getElementById('upiPaid').value = 0;
+            document.getElementById('accountPaid').value = 0;
+        }
 
         // Clear existing product rows
         const tableBody = document.getElementById('productTableBody');
@@ -451,18 +462,37 @@ class Utils {
     }
 
 
-    // Update all calculations (synchronous)
+    // Calculate total amount paid from all payment methods
+    static calculateTotalPaid() {
+        const cashPaid = parseFloat(document.getElementById('cashPaid').value) || 0;
+        const upiPaid = parseFloat(document.getElementById('upiPaid').value) || 0;
+        const accountPaid = parseFloat(document.getElementById('accountPaid').value) || 0;
+
+        return cashPaid + upiPaid + accountPaid;
+    }
+
+    // Get payment breakdown as object
+    static getPaymentBreakdown() {
+        return {
+            cash: parseFloat(document.getElementById('cashPaid').value) || 0,
+            upi: parseFloat(document.getElementById('upiPaid').value) || 0,
+            account: parseFloat(document.getElementById('accountPaid').value) || 0
+        };
+    }
+
+    // Update the main calculations method to use multiple payments
     static updateCalculations() {
         const subtotal = Utils.calculateSubtotal();
         const previousBalance = parseFloat(document.getElementById('previousBalance').textContent.replace(/[^0-9.-]+/g, "")) || 0;
-        const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+        const totalAmountPaid = Utils.calculateTotalPaid();
 
         const totalAmount = subtotal + previousBalance;
-        const balanceDue = totalAmount - amountPaid;
+        const balanceDue = totalAmount - totalAmountPaid;
 
         // Update display
         document.getElementById('subTotal').textContent = Utils.formatCurrency(subtotal);
         document.getElementById('grandTotal').textContent = Utils.formatCurrency(totalAmount);
+        document.getElementById('totalAmountPaid').textContent = Utils.formatCurrency(totalAmountPaid);
         document.getElementById('balanceDue').textContent = Utils.formatCurrency(balanceDue);
 
         // Update product amounts
@@ -515,78 +545,87 @@ class Utils {
         }
     }
 
-    // Generate next invoice number suggestion
-    static async generateNextInvoiceNumber() {
-        try {
-            const { highestNumber, highestInvoiceNo } = await Utils.getHighestInvoiceNumber();
+// Generate next invoice number suggestion
+static async generateNextInvoiceNumber() {
+    try {
+        const { highestNumber, highestInvoiceNo } = await Utils.getHighestInvoiceNumber();
 
-            if (highestNumber === 0) {
-                // No invoices yet, start with 1 or a default
-                return {
-                    lastInvoiceNo: 'No invoices yet',
-                    nextInvoiceNo: '1',
-                    nextNumber: 1
-                };
-            }
-
-            // Generate next number
-            const nextNumber = highestNumber + 1;
-
-            // Try to maintain the same format as the last invoice
-            let nextInvoiceNo;
-            if (highestInvoiceNo && highestInvoiceNo.match(/[A-Za-z]/)) {
-                // If last invoice has letters, try to preserve the format
-                const prefixMatch = highestInvoiceNo.match(/^[A-Za-z]+/);
-                const suffixMatch = highestInvoiceNo.match(/[A-Za-z]+$/);
-
-                if (prefixMatch && suffixMatch) {
-                    nextInvoiceNo = `${prefixMatch[0]}${nextNumber}${suffixMatch[0]}`;
-                } else if (prefixMatch) {
-                    nextInvoiceNo = `${prefixMatch[0]}${nextNumber}`;
-                } else if (suffixMatch) {
-                    nextInvoiceNo = `${nextNumber}${suffixMatch[0]}`;
-                } else {
-                    nextInvoiceNo = nextNumber.toString();
-                }
-            } else {
-                // Pure numeric or no special format detected
-                nextInvoiceNo = nextNumber.toString();
-            }
-
+        if (highestNumber === 0) {
+            // No invoices yet, start with 001
             return {
-                lastInvoiceNo: highestInvoiceNo,
-                nextInvoiceNo: nextInvoiceNo,
-                nextNumber: nextNumber
-            };
-        } catch (error) {
-            console.error('Error generating next invoice number:', error);
-            return {
-                lastInvoiceNo: 'Error',
-                nextInvoiceNo: '1',
+                lastInvoiceNo: 'No invoices yet',
+                nextInvoiceNo: '001',
                 nextNumber: 1
             };
         }
-    }
 
-    // Update invoice number suggestions in the UI
-    static async updateInvoiceNumberSuggestions() {
-        try {
-            const suggestions = await Utils.generateNextInvoiceNumber();
+        // Generate next number
+        const nextNumber = highestNumber + 1;
 
-            // Update the UI
-            document.getElementById('lastInvoiceNo').textContent = suggestions.lastInvoiceNo;
-            document.getElementById('nextInvoiceNo').textContent = suggestions.nextInvoiceNo;
+        // Format as triple digits (001, 002, ..., 999)
+        const formattedNextNumber = nextNumber.toString().padStart(3, '0');
 
-            // Store the suggested number for later use
-            document.getElementById('nextInvoiceNo').dataset.suggestedNumber = suggestions.nextInvoiceNo;
+        // Try to maintain the same format as the last invoice
+        let nextInvoiceNo;
+        if (highestInvoiceNo && highestInvoiceNo.match(/[A-Za-z]/)) {
+            // If last invoice has letters, try to preserve the format
+            const prefixMatch = highestInvoiceNo.match(/^[A-Za-z]+/);
+            const suffixMatch = highestInvoiceNo.match(/[A-Za-z]+$/);
 
-            return suggestions;
-        } catch (error) {
-            console.error('Error updating invoice number suggestions:', error);
-            document.getElementById('lastInvoiceNo').textContent = 'Error';
-            document.getElementById('nextInvoiceNo').textContent = '1';
+            if (prefixMatch && suffixMatch) {
+                nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}${suffixMatch[0]}`;
+            } else if (prefixMatch) {
+                nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}`;
+            } else if (suffixMatch) {
+                nextInvoiceNo = `${formattedNextNumber}${suffixMatch[0]}`;
+            } else {
+                nextInvoiceNo = formattedNextNumber;
+            }
+        } else {
+            // Pure numeric or no special format detected - use triple digits
+            nextInvoiceNo = formattedNextNumber;
         }
+
+        // Also format the last invoice number for display if it's numeric
+        let formattedLastInvoiceNo = highestInvoiceNo;
+        if (highestInvoiceNo && /^\d+$/.test(highestInvoiceNo)) {
+            formattedLastInvoiceNo = highestInvoiceNo.padStart(3, '0');
+        }
+
+        return {
+            lastInvoiceNo: formattedLastInvoiceNo,
+            nextInvoiceNo: nextInvoiceNo,
+            nextNumber: nextNumber
+        };
+    } catch (error) {
+        console.error('Error generating next invoice number:', error);
+        return {
+            lastInvoiceNo: 'Error',
+            nextInvoiceNo: '001',
+            nextNumber: 1
+        };
     }
+}
+
+// Update invoice number suggestions in the UI
+static async updateInvoiceNumberSuggestions() {
+    try {
+        const suggestions = await Utils.generateNextInvoiceNumber();
+
+        // Update the UI
+        document.getElementById('lastInvoiceNo').textContent = suggestions.lastInvoiceNo;
+        document.getElementById('nextInvoiceNo').textContent = suggestions.nextInvoiceNo;
+
+        // Store the suggested number for later use
+        document.getElementById('nextInvoiceNo').dataset.suggestedNumber = suggestions.nextInvoiceNo;
+
+        return suggestions;
+    } catch (error) {
+        console.error('Error updating invoice number suggestions:', error);
+        document.getElementById('lastInvoiceNo').textContent = 'Error';
+        document.getElementById('nextInvoiceNo').textContent = '001';
+    }
+}
 
 
     // Update customer balance display
@@ -640,12 +679,17 @@ class Utils {
         document.getElementById('customerName').value = '';
         document.getElementById('customerAddress').value = '';
         document.getElementById('customerPhone').value = '';
+        // Reset the new payment method fields instead of the old ones
+        document.getElementById('cashPaid').value = 0;
+        document.getElementById('upiPaid').value = 0;
+        document.getElementById('accountPaid').value = 0;
+
         // document.getElementById('transportMode').value = '';
         // document.getElementById('vehicleNumber').value = '';
         // document.getElementById('supplyDate').value = '';
         // document.getElementById('placeOfSupply').value = '';
-        document.getElementById('amountPaid').value = 0;
-        document.getElementById('paymentMethod').value = 'cash';
+        // document.getElementById('amountPaid').value = 0;
+        // document.getElementById('paymentMethod').value = 'cash';
 
         // Reset product table
         const tableBody = document.getElementById('productTableBody');

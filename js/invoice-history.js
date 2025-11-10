@@ -1210,9 +1210,11 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
         const invoicesWithReturns = await Promise.all(
             customerInvoices.map(async (invoice) => {
                 const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
                 return {
                     ...invoice,
                     totalReturns,
+                    returns,
                     adjustedBalanceDue: invoice.balanceDue - totalReturns
                 };
             })
@@ -1224,6 +1226,11 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
         const totalPaid = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.amountPaid, 0);
         const totalReturns = invoicesWithReturns.reduce((sum, invoice) => sum + invoice.totalReturns, 0);
         
+        // Calculate payment breakdown totals
+        const totalCashPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.cash || 0), 0);
+        const totalUpiPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.upi || 0), 0);
+        const totalAccountPaid = invoicesWithReturns.reduce((sum, invoice) => sum + (invoice.paymentBreakdown?.account || 0), 0);
+        
         // Get adjusted balance from the most recent invoice
         const mostRecentInvoice = invoicesWithReturns[0];
         const adjustedBalanceDue = mostRecentInvoice.adjustedBalanceDue;
@@ -1232,42 +1239,97 @@ async function shareCombinedStatementViaWhatsApp(customerName) {
         const customerPhone = mostRecentInvoice.customerPhone;
         const customerAddress = mostRecentInvoice.customerAddress;
 
-        // Create WhatsApp message with returns information
+        // Create WhatsApp message with professional formatting
         const message = `*PR FABRICS - ACCOUNT STATEMENT*
 *GSTIN: 33CLJPG4331G1ZG*
 
-*Customer Details:*
-Customer: ${customerName}
-Address: ${customerAddress || 'Not specified'}
-Total Invoices: ${totalInvoices}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Invoice Summary:*
-${invoicesWithReturns.map(invoice => {
+*CUSTOMER DETAILS*
+────────────────────────────────
+👤 Customer: ${customerName}
+📍 Address: ${customerAddress || 'Not specified'}
+📊 Total Invoices: ${totalInvoices}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${invoicesWithReturns.map((invoice, index) => {
             const previousBalance = invoice.grandTotal - invoice.subtotal;
-            return `📋 *Invoice #${invoice.invoiceNo}*
-   Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
+            
+            // Build payment breakdown for each invoice
+            let paymentDetails = '';
+            if (invoice.paymentBreakdown) {
+                const payments = [];
+                if (invoice.paymentBreakdown.cash > 0) payments.push(`💵 Cash: ₹${Utils.formatCurrency(invoice.paymentBreakdown.cash)}`);
+                if (invoice.paymentBreakdown.upi > 0) payments.push(`📱 UPI: ₹${Utils.formatCurrency(invoice.paymentBreakdown.upi)}`);
+                if (invoice.paymentBreakdown.account > 0) payments.push(`🏦 Account: ₹${Utils.formatCurrency(invoice.paymentBreakdown.account)}`);
+                paymentDetails = payments.length > 0 ? `\n💳 ${payments.join(' | ')}` : '';
+            }
+
+            // Build product details
+            const productDetails = invoice.products && invoice.products.length > 0 ? 
+                `\n📦 *PRODUCTS:*\n${invoice.products.map((product, index) => 
+                    `   ${index + 1}. ${product.description}\n      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
+                ).join('\n')}` : '';
+
+            // Build return details
+            const returnDetails = invoice.returns && invoice.returns.length > 0 ? 
+                `\n🔄 *RETURNS:*\n${invoice.returns.map((returnItem, index) => 
+                    `   ${index + 1}. ${returnItem.description}\n      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
+                ).join('\n')}` : '';
+
+            return `*INVOICE #${invoice.invoiceNo}* ${index < invoicesWithReturns.length - 1 ? '┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄' : ''}
+📅 Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
+
+💰 *BILL SUMMARY:*
    Current Bill: ₹${Utils.formatCurrency(invoice.subtotal)}
    ${previousBalance > 0 ? `Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
-   Amount Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}
+   Total Amount: ₹${Utils.formatCurrency(invoice.grandTotal)}
+   Amount Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}${paymentDetails}
    ${invoice.totalReturns > 0 ? `Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
-   ${invoice.totalReturns > 0 ? `*Adjusted Due: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` : `*Balance Due: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
+
+${productDetails}${returnDetails}
+
+${invoice.totalReturns > 0 ? 
+`✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` : 
+`✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
         }).join('\n\n')}
 
-*Account Summary:*
-Total Current Bill Amount: ₹${Utils.formatCurrency(totalCurrentBillAmount)}
-Total Amount Paid: ₹${Utils.formatCurrency(totalPaid)}
-${totalReturns > 0 ? `Total Returns: -₹${Utils.formatCurrency(totalReturns)}` : ''}
-${totalReturns > 0 ? `*Adjusted Outstanding Balance: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : `*Outstanding Balance: ₹${Utils.formatCurrency(mostRecentInvoice.balanceDue)}*`}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*OVERALL ACCOUNT SUMMARY*
+────────────────────────────────
+📊 Total Invoices: ${totalInvoices}
+💰 Total Current Bill Amount: ₹${Utils.formatCurrency(totalCurrentBillAmount)}
+💳 Total Amount Paid: ₹${Utils.formatCurrency(totalPaid)}
+${totalCashPaid > 0 ? `   💵 Cash: ₹${Utils.formatCurrency(totalCashPaid)}` : ''}
+${totalUpiPaid > 0 ? `   📱 UPI: ₹${Utils.formatCurrency(totalUpiPaid)}` : ''}
+${totalAccountPaid > 0 ? `   🏦 Account: ₹${Utils.formatCurrency(totalAccountPaid)}` : ''}
+${totalReturns > 0 ? `🔄 Total Returns: -₹${Utils.formatCurrency(totalReturns)}` : ''}
+
+${totalReturns > 0 ? 
+`✅ *ADJUSTED OUTSTANDING BALANCE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : 
+`✅ *OUTSTANDING BALANCE: ₹${Utils.formatCurrency(mostRecentInvoice.balanceDue)}*`}
 
 ${totalReturns > 0 ? `
-*Return Summary:*
-Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
+*RETURN SUMMARY*
+────────────────────────────────
+📦 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 ` : ''}
 
-*CONTACT INFORMATION:*
-*PR FABRICS*
-*Tirupur*
-*Phone: 9952520181*
+*INVOICE NUMBERS*
+────────────────────────────────
+${invoicesWithReturns.map(invoice => 
+            `• #${invoice.invoiceNo} - ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')} - Due: ₹${Utils.formatCurrency(invoice.totalReturns > 0 ? invoice.adjustedBalanceDue : invoice.balanceDue)}`
+        ).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*CONTACT INFORMATION*
+────────────────────────────────
+🏢 *PR FABRICS*
+📍 Tirupur
+📞 *Phone: 9952520181*
 
 _This is an automated statement. Please contact us for any queries._`;
 
@@ -1279,6 +1341,8 @@ _This is an automated statement. Please contact us for any queries._`;
         alert('Error sharing statement. Please try again.');
     }
 }
+
+
 // Share individual invoice via WhatsApp
 async function shareInvoiceViaWhatsApp(invoiceNo) {
     try {
@@ -1297,47 +1361,84 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
         // Get detailed return information
         const returns = await db.getReturnsByInvoice(invoiceNo);
 
-        // Create WhatsApp message with returns information
+        // Build payment breakdown message
+        let paymentBreakdownMessage = '';
+        if (invoiceData.paymentBreakdown) {
+            const paymentMethods = [];
+            if (invoiceData.paymentBreakdown.cash > 0) paymentMethods.push(`💵 Cash: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.cash)}`);
+            if (invoiceData.paymentBreakdown.upi > 0) paymentMethods.push(`📱 UPI: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.upi)}`);
+            if (invoiceData.paymentBreakdown.account > 0) paymentMethods.push(`🏦 Account: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.account)}`);
+            
+            if (paymentMethods.length > 0) {
+                paymentBreakdownMessage = `\n💳 ${paymentMethods.join(' | ')}`;
+            }
+        }
+
+        // Create WhatsApp message with professional formatting
         const message = `*PR FABRICS - INVOICE STATEMENT*
 *GSTIN: 33CLJPG4331G1ZG*
 
-*Invoice Details:*
-Invoice #: ${invoiceData.invoiceNo}
-Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}
-Customer: ${invoiceData.customerName}
-Address: ${invoiceData.customerAddress || 'Not specified'}
-Phone: ${invoiceData.customerPhone || 'Not specified'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Product Details:*
+*INVOICE DETAILS*
+────────────────────────────────
+📄 Invoice #: ${invoiceData.invoiceNo}
+📅 Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}
+👤 Customer: ${invoiceData.customerName}
+📍 Address: ${invoiceData.customerAddress || 'Not specified'}
+📞 Phone: ${invoiceData.customerPhone || 'Not specified'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*PRODUCT DETAILS*
+────────────────────────────────
 ${invoiceData.products.map((product, index) =>
-            `${index + 1}. ${product.description} - Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
-        ).join('\n')}
+            `   ${index + 1}. ${product.description}
+      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)}
+      Amount: ₹${Utils.formatCurrency(product.amount)}`
+        ).join('\n\n')}
 
 ${totalReturns > 0 ? `
-*Return Details:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*RETURN DETAILS*
+────────────────────────────────
 ${returns.map((returnItem, index) =>
-            `${index + 1}. ${returnItem.description} - Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? ` (Reason: ${returnItem.reason})` : ''}`
-        ).join('\n')}
+            `   ${index + 1}. ${returnItem.description}
+      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)}
+      Amount: -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
+        ).join('\n\n')}
 ` : ''}
 
-*Account Summary:*
-Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
-Previous Balance: ₹${Utils.formatCurrency(previousBalance)}
-Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
-Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}
-${totalReturns > 0 ? `Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
-${totalReturns > 0 ? `Adjusted Balance Due: ₹${Utils.formatCurrency(adjustedBalanceDue)}` : `Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}`}
-Payment Method: ${invoiceData.paymentMethod?.toUpperCase() || 'CASH'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*ACCOUNT SUMMARY*
+────────────────────────────────
+💰 Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
+${previousBalance > 0 ? `📊 Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
+💳 Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
+✅ Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}${paymentBreakdownMessage}
+${totalReturns > 0 ? `🔄 Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
+
+${totalReturns > 0 ? 
+`✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` : 
+`✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoiceData.balanceDue)}*`}
 
 ${totalReturns > 0 ? `
-*Return Summary:*
-Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*RETURN SUMMARY*
+────────────────────────────────
+📦 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
 ` : ''}
 
-*CONTACT INFORMATION:*
-*PR FABRICS*
-*Tirupur*
-*Phone: 9952520181*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*CONTACT INFORMATION*
+────────────────────────────────
+🏢 *PR FABRICS*
+📍 Tirupur
+📞 *Phone: 9952520181*
 
 _This is an automated invoice statement. Please contact us for any queries._`;
 
@@ -1349,6 +1450,8 @@ _This is an automated invoice statement. Please contact us for any queries._`;
         alert('Error sharing invoice. Please try again.');
     }
 }
+
+
 
 // One-click solution with automatic clipboard
 function openWhatsApp(phoneNumber, message) {
@@ -1462,30 +1565,51 @@ async function generateInvoicePDF(invoiceNo) {
     }
 }
 
-// Add payment to an invoice with payment method
+// Add payment to an invoice with multiple payment methods
 async function addPayment(invoiceNo) {
-    // Create a custom dialog for payment input
+    // Create a custom dialog for payment input with multiple payment methods
     const paymentDialog = document.createElement('div');
     paymentDialog.className = 'payment-dialog-overlay';
     paymentDialog.innerHTML = `
         <div class="payment-dialog">
             <h3>Add Payment - Invoice #${invoiceNo}</h3>
             <div class="payment-form">
-                <div class="form-group">
-                    <label for="paymentAmount">Payment Amount:</label>
-                    <input type="number" id="paymentAmount" step="0.01" min="0.01" placeholder="Enter amount">
+                <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 12px; background: white; border-radius: 6px; border: 1px solid #e9ecef; border-left: 3px solid #28a745;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #495057; font-size: 13px; min-width: 100px;">
+                            <i class="fas fa-money-bill-wave" style="width: 16px; text-align: center; color: #6c757d;"></i>
+                            CASH:
+                        </div>
+                        <input type="number" id="cashPayment" step="0.01" min="0" placeholder="0.00" value="0" style="width: 120px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; text-align: right; font-size: 13px;">
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 12px; background: white; border-radius: 6px; border: 1px solid #e9ecef; border-left: 3px solid #007bff;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #495057; font-size: 13px; min-width: 100px;">
+                            <i class="fas fa-mobile-alt" style="width: 16px; text-align: center; color: #6c757d;"></i>
+                            UPI:
+                        </div>
+                        <input type="number" id="upiPayment" step="0.01" min="0" placeholder="0.00" value="0" style="width: 120px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; text-align: right; font-size: 13px;">
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 8px 12px; background: white; border-radius: 6px; border: 1px solid #e9ecef; border-left: 3px solid #6f42c1;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #495057; font-size: 13px; min-width: 100px;">
+                            <i class="fas fa-university" style="width: 16px; text-align: center; color: #6c757d;"></i>
+                            ACCOUNT:
+                        </div>
+                        <input type="number" id="accountPayment" step="0.01" min="0" placeholder="0.00" value="0" style="width: 120px; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px; text-align: right; font-size: 13px;">
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 10px 12px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff; font-weight: bold; font-size: 14px;">
+                        <label style="color: #2c3e50;">Total Payment:</label>
+                        <span id="totalPaymentAmount" style="color: #007bff; font-size: 15px;">₹0.00</span>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="paymentMethodSelect">Payment Method:</label>
-                    <select id="paymentMethodSelect" class="payment-select">
-                        <option value="cash">Cash</option>
-                        <option value="gpay">GPay</option>
-                    </select>
-                </div>
+                
                 <div class="form-group">
                     <label for="paymentDate">Payment Date:</label>
                     <input type="date" id="paymentDate" value="${new Date().toISOString().split('T')[0]}">
                 </div>
+                
                 <div class="payment-dialog-actions">
                     <button id="confirmPayment" class="btn-confirm">Add Payment</button>
                     <button id="cancelPayment" class="btn-cancel">Cancel</button>
@@ -1496,20 +1620,49 @@ async function addPayment(invoiceNo) {
 
     document.body.appendChild(paymentDialog);
 
-    // Focus on amount input
+    // Add focus styles to inputs
+    const paymentInputs = paymentDialog.querySelectorAll('input[type="number"]');
+    paymentInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.style.borderColor = '#007bff';
+            this.style.boxShadow = '0 0 0 2px rgba(0, 123, 255, 0.25)';
+        });
+        input.addEventListener('blur', function() {
+            this.style.borderColor = '#ced4da';
+            this.style.boxShadow = 'none';
+        });
+    });
+
+    // Add event listeners for payment inputs to update total
+    const updateTotalPayment = () => {
+        const cash = parseFloat(document.getElementById('cashPayment').value) || 0;
+        const upi = parseFloat(document.getElementById('upiPayment').value) || 0;
+        const account = parseFloat(document.getElementById('accountPayment').value) || 0;
+        const total = cash + upi + account;
+        document.getElementById('totalPaymentAmount').textContent = `₹${Utils.formatCurrency(total)}`;
+    };
+
+    document.getElementById('cashPayment').addEventListener('input', updateTotalPayment);
+    document.getElementById('upiPayment').addEventListener('input', updateTotalPayment);
+    document.getElementById('accountPayment').addEventListener('input', updateTotalPayment);
+
+    // Focus on first payment input
     setTimeout(() => {
-        document.getElementById('paymentAmount').focus();
+        document.getElementById('cashPayment').focus();
     }, 100);
 
     // Return a promise to handle the payment
     return new Promise((resolve) => {
         document.getElementById('confirmPayment').addEventListener('click', async function () {
-            const amount = parseFloat(document.getElementById('paymentAmount').value);
-            const paymentMethod = document.getElementById('paymentMethodSelect').value;
+            const cashAmount = parseFloat(document.getElementById('cashPayment').value) || 0;
+            const upiAmount = parseFloat(document.getElementById('upiPayment').value) || 0;
+            const accountAmount = parseFloat(document.getElementById('accountPayment').value) || 0;
             const paymentDate = document.getElementById('paymentDate').value;
 
-            if (!amount || isNaN(amount) || amount <= 0) {
-                alert('Please enter a valid payment amount.');
+            const totalPayment = cashAmount + upiAmount + accountAmount;
+
+            if (totalPayment <= 0) {
+                alert('Please enter a valid payment amount in at least one payment method.');
                 return;
             }
 
@@ -1521,31 +1674,79 @@ async function addPayment(invoiceNo) {
             try {
                 const invoiceData = await db.getInvoice(invoiceNo);
                 if (invoiceData) {
-                    const paymentAmount = parseFloat(amount);
-                    const newAmountPaid = invoiceData.amountPaid + paymentAmount;
+                    // Update invoice payment breakdown
+                    const currentPaymentBreakdown = invoiceData.paymentBreakdown || {
+                        cash: 0,
+                        upi: 0,
+                        account: 0
+                    };
 
-                    // Update invoice with new payment
+                    // Add new payments to existing breakdown
+                    const updatedPaymentBreakdown = {
+                        cash: currentPaymentBreakdown.cash + cashAmount,
+                        upi: currentPaymentBreakdown.upi + upiAmount,
+                        account: currentPaymentBreakdown.account + accountAmount
+                    };
+
+                    // Update invoice totals
+                    const newAmountPaid = invoiceData.amountPaid + totalPayment;
                     invoiceData.amountPaid = newAmountPaid;
                     invoiceData.balanceDue = invoiceData.grandTotal - newAmountPaid;
+                    invoiceData.paymentBreakdown = updatedPaymentBreakdown;
 
                     await db.saveInvoice(invoiceData);
 
+                    // Save individual payment records
+                    if (cashAmount > 0) {
+                        const cashPaymentData = {
+                            invoiceNo: invoiceNo,
+                            paymentDate: paymentDate,
+                            amount: cashAmount,
+                            paymentMethod: 'cash',
+                            paymentType: 'additional'
+                        };
+                        await db.savePayment(cashPaymentData);
+                    }
+
+                    if (upiAmount > 0) {
+                        const upiPaymentData = {
+                            invoiceNo: invoiceNo,
+                            paymentDate: paymentDate,
+                            amount: upiAmount,
+                            paymentMethod: 'gpay',
+                            paymentType: 'additional'
+                        };
+                        await db.savePayment(upiPaymentData);
+                    }
+
+                    if (accountAmount > 0) {
+                        const accountPaymentData = {
+                            invoiceNo: invoiceNo,
+                            paymentDate: paymentDate,
+                            amount: accountAmount,
+                            paymentMethod: 'account',
+                            paymentType: 'additional'
+                        };
+                        await db.savePayment(accountPaymentData);
+                    }
 
                     // Update all subsequent invoices
                     await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
 
-                    // Save payment record with method
-                    const paymentData = {
-                        invoiceNo: invoiceNo,
-                        paymentDate: paymentDate,
-                        amount: paymentAmount,
-                        paymentMethod: paymentMethod,
-                        paymentType: 'additional'
-                    };
-                    await db.savePayment(paymentData);
-
                     document.body.removeChild(paymentDialog);
-                    alert(`Payment of ₹${Utils.formatCurrency(paymentAmount)} via ${paymentMethod.toUpperCase()} added successfully!`);
+                    
+                    // Show success message with payment breakdown
+                    let successMessage = `Payment of ₹${Utils.formatCurrency(totalPayment)} added successfully!`;
+                    const paymentMethods = [];
+                    if (cashAmount > 0) paymentMethods.push(`Cash: ₹${Utils.formatCurrency(cashAmount)}`);
+                    if (upiAmount > 0) paymentMethods.push(`UPI: ₹${Utils.formatCurrency(upiAmount)}`);
+                    if (accountAmount > 0) paymentMethods.push(`Account: ₹${Utils.formatCurrency(accountAmount)}`);
+                    
+                    if (paymentMethods.length > 0) {
+                        successMessage += `\nBreakdown: ${paymentMethods.join(', ')}`;
+                    }
+                    
+                    alert(successMessage);
                     loadInvoices(); // Refresh the list
                     resolve(true);
                 } else {

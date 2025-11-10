@@ -416,7 +416,7 @@ static getImageBase64() {
                         </tbody>
                     </table>
 
-                    <!-- Calculation Section -->
+                                    <!-- Calculation Section -->
                     <div class="calculation-section">
                         <div class="payment-calculation">
                             <h3>PAYMENT SUMMARY</h3>
@@ -432,22 +432,46 @@ static getImageBase64() {
                                 <label>Total Amount:</label>
                                 <span>₹${Utils.formatCurrency(invoiceData.grandTotal)}</span>
                             </div>
+                            
+                            ${invoiceData.paymentBreakdown ? `
+                            <!-- Multiple Payment Methods Breakdown -->
+                            <div class="payment-row">
+                                <label>Cash Paid:</label>
+                                <span>₹${Utils.formatCurrency(invoiceData.paymentBreakdown.cash || 0)}</span>
+                            </div>
+                            <div class="payment-row">
+                                <label>UPI Paid:</label>
+                                <span>₹${Utils.formatCurrency(invoiceData.paymentBreakdown.upi || 0)}</span>
+                            </div>
+                            <div class="payment-row">
+                                <label>Account Paid:</label>
+                                <span>₹${Utils.formatCurrency(invoiceData.paymentBreakdown.account || 0)}</span>
+                            </div>
+                            <div class="payment-row total-paid">
+                                <label>Total Amount Paid:</label>
+                                <span>₹${Utils.formatCurrency(invoiceData.amountPaid)}</span>
+                            </div>
+                            ` : `
+                            <!-- Fallback for old invoices without paymentBreakdown -->
                             <div class="payment-row">
                                 <label>Amount Paid:</label>
                                 <span>₹${Utils.formatCurrency(invoiceData.amountPaid)}</span>
                             </div>
+                            <div class="payment-row">
+                                <label>Payment Method:</label>
+                                <span style="font-weight: bold; ${invoiceData.paymentMethod === 'cash' ? 'color: #27ae60;' : 'color: #3498db;'}">
+                                    ${invoiceData.paymentMethod === 'cash' ? 'CASH' : (invoiceData.paymentMethod === 'gpay' ? 'GPAY' : 'ACCOUNT')}
+                                </span>
+                            </div>
+                            `}
+                            
                             ${totalReturns > 0 ? `
                             <div class="payment-row">
                                 <label>Return Amount:</label>
                                 <span class="amount-return">-₹${Utils.formatCurrency(totalReturns)}</span>
                             </div>
                             ` : ''}
-                            <div class="payment-row">
-                                <label>Payment Method:</label>
-                                <span style="font-weight: bold; ${invoiceData.paymentMethod === 'cash' ? 'color: #27ae60;' : 'color: #3498db;'}">
-                                    ${invoiceData.paymentMethod === 'cash' ? 'CASH' : 'GPAY'}
-                                </span>
-                            </div>
+                            
                             <div class="payment-row" style="border-bottom: none;">
                                 <label>${totalReturns > 0 ? 'Adjusted Balance Due:' : 'Balance Due:'}</label>
                                 <span class="${adjustedBalanceDue > 0 ? 'amount-negative' : 'amount-positive'}">

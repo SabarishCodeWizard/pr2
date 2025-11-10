@@ -962,3 +962,85 @@ input:focus, select:focus, textarea:focus {
 .btn-apply-suggestion:hover {
     background: #0056b3;
 }
+
+/* Multiple Payment Methods Styles */
+.multiple-payments-section {
+    margin: 15px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.multiple-payments-section h4 {
+    margin: 0 0 12px 0;
+    color: #2c3e50;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+.payment-method-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.payment-method-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 13px;
+}
+
+.payment-method-label i {
+    width: 16px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.payment-input {
+    width: 100px;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    text-align: right;
+    font-size: 13px;
+}
+
+.payment-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.total-paid {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #dee2e6;
+    font-weight: bold;
+    background: #e7f3ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+/* Payment method specific colors */
+.payment-method-row:nth-child(2) { /* Cash */
+    border-left: 3px solid #28a745;
+}
+
+.payment-method-row:nth-child(3) { /* UPI */
+    border-left: 3px solid #007bff;
+}
+
+.payment-method-row:nth-child(4) { /* Account */
+    border-left: 3px solid #6f42c1;
+}
