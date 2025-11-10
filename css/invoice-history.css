@@ -2524,3 +2524,89 @@ body {
         min-width: 700px; /* Ensure table is usable on mobile */
     }
 }
+
+/* Date-wise grouping styles */
+.date-group {
+    margin-bottom: 2rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.date-group-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.date-title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.date-title .fas {
+    font-size: 1.1rem;
+}
+
+.date-summary {
+    display: flex;
+    gap: 1rem;
+}
+
+.invoice-count {
+    padding: 0.4rem 1rem;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.date-invoices-list {
+    padding: 1rem;
+}
+
+/* Responsive design for date headers */
+@media (max-width: 768px) {
+    .date-group-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.8rem;
+    }
+    
+    .date-summary {
+        gap: 0.8rem;
+    }
+    
+    .invoice-count {
+        font-size: 0.9rem;
+        padding: 0.3rem 0.8rem;
+    }
+}
+
+/* Add some animation */
+.date-group {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

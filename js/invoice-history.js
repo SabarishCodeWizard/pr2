@@ -718,7 +718,7 @@ function filterByInvoice(invoiceNo) {
     loadInvoices();
 }
 
-// Load invoices with optional filters
+// Update the loadInvoices function to handle date filtering better
 async function loadInvoices() {
     try {
         const invoices = await db.getAllInvoices();
@@ -767,8 +767,13 @@ async function loadInvoices() {
             });
         }
 
-        // Sort by invoice number (descending order - highest first)
+        // Sort by invoice date and number (newest first)
         filteredInvoices.sort((a, b) => {
+            // First sort by date (newest first)
+            const dateCompare = new Date(b.invoiceDate) - new Date(a.invoiceDate);
+            if (dateCompare !== 0) return dateCompare;
+            
+            // If same date, sort by invoice number (highest first)
             const numA = parseInt(a.invoiceNo) || 0;
             const numB = parseInt(b.invoiceNo) || 0;
             return numB - numA;
@@ -778,6 +783,25 @@ async function loadInvoices() {
     } catch (error) {
         console.error('Error loading invoices:', error);
         alert('Error loading invoices.');
+    }
+}
+
+// Add this function to get date statistics (optional)
+async function getDateWiseStatistics() {
+    try {
+        const invoices = await db.getAllInvoices();
+        const groupedInvoices = groupInvoicesByDate(invoices);
+        
+        return {
+            totalDays: groupedInvoices.length,
+            dateGroups: groupedInvoices,
+            overallStats: {
+                totalInvoices: invoices.length
+            }
+        };
+    } catch (error) {
+        console.error('Error getting date statistics:', error);
+        return null;
     }
 }
 
@@ -1027,7 +1051,34 @@ async function getAlreadyReturnedQty(invoiceNo, productDescription) {
     }
 }
 
-// Also update the displayInvoices function to ensure it shows the correct adjusted balance
+
+// Add this new function to group invoices by date
+function groupInvoicesByDate(invoices) {
+    const groupedInvoices = {};
+    
+    invoices.forEach(invoice => {
+        const invoiceDate = new Date(invoice.invoiceDate).toLocaleDateString('en-IN');
+        
+        if (!groupedInvoices[invoiceDate]) {
+            groupedInvoices[invoiceDate] = {
+                date: invoiceDate,
+                invoices: [],
+                totalInvoices: 0
+            };
+        }
+        
+        groupedInvoices[invoiceDate].invoices.push(invoice);
+        groupedInvoices[invoiceDate].totalInvoices++;
+    });
+    
+    // Convert to array and sort by date (newest first)
+    return Object.values(groupedInvoices).sort((a, b) => {
+        return new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-'));
+    });
+}
+
+
+// Modify the displayInvoices function to show date-wise grouping
 async function displayInvoices(invoices) {
     const invoicesList = document.getElementById('invoicesList');
 
@@ -1036,63 +1087,101 @@ async function displayInvoices(invoices) {
         return;
     }
 
-    // Calculate returns for all invoices first
-    const invoicesWithReturns = await Promise.all(
-        invoices.map(async (invoice) => {
-            const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
-            const adjustedBalanceDue = invoice.balanceDue - totalReturns;
-            
-            return {
-                ...invoice,
-                totalReturns,
-                adjustedBalanceDue,
-                // Add a flag to indicate if this is the current adjusted balance
-                isCurrentAdjustedBalance: true
-            };
-        })
-    );
+    // Group invoices by date
+    const groupedInvoices = groupInvoicesByDate(invoices);
+    
+    let htmlContent = '';
 
-    invoicesList.innerHTML = invoicesWithReturns.map(invoice => {
-        // Calculate previous bill amount (grandTotal - subtotal)
-        const previousBillAmount = invoice.grandTotal - invoice.subtotal;
+    // Generate HTML for each date group
+    for (const group of groupedInvoices) {
+        // Calculate returns for all invoices in this date group first
+        const invoicesWithReturns = await Promise.all(
+            group.invoices.map(async (invoice) => {
+                const totalReturns = await Utils.calculateTotalReturns(invoice.invoiceNo);
+                const adjustedBalanceDue = invoice.balanceDue - totalReturns;
+                
+                return {
+                    ...invoice,
+                    totalReturns,
+                    adjustedBalanceDue,
+                    isCurrentAdjustedBalance: true
+                };
+            })
+        );
 
-        return `
-        <div class="invoice-item">
-            <div class="invoice-info">
-                <h3>Invoice #${invoice.invoiceNo}</h3>
-                <p><strong>Customer:</strong> ${invoice.customerName}</p>
-                <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</p>
-                <p><strong>Current Bill Amount:</strong> ₹${Utils.formatCurrency(invoice.subtotal)}</p>
-                <p><strong>Previous Balance:</strong> ₹${Utils.formatCurrency(previousBillAmount)}</p>
-                <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
-                <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
-                    ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
-                </p>
-                ${invoice.totalReturns > 0 ? `
-                    <p><strong>Return Amount:</strong> <span style="color: #dc3545;">-₹${Utils.formatCurrency(invoice.totalReturns)}</span></p>
-                    <p><strong>Current Adjusted Balance Due:</strong> ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}</p>
-                ` : `
-                    <p><strong>Balance Due:</strong> ₹${Utils.formatCurrency(invoice.balanceDue)}</p>
-                `}
-            </div>
-            <div class="invoice-actions">
-                <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
-                <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
-                <button class="btn-return" onclick="addReturn('${invoice.invoiceNo}')">Return</button>
-                <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
-                <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
-                    <i class="fab fa-whatsapp"></i> Share
-                </button>
-                ${invoice.totalReturns > 0 ? `
-                    <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
-                        <i class="fas fa-history"></i> Return Status
-                    </button>
-                ` : ''}
-                <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
-            </div>
-        </div>
+        // Add date group header (only date and count)
+        htmlContent += `
+            <div class="date-group">
+                <div class="date-group-header">
+                    <h3 class="date-title">
+                        <i class="fas fa-calendar-day"></i>
+                        ${group.date}
+                    </h3>
+                    <div class="date-summary">
+                        <span class="invoice-count">${group.totalInvoices} Invoice${group.totalInvoices > 1 ? 's' : ''}</span>
+                    </div>
+                </div>
+                <div class="date-invoices-list">
         `;
-    }).join('');
+
+        // Add individual invoices for this date
+        htmlContent += invoicesWithReturns.map(invoice => {
+            // Calculate previous bill amount (grandTotal - subtotal)
+            const previousBillAmount = invoice.grandTotal - invoice.subtotal;
+
+            return `
+            <div class="invoice-item">
+                <div class="invoice-info">
+                    <h3>Invoice #${invoice.invoiceNo}</h3>
+                    <p><strong>Customer:</strong> ${invoice.customerName}</p>
+                    <p><strong>Time:</strong> ${new Date(invoice.invoiceDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p><strong>Current Bill Amount:</strong> ₹${Utils.formatCurrency(invoice.subtotal)}</p>
+                    <p><strong>Previous Balance:</strong> ₹${Utils.formatCurrency(previousBillAmount)}</p>
+                    <p><strong>Total Amount:</strong> ₹${Utils.formatCurrency(invoice.grandTotal)}</p>
+                    <p><strong>Amount Paid:</strong> ₹${Utils.formatCurrency(invoice.amountPaid)} 
+                        ${invoice.paymentMethod ? `<span class="payment-method-badge payment-method-${invoice.paymentMethod}">${invoice.paymentMethod.toUpperCase()}</span>` : ''}
+                    </p>
+                    ${invoice.totalReturns > 0 ? `
+                        <p><strong>Return Amount:</strong> <span style="color: #dc3545;">-₹${Utils.formatCurrency(invoice.totalReturns)}</span></p>
+                        <p><strong>Current Adjusted Balance Due:</strong> ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}</p>
+                    ` : `
+                        <p><strong>Balance Due:</strong> ₹${Utils.formatCurrency(invoice.balanceDue)}</p>
+                    `}
+                </div>
+                <div class="invoice-actions">
+                    <button class="btn-edit" onclick="editInvoice('${invoice.invoiceNo}')">Edit</button>
+                    <button class="btn-payment" onclick="addPayment('${invoice.invoiceNo}')">Add Payment</button>
+                    <button class="btn-return" onclick="addReturn('${invoice.invoiceNo}')">Return</button>
+                    <button class="btn-statement" onclick="generateStatement('${invoice.invoiceNo}')">Statement</button>
+                    <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
+                        <i class="fab fa-whatsapp"></i> Share
+                    </button>
+                    ${invoice.totalReturns > 0 ? `
+                        <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
+                            <i class="fas fa-history"></i> Return Status
+                        </button>
+                    ` : ''}
+                    <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        // Close date group
+        htmlContent += `
+                </div>
+            </div>
+        `;
+    }
+
+    invoicesList.innerHTML = htmlContent;
+}
+
+// Add new function to filter by specific date
+function filterByDate(selectedDate) {
+    document.getElementById('fromDate').value = selectedDate;
+    document.getElementById('toDate').value = selectedDate;
+    loadInvoices();
 }
 
 //  <button class="btn-view" onclick="viewInvoice('${invoice.invoiceNo}')">View</button>
