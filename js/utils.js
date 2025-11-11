@@ -505,6 +505,74 @@ class Utils {
 
 
 
+    // Generate next invoice number suggestion
+    static async generateNextInvoiceNumber() {
+        try {
+            const { highestNumber, highestInvoiceNo } = await Utils.getHighestInvoiceNumber();
+
+            if (highestNumber === 0) {
+                // No invoices yet, start with 001
+                return {
+                    lastInvoiceNo: 'No invoices yet',
+                    nextInvoiceNo: '001',
+                    nextNumber: 1
+                };
+            }
+
+            // Generate next number with cycle from 1-999
+            let nextNumber;
+            if (highestNumber >= 999) {
+                // Restart from 1 after reaching 999
+                nextNumber = 1;
+            } else {
+                nextNumber = highestNumber + 1;
+            }
+
+            // Format as triple digits (001, 002, ..., 999)
+            const formattedNextNumber = nextNumber.toString().padStart(3, '0');
+
+            // Try to maintain the same format as the last invoice
+            let nextInvoiceNo;
+            if (highestInvoiceNo && highestInvoiceNo.match(/[A-Za-z]/)) {
+                // If last invoice has letters, try to preserve the format
+                const prefixMatch = highestInvoiceNo.match(/^[A-Za-z]+/);
+                const suffixMatch = highestInvoiceNo.match(/[A-Za-z]+$/);
+
+                if (prefixMatch && suffixMatch) {
+                    nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}${suffixMatch[0]}`;
+                } else if (prefixMatch) {
+                    nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}`;
+                } else if (suffixMatch) {
+                    nextInvoiceNo = `${formattedNextNumber}${suffixMatch[0]}`;
+                } else {
+                    nextInvoiceNo = formattedNextNumber;
+                }
+            } else {
+                // Pure numeric or no special format detected - use triple digits
+                nextInvoiceNo = formattedNextNumber;
+            }
+
+            // Also format the last invoice number for display if it's numeric
+            let formattedLastInvoiceNo = highestInvoiceNo;
+            if (highestInvoiceNo && /^\d+$/.test(highestInvoiceNo)) {
+                formattedLastInvoiceNo = highestInvoiceNo.padStart(3, '0');
+            }
+
+            return {
+                lastInvoiceNo: formattedLastInvoiceNo,
+                nextInvoiceNo: nextInvoiceNo,
+                nextNumber: nextNumber
+            };
+        } catch (error) {
+            console.error('Error generating next invoice number:', error);
+            return {
+                lastInvoiceNo: 'Error',
+                nextInvoiceNo: '001',
+                nextNumber: 1
+            };
+        }
+    }
+
     // Get the highest invoice number from all invoices
     static async getHighestInvoiceNumber() {
         try {
@@ -545,88 +613,49 @@ class Utils {
         }
     }
 
-// Generate next invoice number suggestion
-static async generateNextInvoiceNumber() {
-    try {
-        const { highestNumber, highestInvoiceNo } = await Utils.getHighestInvoiceNumber();
+    // Update invoice number suggestions in the UI
+    static async updateInvoiceNumberSuggestions() {
+        try {
+            const suggestions = await Utils.generateNextInvoiceNumber();
 
-        if (highestNumber === 0) {
-            // No invoices yet, start with 001
-            return {
-                lastInvoiceNo: 'No invoices yet',
-                nextInvoiceNo: '001',
-                nextNumber: 1
-            };
-        }
+            // Update the UI
+            document.getElementById('lastInvoiceNo').textContent = suggestions.lastInvoiceNo;
+            document.getElementById('nextInvoiceNo').textContent = suggestions.nextInvoiceNo;
 
-        // Generate next number
-        const nextNumber = highestNumber + 1;
+            // Add cycle indicator if we're restarting from 001
+            if (suggestions.nextNumber === 1 && suggestions.lastInvoiceNo && suggestions.lastInvoiceNo !== 'No invoices yet') {
+                const cycleIndicator = document.createElement('span');
+                cycleIndicator.className = 'cycle-indicator';
+                cycleIndicator.textContent = ' (Cycle Restarted)';
+                cycleIndicator.style.color = '#e74c3c';
+                cycleIndicator.style.fontSize = '0.8em';
+                cycleIndicator.style.marginLeft = '5px';
 
-        // Format as triple digits (001, 002, ..., 999)
-        const formattedNextNumber = nextNumber.toString().padStart(3, '0');
-
-        // Try to maintain the same format as the last invoice
-        let nextInvoiceNo;
-        if (highestInvoiceNo && highestInvoiceNo.match(/[A-Za-z]/)) {
-            // If last invoice has letters, try to preserve the format
-            const prefixMatch = highestInvoiceNo.match(/^[A-Za-z]+/);
-            const suffixMatch = highestInvoiceNo.match(/[A-Za-z]+$/);
-
-            if (prefixMatch && suffixMatch) {
-                nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}${suffixMatch[0]}`;
-            } else if (prefixMatch) {
-                nextInvoiceNo = `${prefixMatch[0]}${formattedNextNumber}`;
-            } else if (suffixMatch) {
-                nextInvoiceNo = `${formattedNextNumber}${suffixMatch[0]}`;
-            } else {
-                nextInvoiceNo = formattedNextNumber;
+                const nextInvoiceElement = document.getElementById('nextInvoiceNo');
+                nextInvoiceElement.appendChild(cycleIndicator);
             }
-        } else {
-            // Pure numeric or no special format detected - use triple digits
-            nextInvoiceNo = formattedNextNumber;
+
+            // Store the suggested number for later use
+            document.getElementById('nextInvoiceNo').dataset.suggestedNumber = suggestions.nextInvoiceNo;
+
+            return suggestions;
+        } catch (error) {
+            console.error('Error updating invoice number suggestions:', error);
+            document.getElementById('lastInvoiceNo').textContent = 'Error';
+            document.getElementById('nextInvoiceNo').textContent = '001';
         }
+    }
 
-        // Also format the last invoice number for display if it's numeric
-        let formattedLastInvoiceNo = highestInvoiceNo;
-        if (highestInvoiceNo && /^\d+$/.test(highestInvoiceNo)) {
-            formattedLastInvoiceNo = highestInvoiceNo.padStart(3, '0');
+    // Optional: Add a method to check for duplicate invoice numbers when restarting cycle
+    static async isInvoiceNumberAvailable(invoiceNo) {
+        try {
+            const invoices = await db.getAllInvoices();
+            return !invoices.some(invoice => invoice.invoiceNo === invoiceNo);
+        } catch (error) {
+            console.error('Error checking invoice number availability:', error);
+            return true;
         }
-
-        return {
-            lastInvoiceNo: formattedLastInvoiceNo,
-            nextInvoiceNo: nextInvoiceNo,
-            nextNumber: nextNumber
-        };
-    } catch (error) {
-        console.error('Error generating next invoice number:', error);
-        return {
-            lastInvoiceNo: 'Error',
-            nextInvoiceNo: '001',
-            nextNumber: 1
-        };
     }
-}
-
-// Update invoice number suggestions in the UI
-static async updateInvoiceNumberSuggestions() {
-    try {
-        const suggestions = await Utils.generateNextInvoiceNumber();
-
-        // Update the UI
-        document.getElementById('lastInvoiceNo').textContent = suggestions.lastInvoiceNo;
-        document.getElementById('nextInvoiceNo').textContent = suggestions.nextInvoiceNo;
-
-        // Store the suggested number for later use
-        document.getElementById('nextInvoiceNo').dataset.suggestedNumber = suggestions.nextInvoiceNo;
-
-        return suggestions;
-    } catch (error) {
-        console.error('Error updating invoice number suggestions:', error);
-        document.getElementById('lastInvoiceNo').textContent = 'Error';
-        document.getElementById('nextInvoiceNo').textContent = '001';
-    }
-}
-
 
     // Update customer balance display
     static updateCustomerBalanceDisplay(balanceInfo) {
