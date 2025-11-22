@@ -195,8 +195,33 @@ class Database {
                 reject(error);
             }
         });
+
     }
 
+
+    // Delete payment record
+    async deletePayment(paymentId) {
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db.transaction(['payments'], 'readwrite');
+                const store = transaction.objectStore('payments');
+                const request = store.delete(paymentId);
+
+                request.onsuccess = () => {
+                    console.log('Payment deleted successfully');
+                    resolve();
+                };
+
+                request.onerror = () => {
+                    console.error('Error deleting payment');
+                    reject(request.error);
+                };
+            } catch (error) {
+                console.error('Transaction error:', error);
+                reject(error);
+            }
+        });
+    }
 
     // Get all invoices
     async getAllInvoices() {

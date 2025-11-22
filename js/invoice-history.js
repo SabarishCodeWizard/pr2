@@ -1157,6 +1157,13 @@ async function displayInvoices(invoices) {
                     <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
                         <i class="fab fa-whatsapp"></i> Share
                     </button>
+
+                    
+    ${invoice.amountPaid > 0 ? `
+        <button class="btn-payment-history" onclick="viewPaymentHistory('${invoice.invoiceNo}')">
+            <i class="fas fa-history"></i> Payment History (₹${Utils.formatCurrency(invoice.amountPaid)})
+        </button>
+    ` : ''}
                 ${invoice.totalReturns > 0 ? `
                     <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
                         <i class="fas fa-history"></i> View/Undo Returns (₹${Utils.formatCurrency(invoice.totalReturns)})
@@ -1791,6 +1798,224 @@ async function generateStatement(invoiceNo) {
         console.error('Error generating statement:', error);
         alert('Error generating statement.');
     }
+}
+
+
+
+// Add these new functions to invoice-history.js
+
+// View payment history with undo option
+async function viewPaymentHistory(invoiceNo) {
+    try {
+        const payments = await db.getPaymentsByInvoice(invoiceNo);
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        if (payments.length === 0) {
+            alert('No payment records found for this invoice.');
+            return;
+        }
+
+        const paymentHistoryHTML = `
+            <div class="payment-history-dialog">
+                <div class="payment-history-header">
+                    <h3>Payment History - Invoice #${invoiceNo}</h3>
+                    <button class="close-payment-history">&times;</button>
+                </div>
+                <div class="payment-history-content">
+                    <div class="customer-info">
+                        <h4>${invoiceData.customerName}</h4>
+                        <p>Total Payments: ${payments.length}</p>
+                        <p>Current Balance Due: ₹${Utils.formatCurrency(invoiceData.balanceDue)}</p>
+                    </div>
+                    
+                    <div class="payments-list">
+                        ${payments.map((payment, index) => `
+                            <div class="payment-record" data-payment-id="${payment.id}">
+                                <div class="payment-record-header">
+                                    <strong>Payment #${index + 1}</strong>
+                                    <span class="payment-date">${new Date(payment.paymentDate).toLocaleDateString('en-IN')}</span>
+                                </div>
+                                <div class="payment-details">
+                                    <p><strong>Amount:</strong> ₹${Utils.formatCurrency(payment.amount)}</p>
+                                    <p><strong>Method:</strong> ${payment.paymentMethod ? payment.paymentMethod.toUpperCase() : 'CASH'}</p>
+                                    <p><strong>Type:</strong> ${payment.paymentType === 'initial' ? 'Initial Payment' : 'Additional Payment'}</p>
+                                    <p><strong>Date:</strong> ${new Date(payment.paymentDate).toLocaleString('en-IN')}</p>
+                                </div>
+                                <div class="payment-actions">
+                                    <button class="btn-undo-payment" onclick="undoPayment(${payment.id}, '${invoiceNo}')">
+                                        <i class="fas fa-undo"></i> Undo This Payment
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="payment-total">
+                        <strong>Total Amount Paid: ₹${Utils.formatCurrency(payments.reduce((sum, payment) => sum + payment.amount, 0))}</strong>
+                    </div>
+                    
+                    <div class="bulk-actions">
+                        <button class="btn-undo-all-payments" onclick="undoAllPayments('${invoiceNo}')">
+                            <i class="fas fa-trash-restore"></i> Undo All Payments for This Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const paymentHistoryDialog = document.createElement('div');
+        paymentHistoryDialog.className = 'payment-history-overlay';
+        paymentHistoryDialog.innerHTML = paymentHistoryHTML;
+
+        document.body.appendChild(paymentHistoryDialog);
+
+        paymentHistoryDialog.querySelector('.close-payment-history').addEventListener('click', () => {
+            document.body.removeChild(paymentHistoryDialog);
+        });
+
+        paymentHistoryDialog.addEventListener('click', (e) => {
+            if (e.target === paymentHistoryDialog) {
+                document.body.removeChild(paymentHistoryDialog);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error viewing payment history:', error);
+        alert('Error loading payment history.');
+    }
+}
+
+// Undo a specific payment
+async function undoPayment(paymentId, invoiceNo) {
+    if (!confirm('Are you sure you want to undo this payment? This will add the payment amount back to the balance due.')) {
+        return;
+    }
+
+    try {
+        // Get payment details before deleting
+        const payments = await db.getPaymentsByInvoice(invoiceNo);
+        const paymentToDelete = payments.find(p => p.id === paymentId);
+
+        if (!paymentToDelete) {
+            alert('Payment not found!');
+            return;
+        }
+
+        // Get invoice data
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        // Delete the payment record
+        await db.deletePayment(paymentId);
+
+        // Recalculate invoice totals
+        const remainingPayments = await db.getPaymentsByInvoice(invoiceNo);
+        const totalPaid = remainingPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+        // Update payment breakdown
+        let updatedPaymentBreakdown = { ...invoiceData.paymentBreakdown };
+        if (updatedPaymentBreakdown) {
+            const paymentMethod = paymentToDelete.paymentMethod || 'cash';
+            updatedPaymentBreakdown[paymentMethod] = Math.max(0, (updatedPaymentBreakdown[paymentMethod] || 0) - paymentToDelete.amount);
+        }
+
+        // Update invoice
+        invoiceData.amountPaid = totalPaid;
+        invoiceData.balanceDue = invoiceData.grandTotal - totalPaid;
+        invoiceData.paymentBreakdown = updatedPaymentBreakdown;
+
+        await db.saveInvoice(invoiceData);
+
+        // Update all subsequent invoices
+        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+        alert(`Payment of ₹${Utils.formatCurrency(paymentToDelete.amount)} has been successfully undone!`);
+
+        // Close the dialog and refresh the display
+        const paymentHistoryDialog = document.querySelector('.payment-history-overlay');
+        if (paymentHistoryDialog) {
+            document.body.removeChild(paymentHistoryDialog);
+        }
+
+        // Refresh the invoices list
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error undoing payment:', error);
+        alert('Error undoing payment. Please try again.');
+    }
+}
+
+// Undo all payments for an invoice
+async function undoAllPayments(invoiceNo) {
+    if (!confirm('Are you sure you want to undo ALL payments for this invoice? This will set the balance due back to the original invoice amount.')) {
+        return;
+    }
+
+    try {
+        const payments = await db.getPaymentsByInvoice(invoiceNo);
+
+        if (payments.length === 0) {
+            alert('No payments found for this invoice.');
+            return;
+        }
+
+        // Get invoice data
+        const invoiceData = await db.getInvoice(invoiceNo);
+        const totalPaymentAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+        // Delete all payment records
+        for (const payment of payments) {
+            await db.deletePayment(payment.id);
+        }
+
+        // Reset invoice payment information
+        invoiceData.amountPaid = 0;
+        invoiceData.balanceDue = invoiceData.grandTotal;
+        invoiceData.paymentBreakdown = {
+            cash: 0,
+            upi: 0,
+            account: 0
+        };
+
+        await db.saveInvoice(invoiceData);
+
+        // Update all subsequent invoices
+        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+        alert(`All ${payments.length} payments (total: ₹${Utils.formatCurrency(totalPaymentAmount)}) have been successfully undone!`);
+
+        // Close the dialog and refresh the display
+        const paymentHistoryDialog = document.querySelector('.payment-history-overlay');
+        if (paymentHistoryDialog) {
+            document.body.removeChild(paymentHistoryDialog);
+        }
+
+        // Refresh the invoices list
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error undoing all payments:', error);
+        alert('Error undoing payments. Please try again.');
+    }
+}
+
+// Delete payment record from database
+async function deletePayment(paymentId) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.db.transaction(['payments'], 'readwrite');
+        const store = transaction.objectStore('payments');
+        const request = store.delete(paymentId);
+
+        request.onsuccess = () => {
+            console.log('Payment deleted successfully');
+            resolve();
+        };
+
+        request.onerror = () => {
+            console.error('Error deleting payment');
+            reject(request.error);
+        };
+    });
 }
 
 
