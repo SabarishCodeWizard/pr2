@@ -1,4 +1,4 @@
-// Product Shortcuts Management
+// Product Shortcuts Management - Firebase Version
 class ShortcutManager {
     constructor() {
         this.currentEditId = null;
@@ -6,10 +6,8 @@ class ShortcutManager {
     }
 
     async init() {
-        // Wait for database to be ready
-        if (!db.db) {
-            await db.init();
-        }
+        // Wait for database to be ready using the new ensureInitialized method
+        await db.ensureInitialized();
         await this.loadShortcuts();
         this.setupEventListeners();
     }
@@ -60,7 +58,7 @@ class ShortcutManager {
             const shortcutData = {
                 shortcutKey: shortcutKey.toUpperCase(),
                 fullDescription: fullDescription,
-                createdAt: new Date().toISOString()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             await this.saveShortcut(shortcutData);
@@ -82,20 +80,15 @@ class ShortcutManager {
     }
 
     async saveShortcut(shortcutData) {
-        return new Promise((resolve, reject) => {
-            // Ensure database is ready
-            if (!db.db) {
-                reject(new Error('Database not initialized'));
-                return;
-            }
-
-            const transaction = db.db.transaction(['shortcuts'], 'readwrite');
-            const store = transaction.objectStore('shortcuts');
-            const request = store.put(shortcutData);
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        await db.ensureInitialized();
+        try {
+            await db.firestore.collection('shortcuts').doc(shortcutData.shortcutKey).set(shortcutData);
+            console.log('Shortcut saved successfully to Firebase');
+            return shortcutData.shortcutKey;
+        } catch (error) {
+            console.error('Error saving shortcut to Firebase:', error);
+            throw error;
+        }
     }
 
     async loadShortcuts() {
@@ -109,26 +102,20 @@ class ShortcutManager {
     }
 
     async getAllShortcuts() {
-        return new Promise((resolve, reject) => {
-            // Ensure database is ready
-            if (!db.db) {
-                resolve([]); // Return empty array if db not ready
-                return;
-            }
-
-            // Check if shortcuts store exists
-            if (!db.db.objectStoreNames.contains('shortcuts')) {
-                resolve([]); // Return empty array if store doesn't exist
-                return;
-            }
-
-            const transaction = db.db.transaction(['shortcuts'], 'readonly');
-            const store = transaction.objectStore('shortcuts');
-            const request = store.getAll();
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        await db.ensureInitialized();
+        try {
+            const querySnapshot = await db.firestore.collection('shortcuts').get();
+            const shortcuts = [];
+            querySnapshot.forEach((doc) => {
+                shortcuts.push(doc.data());
+            });
+            
+            // Sort shortcuts alphabetically by shortcut key
+            return shortcuts.sort((a, b) => a.shortcutKey.localeCompare(b.shortcutKey));
+        } catch (error) {
+            console.error('Error getting all shortcuts from Firebase:', error);
+            return [];
+        }
     }
 
     renderShortcuts(shortcuts) {
@@ -150,9 +137,6 @@ class ShortcutManager {
             `;
             return;
         }
-
-        // Sort shortcuts alphabetically by shortcut key
-        shortcuts.sort((a, b) => a.shortcutKey.localeCompare(b.shortcutKey));
 
         tableBody.innerHTML = shortcuts.map(shortcut => `
             <tr>
@@ -188,20 +172,20 @@ class ShortcutManager {
     }
 
     async getShortcut(shortcutKey) {
-        return new Promise((resolve, reject) => {
-            // Ensure database is ready
-            if (!db.db || !db.db.objectStoreNames.contains('shortcuts')) {
-                resolve(null);
-                return;
+        await db.ensureInitialized();
+        try {
+            const docRef = db.firestore.collection('shortcuts').doc(shortcutKey);
+            const docSnap = await docRef.get();
+            
+            if (docSnap.exists) {
+                return docSnap.data();
+            } else {
+                return null;
             }
-
-            const transaction = db.db.transaction(['shortcuts'], 'readonly');
-            const store = transaction.objectStore('shortcuts');
-            const request = store.get(shortcutKey);
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        } catch (error) {
+            console.error('Error getting shortcut from Firebase:', error);
+            throw error;
+        }
     }
 
     async saveEdit() {
@@ -217,7 +201,7 @@ class ShortcutManager {
             const shortcutData = {
                 shortcutKey: shortcutKey.toUpperCase(),
                 fullDescription: fullDescription,
-                createdAt: new Date().toISOString()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             // If the key changed, we need to delete the old one and add new
@@ -242,20 +226,9 @@ class ShortcutManager {
         }
 
         try {
-            await new Promise((resolve, reject) => {
-                // Ensure database is ready
-                if (!db.db || !db.db.objectStoreNames.contains('shortcuts')) {
-                    resolve();
-                    return;
-                }
-
-                const transaction = db.db.transaction(['shortcuts'], 'readwrite');
-                const store = transaction.objectStore('shortcuts');
-                const request = store.delete(shortcutKey);
-
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject(request.error);
-            });
+            await db.ensureInitialized();
+            await db.firestore.collection('shortcuts').doc(shortcutKey).delete();
+            console.log('Shortcut deleted successfully from Firebase');
 
             await this.loadShortcuts();
             this.showMessage('Shortcut deleted successfully!', 'success');
@@ -337,15 +310,32 @@ class ShortcutManager {
     }
 }
 
+// Add the ensureInitialized method to your Database class if not already present
+// Add this to your db.js file if you haven't already:
+/*
+async ensureInitialized() {
+    if (!this.initialized && !this.initializing) {
+        await this.init();
+    } else if (this.initializing) {
+        // Wait for initialization to complete
+        await new Promise(resolve => {
+            const checkInitialized = () => {
+                if (this.initialized) {
+                    resolve();
+                } else {
+                    setTimeout(checkInitialized, 100);
+                }
+            };
+            checkInitialized();
+        });
+    }
+}
+*/
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        // Initialize database first
-        if (!db.db) {
-            await db.init();
-        }
-        
-        // Create shortcuts manager
+        // Create shortcuts manager - it will handle its own initialization
         window.shortcutManager = new ShortcutManager();
     } catch (error) {
         console.error('Failed to initialize shortcut manager:', error);
@@ -357,6 +347,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <td colspan="3" style="text-align: center; padding: 40px; color: #e74c3c;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
                         <p>Failed to load shortcuts. Please refresh the page.</p>
+                        <p style="font-size: 12px; margin-top: 10px;">Error: ${error.message}</p>
                     </td>
                 </tr>
             `;

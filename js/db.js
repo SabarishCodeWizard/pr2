@@ -107,6 +107,26 @@ class Database {
         }
     }
 
+
+    // Add this method to your Database class in db.js
+    async ensureInitialized() {
+        if (!this.initialized && !this.initializing) {
+            await this.init();
+        } else if (this.initializing) {
+            // Wait for initialization to complete
+            await new Promise(resolve => {
+                const checkInitialized = () => {
+                    if (this.initialized) {
+                        resolve();
+                    } else {
+                        setTimeout(checkInitialized, 100);
+                    }
+                };
+                checkInitialized();
+            });
+        }
+    }
+
     // Get all customers
     async getAllCustomers() {
         this._checkInit();
@@ -123,12 +143,29 @@ class Database {
         }
     }
 
-    // Delete customer
+    // In your db.js - Update the deleteCustomer method
     async deleteCustomer(phone) {
         this._checkInit();
         try {
+            // First, get all invoices for this customer
+            const invoicesQuery = await this.firestore.collection('invoices')
+                .where('customerPhone', '==', phone)
+                .get();
+
+            // Delete all related invoices and their payments/returns
+            const deletePromises = [];
+            invoicesQuery.forEach((doc) => {
+                const invoiceNo = doc.id;
+                // Delete invoice and its related data
+                deletePromises.push(this.deleteInvoice(invoiceNo));
+            });
+
+            await Promise.all(deletePromises);
+
+            // Finally delete the customer
             await this.firestore.collection('customers').doc(phone).delete();
-            console.log('Customer deleted successfully from Firebase');
+            console.log(`Customer ${phone} and all related data deleted successfully`);
+
         } catch (error) {
             console.error('Error deleting customer from Firebase:', error);
             throw error;
@@ -147,14 +184,90 @@ class Database {
         }
     }
 
-    // Delete payment record
+    // In db.js - Update deletePayment method
     async deletePayment(paymentId) {
         this._checkInit();
         try {
-            await this.firestore.collection('payments').doc(paymentId.toString()).delete();
+            console.log('Attempting to delete payment with ID:', paymentId);
+
+            // First, get the payment data to know which invoice it belongs to
+            const paymentDoc = await this.firestore.collection('payments').doc(paymentId).get();
+
+            if (!paymentDoc.exists) {
+                console.log('Payment not found with ID:', paymentId);
+                // Try alternative ID formats
+                const alternativeIds = [
+                    paymentId.toString(),
+                    `payment_${paymentId}`,
+                    paymentId
+                ];
+
+                for (const altId of alternativeIds) {
+                    const altDoc = await this.firestore.collection('payments').doc(altId).get();
+                    if (altDoc.exists) {
+                        console.log('Found payment with alternative ID:', altId);
+                        const paymentData = altDoc.data();
+                        const invoiceNo = paymentData.invoiceNo;
+
+                        // Delete with alternative ID
+                        await this.firestore.collection('payments').doc(altId).delete();
+                        console.log('Payment deleted successfully from Firebase with alternative ID');
+
+                        // Update the invoice
+                        if (invoiceNo) {
+                            await this.updateInvoiceAfterPaymentDeletion(invoiceNo, paymentData.amount);
+                        }
+                        return;
+                    }
+                }
+
+                throw new Error(`Payment not found with any ID format: ${paymentId}`);
+            }
+
+            const paymentData = paymentDoc.data();
+            const invoiceNo = paymentData.invoiceNo;
+
+            // Delete the payment
+            await this.firestore.collection('payments').doc(paymentId).delete();
             console.log('Payment deleted successfully from Firebase');
+
+            // Update the invoice to reflect the payment deletion
+            if (invoiceNo) {
+                await this.updateInvoiceAfterPaymentDeletion(invoiceNo, paymentData.amount);
+            }
+
         } catch (error) {
             console.error('Error deleting payment from Firebase:', error);
+            throw error;
+        }
+    }
+
+    // Helper method to update invoice after payment deletion
+    async updateInvoiceAfterPaymentDeletion(invoiceNo, paymentAmount) {
+        try {
+            const invoiceData = await this.getInvoice(invoiceNo);
+            if (invoiceData) {
+                // Update payment breakdown
+                if (invoiceData.paymentBreakdown) {
+                    const paymentMethod = invoiceData.paymentMethod || 'cash';
+                    invoiceData.paymentBreakdown[paymentMethod] = Math.max(
+                        0,
+                        (invoiceData.paymentBreakdown[paymentMethod] || 0) - paymentAmount
+                    );
+                }
+
+                // Update totals
+                invoiceData.amountPaid = Math.max(0, invoiceData.amountPaid - paymentAmount);
+                invoiceData.balanceDue = invoiceData.grandTotal - invoiceData.amountPaid;
+
+                // Save updated invoice
+                await this.saveInvoice(invoiceData);
+
+                // Update subsequent invoices
+                await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+            }
+        } catch (error) {
+            console.error('Error updating invoice after payment deletion:', error);
             throw error;
         }
     }
@@ -199,19 +312,21 @@ class Database {
         }
     }
 
-    // Save payment record
+    // In db.js - Update savePayment method
     async savePayment(paymentData) {
         this._checkInit();
         try {
-            // Use auto-generated ID or provided ID
-            const paymentId = paymentData.id || Date.now().toString();
+            // Use the paymentData.id if provided, otherwise generate a proper ID
+            const paymentId = paymentData.id || `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            await this.firestore.collection('payments').doc(paymentId).set({
+            const paymentToSave = {
                 ...paymentData,
-                id: paymentId,
+                id: paymentId, // Ensure ID is stored
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log('Payment saved successfully to Firebase');
+            };
+
+            await this.firestore.collection('payments').doc(paymentId).set(paymentToSave);
+            console.log('Payment saved successfully to Firebase with ID:', paymentId);
             return paymentId;
         } catch (error) {
             console.error('Error saving payment to Firebase:', error);
@@ -238,17 +353,105 @@ class Database {
         }
     }
 
-    // Delete invoice
+    // In your db.js - Update the deleteInvoice method
     async deleteInvoice(invoiceNo) {
         this._checkInit();
         try {
+            // First, get the invoice data to know the customer and other details
+            const invoiceData = await this.getInvoice(invoiceNo);
+            if (!invoiceData) {
+                console.log('Invoice not found, nothing to delete');
+                return;
+            }
+
+            const customerName = invoiceData.customerName;
+            const customerPhone = invoiceData.customerPhone;
+
+            // Delete the invoice
             await this.firestore.collection('invoices').doc(invoiceNo).delete();
             console.log('Invoice deleted successfully from Firebase');
+
+            // Delete related payments
+            await this.deletePaymentsByInvoice(invoiceNo);
+
+            // Delete related returns
+            await this.deleteReturnsByInvoice(invoiceNo);
+
+            // Update customer data if needed (remove reference to this invoice)
+            await this.updateCustomerAfterInvoiceDeletion(customerPhone, invoiceNo);
+
+            // Update subsequent invoices for this customer
+            await Utils.updateSubsequentInvoices(customerName, invoiceNo);
+
+            console.log(`Invoice ${invoiceNo} and all related data deleted successfully`);
+
         } catch (error) {
             console.error('Error deleting invoice from Firebase:', error);
             throw error;
         }
     }
+
+
+    // Update customer data after invoice deletion
+    async updateCustomerAfterInvoiceDeletion(customerPhone, invoiceNo) {
+        if (!customerPhone) return;
+
+        try {
+            const customer = await this.getCustomer(customerPhone);
+            if (customer) {
+                // You can add logic here to update customer statistics if needed
+                // For example, if you store invoice references in customer data
+                console.log(`Customer ${customerPhone} updated after invoice deletion`);
+            }
+        } catch (error) {
+            console.error('Error updating customer after invoice deletion:', error);
+            // Don't throw error here as it's not critical
+        }
+    }
+
+
+    // Delete all payments for an invoice
+    async deletePaymentsByInvoice(invoiceNo) {
+        try {
+            const paymentsQuery = await this.firestore.collection('payments')
+                .where('invoiceNo', '==', invoiceNo)
+                .get();
+
+            const deletePromises = [];
+            paymentsQuery.forEach((doc) => {
+                deletePromises.push(doc.ref.delete());
+            });
+
+            await Promise.all(deletePromises);
+            console.log(`Deleted ${deletePromises.length} payments for invoice ${invoiceNo}`);
+        } catch (error) {
+            console.error('Error deleting payments:', error);
+            throw error;
+        }
+    }
+
+
+
+    // Delete all returns for an invoice
+    async deleteReturnsByInvoice(invoiceNo) {
+        try {
+            const returnsQuery = await this.firestore.collection('returns')
+                .where('invoiceNo', '==', invoiceNo)
+                .get();
+
+            const deletePromises = [];
+            returnsQuery.forEach((doc) => {
+                deletePromises.push(doc.ref.delete());
+            });
+
+            await Promise.all(deletePromises);
+            console.log(`Deleted ${deletePromises.length} returns for invoice ${invoiceNo}`);
+        } catch (error) {
+            console.error('Error deleting returns:', error);
+            throw error;
+        }
+    }
+
 
     // Save return record
     async saveReturn(returnData) {

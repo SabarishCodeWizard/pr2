@@ -282,10 +282,19 @@ function handleKeyboardNavigation(key, dropdown, input) {
 async function showAutoCompleteSuggestions(query, dropdown, input) {
     try {
         const shortcuts = await getAllShortcuts();
+        
+        if (shortcuts.length === 0) {
+            console.log('No shortcuts found in database');
+            dropdown.style.display = 'none';
+            return;
+        }
+        
         const matches = shortcuts.filter(shortcut => 
             shortcut.shortcutKey.toLowerCase().includes(query.toLowerCase()) ||
             shortcut.fullDescription.toLowerCase().includes(query.toLowerCase())
         );
+        
+        console.log(`Found ${matches.length} matches for query: ${query}`);
         
         if (matches.length > 0) {
             dropdown.innerHTML = matches.map(shortcut => `
@@ -326,21 +335,27 @@ async function showAutoCompleteSuggestions(query, dropdown, input) {
 
 
 
+// Update getAllShortcuts to use Firebase
 async function getAllShortcuts() {
-    return new Promise((resolve, reject) => {
-        // Ensure database is ready
-        if (!db.db || !db.db.objectStoreNames.contains('shortcuts')) {
-            resolve([]);
-            return;
-        }
+    try {
+        // Ensure Firebase is initialized
+        await db.ensureInitialized();
         
-        const transaction = db.db.transaction(['shortcuts'], 'readonly');
-        const store = transaction.objectStore('shortcuts');
-        const request = store.getAll();
+        // Get shortcuts from Firebase
+        const querySnapshot = await db.firestore.collection('shortcuts').get();
+        const shortcuts = [];
         
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
+        querySnapshot.forEach((doc) => {
+            shortcuts.push(doc.data());
+        });
+        
+        // Sort shortcuts alphabetically by shortcut key
+        return shortcuts.sort((a, b) => a.shortcutKey.localeCompare(b.shortcutKey));
+        
+    } catch (error) {
+        console.error('Error getting shortcuts from Firebase:', error);
+        return []; // Return empty array on error
+    }
 }
 
 // Also update resetForm to refresh suggestions

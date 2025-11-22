@@ -1804,7 +1804,7 @@ async function generateStatement(invoiceNo) {
 
 // Add these new functions to invoice-history.js
 
-// View payment history with undo option
+// In invoice-history.js - Update viewPaymentHistory function
 async function viewPaymentHistory(invoiceNo) {
     try {
         const payments = await db.getPaymentsByInvoice(invoiceNo);
@@ -1829,8 +1829,11 @@ async function viewPaymentHistory(invoiceNo) {
                     </div>
                     
                     <div class="payments-list">
-                        ${payments.map((payment, index) => `
-                            <div class="payment-record" data-payment-id="${payment.id}">
+                        ${payments.map((payment, index) => {
+                            // Ensure we have a valid payment ID
+                            const paymentId = payment.id || payment.docId || `payment_${index}`;
+                            return `
+                            <div class="payment-record" data-payment-id="${paymentId}">
                                 <div class="payment-record-header">
                                     <strong>Payment #${index + 1}</strong>
                                     <span class="payment-date">${new Date(payment.paymentDate).toLocaleDateString('en-IN')}</span>
@@ -1840,14 +1843,16 @@ async function viewPaymentHistory(invoiceNo) {
                                     <p><strong>Method:</strong> ${payment.paymentMethod ? payment.paymentMethod.toUpperCase() : 'CASH'}</p>
                                     <p><strong>Type:</strong> ${payment.paymentType === 'initial' ? 'Initial Payment' : 'Additional Payment'}</p>
                                     <p><strong>Date:</strong> ${new Date(payment.paymentDate).toLocaleString('en-IN')}</p>
+                                    <p><strong>Payment ID:</strong> ${paymentId}</p>
                                 </div>
                                 <div class="payment-actions">
-                                    <button class="btn-undo-payment" onclick="undoPayment(${payment.id}, '${invoiceNo}')">
+                                    <button class="btn-undo-payment" onclick="undoPayment('${paymentId}', '${invoiceNo}')">
                                         <i class="fas fa-undo"></i> Undo This Payment
                                     </button>
                                 </div>
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
 
                     <div class="payment-total">
@@ -1885,8 +1890,10 @@ async function viewPaymentHistory(invoiceNo) {
     }
 }
 
-// Undo a specific payment
+// Update undoPayment function
 async function undoPayment(paymentId, invoiceNo) {
+    console.log('Undoing payment with ID:', paymentId);
+    
     if (!confirm('Are you sure you want to undo this payment? This will add the payment amount back to the balance due.')) {
         return;
     }
@@ -1894,39 +1901,28 @@ async function undoPayment(paymentId, invoiceNo) {
     try {
         // Get payment details before deleting
         const payments = await db.getPaymentsByInvoice(invoiceNo);
-        const paymentToDelete = payments.find(p => p.id === paymentId);
+        
+        // Try to find the payment by different ID formats
+        let paymentToDelete = payments.find(p => p.id === paymentId);
+        if (!paymentToDelete) {
+            paymentToDelete = payments.find(p => p.id === paymentId.toString());
+        }
+        if (!paymentToDelete) {
+            // Try without the "payment_" prefix
+            const cleanId = paymentId.replace('payment_', '');
+            paymentToDelete = payments.find(p => p.id === cleanId);
+        }
 
         if (!paymentToDelete) {
-            alert('Payment not found!');
+            console.log('Available payments:', payments);
+            alert(`Payment not found! Looking for ID: ${paymentId}. Available IDs: ${payments.map(p => p.id).join(', ')}`);
             return;
         }
 
-        // Get invoice data
-        const invoiceData = await db.getInvoice(invoiceNo);
+        console.log('Found payment to delete:', paymentToDelete);
 
         // Delete the payment record
-        await db.deletePayment(paymentId);
-
-        // Recalculate invoice totals
-        const remainingPayments = await db.getPaymentsByInvoice(invoiceNo);
-        const totalPaid = remainingPayments.reduce((sum, payment) => sum + payment.amount, 0);
-
-        // Update payment breakdown
-        let updatedPaymentBreakdown = { ...invoiceData.paymentBreakdown };
-        if (updatedPaymentBreakdown) {
-            const paymentMethod = paymentToDelete.paymentMethod || 'cash';
-            updatedPaymentBreakdown[paymentMethod] = Math.max(0, (updatedPaymentBreakdown[paymentMethod] || 0) - paymentToDelete.amount);
-        }
-
-        // Update invoice
-        invoiceData.amountPaid = totalPaid;
-        invoiceData.balanceDue = invoiceData.grandTotal - totalPaid;
-        invoiceData.paymentBreakdown = updatedPaymentBreakdown;
-
-        await db.saveInvoice(invoiceData);
-
-        // Update all subsequent invoices
-        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+        await db.deletePayment(paymentToDelete.id);
 
         alert(`Payment of ₹${Utils.formatCurrency(paymentToDelete.amount)} has been successfully undone!`);
 
@@ -1941,11 +1937,11 @@ async function undoPayment(paymentId, invoiceNo) {
 
     } catch (error) {
         console.error('Error undoing payment:', error);
-        alert('Error undoing payment. Please try again.');
+        alert('Error undoing payment: ' + error.message);
     }
 }
 
-// Undo all payments for an invoice
+// Update undoAllPayments function
 async function undoAllPayments(invoiceNo) {
     if (!confirm('Are you sure you want to undo ALL payments for this invoice? This will set the balance due back to the original invoice amount.')) {
         return;
@@ -2988,16 +2984,27 @@ async function undoAllReturns(invoiceNo) {
     }
 }
 
-// Delete invoice
+// In invoice-history.js - Update the deleteInvoice function
 async function deleteInvoice(invoiceNo) {
-    if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this invoice? This will also delete all related payments and returns. This action cannot be undone.')) {
         try {
+            // Show loading indicator
+            const invoicesList = document.getElementById('invoicesList');
+            invoicesList.innerHTML = '<div class="loading">Deleting invoice...</div>';
+            
             await db.deleteInvoice(invoiceNo);
-            alert('Invoice deleted successfully!');
-            loadInvoices(); // Refresh the list
+            
+            // Show success message
+            alert('Invoice and all related data deleted successfully!');
+            
+            // Reload the invoices list
+            await loadInvoices();
+            
         } catch (error) {
             console.error('Error deleting invoice:', error);
-            alert('Error deleting invoice.');
+            alert('Error deleting invoice: ' + error.message);
+            // Reload invoices anyway to refresh the view
+            await loadInvoices();
         }
     }
 }
