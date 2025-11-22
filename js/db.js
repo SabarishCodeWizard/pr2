@@ -171,6 +171,33 @@ class Database {
     }
 
 
+    // Add this method to the Database class in db.js
+
+    // Delete return by ID
+    async deleteReturn(returnId) {
+        return new Promise((resolve, reject) => {
+            try {
+                const transaction = this.db.transaction(['returns'], 'readwrite');
+                const store = transaction.objectStore('returns');
+                const request = store.delete(returnId);
+
+                request.onsuccess = () => {
+                    console.log('Return deleted successfully');
+                    resolve();
+                };
+
+                request.onerror = () => {
+                    console.error('Error deleting return');
+                    reject(request.error);
+                };
+            } catch (error) {
+                console.error('Transaction error:', error);
+                reject(error);
+            }
+        });
+    }
+
+
     // Get all invoices
     async getAllInvoices() {
         return new Promise((resolve, reject) => {

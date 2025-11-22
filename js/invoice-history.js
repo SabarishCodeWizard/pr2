@@ -1157,11 +1157,11 @@ async function displayInvoices(invoices) {
                     <button class="btn-share" onclick="shareInvoiceViaWhatsApp('${invoice.invoiceNo}')">
                         <i class="fab fa-whatsapp"></i> Share
                     </button>
-                    ${invoice.totalReturns > 0 ? `
-                        <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
-                            <i class="fas fa-history"></i> Return Status
-                        </button>
-                    ` : ''}
+                ${invoice.totalReturns > 0 ? `
+                    <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
+                        <i class="fas fa-history"></i> View/Undo Returns (₹${Utils.formatCurrency(invoice.totalReturns)})
+                    </button>
+                ` : ''}
                     <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
                 </div>
             </div>
@@ -2599,7 +2599,7 @@ async function getAlreadyReturnedQty(invoiceNo, productDescription) {
     }
 }
 
-// View return status
+// View return status with undo option
 async function viewReturnStatus(invoiceNo) {
     try {
         const returns = await db.getReturnsByInvoice(invoiceNo);
@@ -2624,7 +2624,7 @@ async function viewReturnStatus(invoiceNo) {
                     
                     <div class="returns-list">
                         ${returns.map((returnItem, index) => `
-                            <div class="return-record">
+                            <div class="return-record" data-return-id="${returnItem.id}">
                                 <div class="return-record-header">
                                     <strong>Return #${index + 1}</strong>
                                     <span class="return-date">${new Date(returnItem.returnDate).toLocaleDateString('en-IN')}</span>
@@ -2636,12 +2636,23 @@ async function viewReturnStatus(invoiceNo) {
                                     <p><strong>Amount:</strong> ₹${Utils.formatCurrency(returnItem.returnAmount)}</p>
                                     <p><strong>Reason:</strong> ${returnItem.reason}</p>
                                 </div>
+                                <div class="return-actions">
+                                    <button class="btn-undo-return" onclick="undoReturn(${returnItem.id}, '${invoiceNo}')">
+                                        <i class="fas fa-undo"></i> Undo This Return
+                                    </button>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
 
                     <div class="return-total">
                         <strong>Total Return Amount: ₹${Utils.formatCurrency(returns.reduce((sum, item) => sum + item.returnAmount, 0))}</strong>
+                    </div>
+                    
+                    <div class="bulk-actions">
+                        <button class="btn-undo-all-returns" onclick="undoAllReturns('${invoiceNo}')">
+                            <i class="fas fa-trash-restore"></i> Undo All Returns for This Invoice
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2666,6 +2677,89 @@ async function viewReturnStatus(invoiceNo) {
     } catch (error) {
         console.error('Error viewing return status:', error);
         alert('Error loading return status.');
+    }
+}
+
+
+
+// Undo a specific return
+async function undoReturn(returnId, invoiceNo) {
+    if (!confirm('Are you sure you want to undo this return? This action cannot be reversed.')) {
+        return;
+    }
+
+    try {
+        // Delete the return record
+        await db.deleteReturn(returnId);
+
+        // Update invoice with recalculated returns
+        await Utils.updateInvoiceWithReturns(invoiceNo);
+
+        // Get invoice data for customer name
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        // Update all subsequent invoices
+        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+        alert('Return has been successfully undone!');
+
+        // Close the dialog and refresh the display
+        const returnStatusDialog = document.querySelector('.return-status-overlay');
+        if (returnStatusDialog) {
+            document.body.removeChild(returnStatusDialog);
+        }
+
+        // Refresh the invoices list
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error undoing return:', error);
+        alert('Error undoing return. Please try again.');
+    }
+}
+
+// Undo all returns for an invoice
+async function undoAllReturns(invoiceNo) {
+    if (!confirm('Are you sure you want to undo ALL returns for this invoice? This action cannot be reversed.')) {
+        return;
+    }
+
+    try {
+        const returns = await db.getReturnsByInvoice(invoiceNo);
+
+        if (returns.length === 0) {
+            alert('No returns found for this invoice.');
+            return;
+        }
+
+        // Delete all return records
+        for (const returnItem of returns) {
+            await db.deleteReturn(returnItem.id);
+        }
+
+        // Update invoice with recalculated returns (should be 0 now)
+        await Utils.updateInvoiceWithReturns(invoiceNo);
+
+        // Get invoice data for customer name
+        const invoiceData = await db.getInvoice(invoiceNo);
+
+        // Update all subsequent invoices
+        await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+        alert(`All ${returns.length} returns have been successfully undone!`);
+
+        // Close the dialog and refresh the display
+        const returnStatusDialog = document.querySelector('.return-status-overlay');
+        if (returnStatusDialog) {
+            document.body.removeChild(returnStatusDialog);
+        }
+
+        // Refresh the invoices list
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Error undoing all returns:', error);
+        alert('Error undoing returns. Please try again.');
     }
 }
 
