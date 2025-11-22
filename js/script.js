@@ -53,6 +53,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.getElementById('invoiceDate').valueAsDate = new Date();
 
 
+     // Setup auto-completion
+    setupAutoCompletion();
+    
+    // Re-setup auto-completion when new rows are added
+    const originalAddProductRow = addProductRow;
+    window.addProductRow = function() {
+        originalAddProductRow();
+        setupAutoCompletion();
+    };
+
+
     // Add event listener for apply suggestion button
     document.getElementById('applySuggestion').addEventListener('click', applySuggestedInvoiceNumber);
 
@@ -178,6 +189,160 @@ async function saveBill() {
     }
 }
 
+
+// Auto-completion for product descriptions
+function setupAutoCompletion() {
+    const productInputs = document.querySelectorAll('.product-description');
+    
+    productInputs.forEach(input => {
+        // Check if dropdown already exists
+        let dropdown = input.parentNode.querySelector('.autocomplete-dropdown');
+        
+        if (!dropdown) {
+            // Create dropdown container
+            dropdown = document.createElement('div');
+            dropdown.className = 'autocomplete-dropdown';
+            
+            // Wrap input in container for proper positioning
+            const container = document.createElement('div');
+            container.className = 'product-description-container';
+            container.style.position = 'relative';
+            
+            input.parentNode.insertBefore(container, input);
+            container.appendChild(input);
+            container.appendChild(dropdown);
+        }
+        
+        // Event listeners for auto-completion
+        input.addEventListener('input', async (e) => {
+            const value = e.target.value.trim();
+            if (value.length >= 1) {
+                await showAutoCompleteSuggestions(value, dropdown, input);
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                dropdown.style.display = 'none';
+            }, 200);
+        });
+        
+        input.addEventListener('focus', async (e) => {
+            const value = e.target.value.trim();
+            if (value.length >= 1) {
+                await showAutoCompleteSuggestions(value, dropdown, input);
+            }
+        });
+
+        // Handle keyboard navigation
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                handleKeyboardNavigation(e.key, dropdown, input);
+            } else if (e.key === 'Enter' && dropdown.style.display === 'block') {
+                e.preventDefault();
+                const selectedItem = dropdown.querySelector('.autocomplete-item.highlighted');
+                if (selectedItem) {
+                    input.value = selectedItem.dataset.full;
+                    dropdown.style.display = 'none';
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+    });
+}
+
+// Handle keyboard navigation in auto-complete dropdown
+function handleKeyboardNavigation(key, dropdown, input) {
+    const items = dropdown.querySelectorAll('.autocomplete-item');
+    if (items.length === 0) return;
+
+    let currentIndex = -1;
+    items.forEach((item, index) => {
+        if (item.classList.contains('highlighted')) {
+            currentIndex = index;
+            item.classList.remove('highlighted');
+        }
+    });
+
+    if (key === 'ArrowDown') {
+        currentIndex = (currentIndex + 1) % items.length;
+    } else if (key === 'ArrowUp') {
+        currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+    }
+
+    items[currentIndex].classList.add('highlighted');
+    items[currentIndex].scrollIntoView({ block: 'nearest' });
+}
+
+async function showAutoCompleteSuggestions(query, dropdown, input) {
+    try {
+        const shortcuts = await getAllShortcuts();
+        const matches = shortcuts.filter(shortcut => 
+            shortcut.shortcutKey.toLowerCase().includes(query.toLowerCase()) ||
+            shortcut.fullDescription.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        if (matches.length > 0) {
+            dropdown.innerHTML = matches.map(shortcut => `
+                <div class="autocomplete-item" data-shortcut="${shortcut.shortcutKey}" data-full="${shortcut.fullDescription}">
+                    <strong>${shortcut.shortcutKey}</strong> → ${shortcut.fullDescription}
+                </div>
+            `).join('');
+            
+            dropdown.style.display = 'block';
+            
+            // Add click handlers for suggestions
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = item.dataset.full;
+                    dropdown.style.display = 'none';
+                    // Trigger input event to update calculations if needed
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+
+                item.addEventListener('mouseenter', () => {
+                    // Remove highlight from all items
+                    dropdown.querySelectorAll('.autocomplete-item').forEach(i => {
+                        i.classList.remove('highlighted');
+                    });
+                    // Add highlight to hovered item
+                    item.classList.add('highlighted');
+                });
+            });
+        } else {
+            dropdown.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading auto-complete suggestions:', error);
+        dropdown.style.display = 'none';
+    }
+}
+
+
+
+async function getAllShortcuts() {
+    return new Promise((resolve, reject) => {
+        // Ensure database is ready
+        if (!db.db || !db.db.objectStoreNames.contains('shortcuts')) {
+            resolve([]);
+            return;
+        }
+        
+        const transaction = db.db.transaction(['shortcuts'], 'readonly');
+        const store = transaction.objectStore('shortcuts');
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
 // Also update resetForm to refresh suggestions
 function resetForm() {
     if (confirm('Are you sure you want to reset the form? All unsaved data will be lost.')) {
@@ -232,6 +397,7 @@ function applySuggestedInvoiceNumber() {
     Utils.updateCalculations();
 });
 
+
 // Add a new product row
 function addProductRow() {
     const tableBody = document.getElementById('productTableBody');
@@ -240,9 +406,14 @@ function addProductRow() {
 
     newRow.innerHTML = `
         <td>${rowCount + 1}</td>
-        <td><input type="text" class="product-description"></td>
-        <td><input type="number" class="qty" value="0"></td>
-        <td><input type="number" class="rate" value="0.00"></td>
+        <td>
+            <div class="product-description-container">
+                <input type="text" class="product-description">
+                <div class="autocomplete-dropdown"></div>
+            </div>
+        </td>
+        <td><input type="number" class="qty" value="0" min="0" step="1"></td>
+        <td><input type="number" class="rate" value="0.00" min="0" step="0.01"></td>
         <td class="amount">0.00</td>
         <td><button class="remove-row">X</button></td>
     `;
@@ -253,6 +424,58 @@ function addProductRow() {
         updateRowNumbers();
         Utils.updateCalculations();
     });
+
+    // Setup auto-completion for the new row
+    setupAutoCompletionForRow(newRow);
+}
+
+// Setup auto-completion for a specific row
+function setupAutoCompletionForRow(row) {
+    const input = row.querySelector('.product-description');
+    const dropdown = row.querySelector('.autocomplete-dropdown');
+    
+    if (input && dropdown) {
+        // Event listeners for auto-completion
+        input.addEventListener('input', async (e) => {
+            const value = e.target.value.trim();
+            if (value.length >= 1) {
+                await showAutoCompleteSuggestions(value, dropdown, input);
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                dropdown.style.display = 'none';
+            }, 200);
+        });
+        
+        input.addEventListener('focus', async (e) => {
+            const value = e.target.value.trim();
+            if (value.length >= 1) {
+                await showAutoCompleteSuggestions(value, dropdown, input);
+            }
+        });
+
+        // Handle keyboard navigation
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                handleKeyboardNavigation(e.key, dropdown, input);
+            } else if (e.key === 'Enter' && dropdown.style.display === 'block') {
+                e.preventDefault();
+                const selectedItem = dropdown.querySelector('.autocomplete-item.highlighted');
+                if (selectedItem) {
+                    input.value = selectedItem.dataset.full;
+                    dropdown.style.display = 'none';
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
 }
 
 // Update row amount based on quantity and rate

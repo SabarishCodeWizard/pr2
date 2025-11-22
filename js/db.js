@@ -61,6 +61,13 @@ class Database {
                     returnStore.createIndex('customerName', 'customerName', { unique: false });
                     console.log('Created returns object store');
                 }
+
+                // Create object store for shortcuts if it doesn't exist
+                if (!db.objectStoreNames.contains('shortcuts')) {
+                    const shortcutStore = db.createObjectStore('shortcuts', { keyPath: 'shortcutKey' });
+                    shortcutStore.createIndex('shortcutKey', 'shortcutKey', { unique: true });
+                    console.log('Created shortcuts object store');
+                }
             };
 
             request.onblocked = () => {
