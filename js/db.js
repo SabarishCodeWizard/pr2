@@ -1,384 +1,341 @@
-// Database initialization and operations
+// db.js - Firebase Compatibility Version
 class Database {
     constructor() {
         this.dbName = 'BillingDB';
-        this.version = 2; // Incremented version to 2
+        this.version = 2;
         this.db = null;
+        this.firestore = null;
+        this.initialized = false;
+
+        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
+        this.firebaseConfig = {
+            apiKey: "AIzaSyBHQEyCf27I_y0o7QFvdHwN_86PH7ugYbQ",
+            authDomain: "prfabricsbilling.firebaseapp.com",
+            projectId: "prfabricsbilling",
+            storageBucket: "prfabricsbilling.firebasestorage.app",
+            messagingSenderId: "591557598182",
+            appId: "1:591557598182:web:f63108b79c4861812ad427",
+            measurementId: "G-SKPHVM350N"
+        };
     }
 
-    // Initialize the database
+    // Initialize Firebase
     async init() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.version);
+        try {
+            // Initialize Firebase
+            firebase.initializeApp(this.firebaseConfig);
+            this.firestore = firebase.firestore();
 
-            request.onerror = () => {
-                console.error('Database failed to open');
-                reject(request.error);
-            };
+            // Enable offline persistence
+            this.firestore.enablePersistence()
+                .then(() => {
+                    console.log('Firebase persistence enabled');
+                })
+                .catch((err) => {
+                    console.log('Firebase persistence error:', err);
+                    if (err.code == 'failed-precondition') {
+                        console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                    } else if (err.code == 'unimplemented') {
+                        console.log('The current browser doesn\'t support persistence');
+                    }
+                });
 
-            request.onsuccess = () => {
-                this.db = request.result;
-                console.log('Database opened successfully');
-                resolve(this.db);
-            };
+            this.initialized = true;
+            console.log('Firebase initialized successfully');
+            return this.firestore;
 
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                const oldVersion = event.oldVersion;
-                const newVersion = event.newVersion;
-
-                console.log(`Upgrading database from version ${oldVersion} to ${newVersion}`);
-
-                // Create object store for invoices if it doesn't exist
-                if (!db.objectStoreNames.contains('invoices')) {
-                    const invoiceStore = db.createObjectStore('invoices', { keyPath: 'invoiceNo' });
-                    invoiceStore.createIndex('customerName', 'customerName', { unique: false });
-                    invoiceStore.createIndex('invoiceDate', 'invoiceDate', { unique: false });
-                    console.log('Created invoices object store');
-                }
-
-                // Add this in the onupgradeneeded method after the returns store creation
-                if (!db.objectStoreNames.contains('customers')) {
-                    const customerStore = db.createObjectStore('customers', { keyPath: 'phone' });
-                    customerStore.createIndex('name', 'name', { unique: false });
-                    customerStore.createIndex('phone', 'phone', { unique: true });
-                    console.log('Created customers object store');
-                }
-
-                // Create object store for payments if it doesn't exist
-                if (!db.objectStoreNames.contains('payments')) {
-                    const paymentStore = db.createObjectStore('payments', { keyPath: 'id', autoIncrement: true });
-                    paymentStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
-                    paymentStore.createIndex('paymentDate', 'paymentDate', { unique: false });
-                    console.log('Created payments object store');
-                }
-
-                // Create object store for returns - this is new in version 2
-                if (!db.objectStoreNames.contains('returns')) {
-                    const returnStore = db.createObjectStore('returns', { keyPath: 'id', autoIncrement: true });
-                    returnStore.createIndex('invoiceNo', 'invoiceNo', { unique: false });
-                    returnStore.createIndex('returnDate', 'returnDate', { unique: false });
-                    returnStore.createIndex('customerName', 'customerName', { unique: false });
-                    console.log('Created returns object store');
-                }
-
-                // Create object store for shortcuts if it doesn't exist
-                if (!db.objectStoreNames.contains('shortcuts')) {
-                    const shortcutStore = db.createObjectStore('shortcuts', { keyPath: 'shortcutKey' });
-                    shortcutStore.createIndex('shortcutKey', 'shortcutKey', { unique: true });
-                    console.log('Created shortcuts object store');
-                }
-            };
-
-            request.onblocked = () => {
-                console.error('Database upgrade blocked');
-                alert('Please close all other tabs with this app to update the database.');
-            };
-        });
+        } catch (error) {
+            console.error('Error initializing Firebase:', error);
+            throw error;
+        }
     }
 
-    // Save invoice to database
+    // Helper method to check initialization
+    _checkInit() {
+        if (!this.initialized) {
+            throw new Error('Database not initialized. Call init() first.');
+        }
+    }
+
+    // Save invoice to Firebase
     async saveInvoice(invoiceData) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['invoices'], 'readwrite');
-            const store = transaction.objectStore('invoices');
-            const request = store.put(invoiceData);
-
-            request.onsuccess = () => {
-                console.log('Invoice saved successfully');
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Error saving invoice');
-                reject(request.error);
-            };
-        });
+        this._checkInit();
+        try {
+            await this.firestore.collection('invoices').doc(invoiceData.invoiceNo).set({
+                ...invoiceData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Invoice saved successfully to Firebase');
+            return invoiceData.invoiceNo;
+        } catch (error) {
+            console.error('Error saving invoice to Firebase:', error);
+            throw error;
+        }
     }
 
-
-
-    // Save customer to database
+    // Save customer to Firebase
     async saveCustomer(customerData) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['customers'], 'readwrite');
-            const store = transaction.objectStore('customers');
-            const request = store.put(customerData);
-
-            request.onsuccess = () => {
-                console.log('Customer saved successfully');
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Error saving customer');
-                reject(request.error);
-            };
-        });
+        this._checkInit();
+        try {
+            await this.firestore.collection('customers').doc(customerData.phone).set({
+                ...customerData,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Customer saved successfully to Firebase');
+            return customerData.phone;
+        } catch (error) {
+            console.error('Error saving customer to Firebase:', error);
+            throw error;
+        }
     }
 
     // Get customer by phone number
     async getCustomer(phone) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['customers'], 'readonly');
-            const store = transaction.objectStore('customers');
-            const request = store.get(phone);
+        this._checkInit();
+        try {
+            const docRef = this.firestore.collection('customers').doc(phone);
+            const docSnap = await docRef.get();
 
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
-        });
+            if (docSnap.exists) {
+                return docSnap.data();
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting customer from Firebase:', error);
+            throw error;
+        }
     }
 
     // Get all customers
     async getAllCustomers() {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['customers'], 'readonly');
-            const store = transaction.objectStore('customers');
-            const request = store.getAll();
-
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
-        });
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('customers').get();
+            const customers = [];
+            querySnapshot.forEach((doc) => {
+                customers.push(doc.data());
+            });
+            return customers;
+        } catch (error) {
+            console.error('Error getting all customers from Firebase:', error);
+            throw error;
+        }
     }
 
     // Delete customer
     async deleteCustomer(phone) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['customers'], 'readwrite');
-            const store = transaction.objectStore('customers');
-            const request = store.delete(phone);
-
-            request.onsuccess = () => {
-                console.log('Customer deleted successfully');
-                resolve();
-            };
-
-            request.onerror = () => {
-                console.error('Error deleting customer');
-                reject(request.error);
-            };
-        });
+        this._checkInit();
+        try {
+            await this.firestore.collection('customers').doc(phone).delete();
+            console.log('Customer deleted successfully from Firebase');
+        } catch (error) {
+            console.error('Error deleting customer from Firebase:', error);
+            throw error;
+        }
     }
-
-
-    // Add this method to the Database class in db.js
 
     // Delete return by ID
     async deleteReturn(returnId) {
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db.transaction(['returns'], 'readwrite');
-                const store = transaction.objectStore('returns');
-                const request = store.delete(returnId);
-
-                request.onsuccess = () => {
-                    console.log('Return deleted successfully');
-                    resolve();
-                };
-
-                request.onerror = () => {
-                    console.error('Error deleting return');
-                    reject(request.error);
-                };
-            } catch (error) {
-                console.error('Transaction error:', error);
-                reject(error);
-            }
-        });
-
+        this._checkInit();
+        try {
+            await this.firestore.collection('returns').doc(returnId.toString()).delete();
+            console.log('Return deleted successfully from Firebase');
+        } catch (error) {
+            console.error('Error deleting return from Firebase:', error);
+            throw error;
+        }
     }
-
 
     // Delete payment record
     async deletePayment(paymentId) {
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db.transaction(['payments'], 'readwrite');
-                const store = transaction.objectStore('payments');
-                const request = store.delete(paymentId);
-
-                request.onsuccess = () => {
-                    console.log('Payment deleted successfully');
-                    resolve();
-                };
-
-                request.onerror = () => {
-                    console.error('Error deleting payment');
-                    reject(request.error);
-                };
-            } catch (error) {
-                console.error('Transaction error:', error);
-                reject(error);
-            }
-        });
+        this._checkInit();
+        try {
+            await this.firestore.collection('payments').doc(paymentId.toString()).delete();
+            console.log('Payment deleted successfully from Firebase');
+        } catch (error) {
+            console.error('Error deleting payment from Firebase:', error);
+            throw error;
+        }
     }
 
     // Get all invoices
     async getAllInvoices() {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['invoices'], 'readonly');
-            const store = transaction.objectStore('invoices');
-            const request = store.getAll();
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('invoices').get();
+            const invoices = [];
+            querySnapshot.forEach((doc) => {
+                invoices.push(doc.data());
+            });
 
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
-        });
+            // Sort by invoice date descending (newest first)
+            return invoices.sort((a, b) => {
+                const dateA = a.invoiceDate ? new Date(a.invoiceDate) : new Date(0);
+                const dateB = b.invoiceDate ? new Date(b.invoiceDate) : new Date(0);
+                return dateB - dateA;
+            });
+        } catch (error) {
+            console.error('Error getting all invoices from Firebase:', error);
+            throw error;
+        }
     }
 
     // Get invoice by invoice number
     async getInvoice(invoiceNo) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['invoices'], 'readonly');
-            const store = transaction.objectStore('invoices');
-            const request = store.get(invoiceNo);
+        this._checkInit();
+        try {
+            const docRef = this.firestore.collection('invoices').doc(invoiceNo);
+            const docSnap = await docRef.get();
 
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
-        });
+            if (docSnap.exists) {
+                return docSnap.data();
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting invoice from Firebase:', error);
+            throw error;
+        }
     }
 
     // Save payment record
     async savePayment(paymentData) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['payments'], 'readwrite');
-            const store = transaction.objectStore('payments');
-            const request = store.put(paymentData);
+        this._checkInit();
+        try {
+            // Use auto-generated ID or provided ID
+            const paymentId = paymentData.id || Date.now().toString();
 
-            request.onsuccess = () => {
-                console.log('Payment saved successfully');
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Error saving payment');
-                reject(request.error);
-            };
-        });
+            await this.firestore.collection('payments').doc(paymentId).set({
+                ...paymentData,
+                id: paymentId,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Payment saved successfully to Firebase');
+            return paymentId;
+        } catch (error) {
+            console.error('Error saving payment to Firebase:', error);
+            throw error;
+        }
     }
 
     // Get all payments for an invoice
     async getPaymentsByInvoice(invoiceNo) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['payments'], 'readonly');
-            const store = transaction.objectStore('payments');
-            const index = store.index('invoiceNo');
-            const request = index.getAll(invoiceNo);
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('payments')
+                .where('invoiceNo', '==', invoiceNo)
+                .get();
 
-            request.onsuccess = () => {
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                reject(request.error);
-            };
-        });
+            const payments = [];
+            querySnapshot.forEach((doc) => {
+                payments.push(doc.data());
+            });
+            return payments;
+        } catch (error) {
+            console.error('Error getting payments from Firebase:', error);
+            return [];
+        }
     }
 
     // Delete invoice
     async deleteInvoice(invoiceNo) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['invoices'], 'readwrite');
-            const store = transaction.objectStore('invoices');
-            const request = store.delete(invoiceNo);
-
-            request.onsuccess = () => {
-                console.log('Invoice deleted successfully');
-                resolve();
-            };
-
-            request.onerror = () => {
-                console.error('Error deleting invoice');
-                reject(request.error);
-            };
-        });
+        this._checkInit();
+        try {
+            await this.firestore.collection('invoices').doc(invoiceNo).delete();
+            console.log('Invoice deleted successfully from Firebase');
+        } catch (error) {
+            console.error('Error deleting invoice from Firebase:', error);
+            throw error;
+        }
     }
 
     // Save return record
     async saveReturn(returnData) {
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction(['returns'], 'readwrite');
-            const store = transaction.objectStore('returns');
-            const request = store.put(returnData);
+        this._checkInit();
+        try {
+            // Use auto-generated ID or provided ID
+            const returnId = returnData.id || Date.now().toString();
 
-            request.onsuccess = () => {
-                console.log('Return saved successfully');
-                resolve(request.result);
-            };
-
-            request.onerror = () => {
-                console.error('Error saving return');
-                reject(request.error);
-            };
-        });
+            await this.firestore.collection('returns').doc(returnId).set({
+                ...returnData,
+                id: returnId,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('Return saved successfully to Firebase');
+            return returnId;
+        } catch (error) {
+            console.error('Error saving return to Firebase:', error);
+            throw error;
+        }
     }
 
     // Get all returns for an invoice
     async getReturnsByInvoice(invoiceNo) {
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db.transaction(['returns'], 'readonly');
-                const store = transaction.objectStore('returns');
-                const index = store.index('invoiceNo');
-                const request = index.getAll(invoiceNo);
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('returns')
+                .where('invoiceNo', '==', invoiceNo)
+                .get();
 
-                request.onsuccess = () => {
-                    resolve(request.result);
-                };
-
-                request.onerror = () => {
-                    console.error('Error getting returns:', request.error);
-                    reject(request.error);
-                };
-            } catch (error) {
-                console.error('Transaction error:', error);
-                // If returns store doesn't exist, return empty array
-                resolve([]);
-            }
-        });
+            const returns = [];
+            querySnapshot.forEach((doc) => {
+                returns.push(doc.data());
+            });
+            return returns;
+        } catch (error) {
+            console.error('Error getting returns from Firebase:', error);
+            return [];
+        }
     }
 
     // Get all returns
     async getAllReturns() {
-        return new Promise((resolve, reject) => {
-            try {
-                const transaction = this.db.transaction(['returns'], 'readonly');
-                const store = transaction.objectStore('returns');
-                const request = store.getAll();
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('returns').get();
+            const returns = [];
+            querySnapshot.forEach((doc) => {
+                returns.push(doc.data());
+            });
+            return returns;
+        } catch (error) {
+            console.error('Error getting all returns from Firebase:', error);
+            return [];
+        }
+    }
 
-                request.onsuccess = () => {
-                    resolve(request.result);
-                };
+    // Migration function to export existing IndexedDB data
+    async exportIndexedDBData() {
+        // This would export data from your old IndexedDB
+        // You'll need to implement this based on your current IndexedDB structure
+        console.log('Export IndexedDB data function');
+        return null;
+    }
 
-                request.onerror = () => {
-                    console.error('Error getting all returns:', request.error);
-                    reject(request.error);
-                };
-            } catch (error) {
-                console.error('Transaction error:', error);
-                // If returns store doesn't exist, return empty array
-                resolve([]);
+    // Migration function to import data to Firebase
+    async importToFirebase(data) {
+        this._checkInit();
+        try {
+            // Import invoices
+            if (data.invoices) {
+                for (const invoice of data.invoices) {
+                    await this.saveInvoice(invoice);
+                }
             }
-        });
+
+            // Import customers
+            if (data.customers) {
+                for (const customer of data.customers) {
+                    await this.saveCustomer(customer);
+                }
+            }
+
+            console.log('Data imported successfully to Firebase');
+        } catch (error) {
+            console.error('Error importing data to Firebase:', error);
+            throw error;
+        }
     }
 }
 
