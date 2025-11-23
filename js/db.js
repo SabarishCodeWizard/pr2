@@ -515,7 +515,167 @@ class Database {
         console.log('Export IndexedDB data function');
         return null;
     }
+    // In your db.js - Add these methods to the Database class
 
+    // Move invoice to recycle bin instead of permanent deletion
+    async moveInvoiceToRecycleBin(invoiceNo) {
+        this._checkInit();
+        try {
+            // Get the invoice data first
+            const invoiceData = await this.getInvoice(invoiceNo);
+            if (!invoiceData) {
+                console.log('Invoice not found, nothing to move to recycle bin');
+                return;
+            }
+
+            // Get related payments and returns
+            const payments = await this.getPaymentsByInvoice(invoiceNo);
+            const returns = await this.getReturnsByInvoice(invoiceNo);
+
+            // Create recycle bin entry
+            const recycleBinEntry = {
+                id: `invoice_${invoiceNo}_${Date.now()}`,
+                type: 'invoice',
+                originalId: invoiceNo,
+                data: invoiceData,
+                payments: payments,
+                returns: returns,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                customerName: invoiceData.customerName,
+                customerPhone: invoiceData.customerPhone,
+                invoiceDate: invoiceData.invoiceDate,
+                grandTotal: invoiceData.grandTotal
+            };
+
+            // Save to recycle bin
+            await this.firestore.collection('recycleBin').doc(recycleBinEntry.id).set(recycleBinEntry);
+            console.log('Invoice moved to recycle bin:', invoiceNo);
+
+            // Now delete the original invoice and related data
+            await this.firestore.collection('invoices').doc(invoiceNo).delete();
+
+            // Delete related payments
+            await this.deletePaymentsByInvoice(invoiceNo);
+
+            // Delete related returns
+            await this.deleteReturnsByInvoice(invoiceNo);
+
+            // Update subsequent invoices
+            await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceNo);
+
+            console.log(`Invoice ${invoiceNo} moved to recycle bin and original data deleted`);
+
+        } catch (error) {
+            console.error('Error moving invoice to recycle bin:', error);
+            throw error;
+        }
+    }
+
+    // Get all items from recycle bin
+    async getRecycleBinItems() {
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('recycleBin')
+                .orderBy('deletedAt', 'desc')
+                .get();
+
+            const items = [];
+            querySnapshot.forEach((doc) => {
+                items.push(doc.data());
+            });
+            return items;
+        } catch (error) {
+            console.error('Error getting recycle bin items:', error);
+            return [];
+        }
+    }
+
+    // Restore item from recycle bin
+    async restoreFromRecycleBin(itemId) {
+        this._checkInit();
+        try {
+            // Get the recycle bin item
+            const docRef = this.firestore.collection('recycleBin').doc(itemId);
+            const docSnap = await docRef.get();
+
+            if (!docSnap.exists) {
+                throw new Error('Recycle bin item not found');
+            }
+
+            const item = docSnap.data();
+
+            if (item.type === 'invoice') {
+                // Restore invoice
+                await this.firestore.collection('invoices').doc(item.originalId).set(item.data);
+
+                // Restore payments
+                if (item.payments && item.payments.length > 0) {
+                    for (const payment of item.payments) {
+                        await this.savePayment(payment);
+                    }
+                }
+
+                // Restore returns
+                if (item.returns && item.returns.length > 0) {
+                    for (const returnItem of item.returns) {
+                        await this.saveReturn(returnItem);
+                    }
+                }
+
+                // Update subsequent invoices
+                await Utils.updateSubsequentInvoices(item.data.customerName, item.originalId);
+            }
+
+            // Remove from recycle bin
+            await docRef.delete();
+            console.log(`Item ${itemId} restored from recycle bin`);
+
+            return item.originalId;
+
+        } catch (error) {
+            console.error('Error restoring from recycle bin:', error);
+            throw error;
+        }
+    }
+
+    // Permanently delete from recycle bin
+    async permanentDeleteFromRecycleBin(itemId) {
+        this._checkInit();
+        try {
+            await this.firestore.collection('recycleBin').doc(itemId).delete();
+            console.log('Item permanently deleted from recycle bin:', itemId);
+        } catch (error) {
+            console.error('Error permanently deleting from recycle bin:', error);
+            throw error;
+        }
+    }
+
+    // Empty entire recycle bin
+    async emptyRecycleBin() {
+        this._checkInit();
+        try {
+            const querySnapshot = await this.firestore.collection('recycleBin').get();
+
+            const deletePromises = [];
+            querySnapshot.forEach((doc) => {
+                deletePromises.push(doc.ref.delete());
+            });
+
+            await Promise.all(deletePromises);
+            console.log(`Recycle bin emptied: ${deletePromises.length} items deleted`);
+
+            return deletePromises.length;
+        } catch (error) {
+            console.error('Error emptying recycle bin:', error);
+            throw error;
+        }
+    }
+
+    // Update the deleteInvoice method to use recycle bin
+    async deleteInvoice(invoiceNo) {
+        // Use the new recycle bin method instead of permanent deletion
+        await this.moveInvoiceToRecycleBin(invoiceNo);
+    }
     // Migration function to import data to Firebase
     async importToFirebase(data) {
         this._checkInit();

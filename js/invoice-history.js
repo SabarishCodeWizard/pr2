@@ -2777,27 +2777,168 @@ async function generateInvoicePDF(invoiceNo) {
     }
 }
 
-// Update deleteInvoice function with loading
+// Update deleteInvoice function with professional UI
 async function deleteInvoice(invoiceNo) {
-    if (confirm('Are you sure you want to delete this invoice? This will also delete all related payments and returns. This action cannot be undone.')) {
-        try {
-            showLoading('Deleting Invoice', 'Please wait while we remove the invoice and related data...');
+    // Create professional confirmation dialog
+    const deleteDialog = document.createElement('div');
+    deleteDialog.className = 'delete-dialog-overlay';
+    deleteDialog.innerHTML = `
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <div class="delete-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>Confirm Deletion</h3>
+            </div>
+            
+            <div class="delete-dialog-content">
+                <p class="delete-warning-text">
+                    You are about to delete Invoice <strong>#${invoiceNo}</strong>. 
+                    This action will move the item to the recycle bin:
+                </p>
+                
+                <ul class="delete-consequences">
+                    <li><i class="fas fa-file-invoice"></i> The invoice record</li>
+                    <li><i class="fas fa-money-bill-wave"></i> All payment history</li>
+                    <li><i class="fas fa-undo"></i> All return records</li>
+                    <li><i class="fas fa-chart-line"></i> Customer balance calculations</li>
+                </ul>
+                
+                <div class="delete-final-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>This action cannot be undone!</span>
+                </div>
+                
+                <div class="confirmation-input">
+                    <label for="confirmInvoiceNo">
+                        Type the invoice number <strong>${invoiceNo}</strong> to confirm:
+                    </label>
+                    <input type="text" id="confirmInvoiceNo" placeholder="Enter invoice number" autocomplete="off">
+                </div>
+            </div>
+            
+            <div class="delete-dialog-actions">
+                <button class="btn-cancel-delete" onclick="closeDeleteDialog()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-confirm-delete" id="confirmDeleteBtn" disabled onclick="proceedWithDelete('${invoiceNo}')">
+                    <i class="fas fa-trash"></i> Delete Permanently
+                </button>
+            </div>
+        </div>
+    `;
 
-            await db.deleteInvoice(invoiceNo);
+    document.body.appendChild(deleteDialog);
 
-            hideLoading();
-            alert('Invoice and all related data deleted successfully!');
-            await loadInvoices();
+    // Add input validation
+    const confirmInput = document.getElementById('confirmInvoiceNo');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-        } catch (error) {
-            hideLoading();
-            console.error('Error deleting invoice:', error);
-            alert('Error deleting invoice: ' + error.message);
-            await loadInvoices();
+    confirmInput.addEventListener('input', function() {
+        const isConfirmed = this.value.trim() === invoiceNo;
+        confirmBtn.disabled = !isConfirmed;
+        
+        if (isConfirmed) {
+            this.style.borderColor = '#28a745';
+            this.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.25)';
+        } else {
+            this.style.borderColor = '#dc3545';
+            this.style.boxShadow = '0 0 0 2px rgba(220, 53, 69, 0.25)';
         }
+    });
+
+    // Enter key support
+    confirmInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !confirmBtn.disabled) {
+            proceedWithDelete(invoiceNo);
+        }
+    });
+
+    // Focus on input
+    setTimeout(() => {
+        confirmInput.focus();
+    }, 100);
+}
+
+// Close delete dialog
+function closeDeleteDialog() {
+    const deleteDialog = document.querySelector('.delete-dialog-overlay');
+    if (deleteDialog) {
+        deleteDialog.remove();
     }
 }
 
+// Proceed with deletion after confirmation
+async function proceedWithDelete(invoiceNo) {
+    try {
+        closeDeleteDialog();
+        
+        showLoading('Deleting Invoice', 'Please wait while we securely remove the invoice and all related data...');
+
+        await db.deleteInvoice(invoiceNo);
+
+        hideLoading();
+        
+        // Show success message
+        showSuccessMessage(`Invoice #${invoiceNo} and all related data have been permanently deleted.`);
+        
+        await loadInvoices();
+
+    } catch (error) {
+        hideLoading();
+        console.error('Error deleting invoice:', error);
+        showErrorMessage('Error deleting invoice: ' + error.message);
+        await loadInvoices();
+    }
+}
+
+// Show success message
+function showSuccessMessage(message) {
+    const successToast = document.createElement('div');
+    successToast.className = 'operation-toast toast-success';
+    successToast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span>${message}</span>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(successToast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (successToast.parentElement) {
+            successToast.remove();
+        }
+    }, 5000);
+}
+
+// Show error message
+function showErrorMessage(message) {
+    const errorToast = document.createElement('div');
+    errorToast.className = 'operation-toast toast-error';
+    errorToast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>${message}</span>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(errorToast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (errorToast.parentElement) {
+            errorToast.remove();
+        }
+    }, 5000);
+}
 
 
 
