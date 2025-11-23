@@ -1123,98 +1123,242 @@ td {
         padding: 6px 10px;
     }
 }
+/* Professional Loading Spinner for Customer Details */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
 
+.professional-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
 
+.spinner-text {
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+    text-align: center;
+}
 
+.spinner-subtext {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+    text-align: center;
+}
 
-/* Phone Number Styling
-.phone-number {
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.3s ease;
-    position: relative;
-    font-family: 'Courier New', monospace;
-    background: #f8f9fa;
-    padding: 4px 8px;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Customer Details specific loading states */
+.customers-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Skeleton loading for customer table */
+.skeleton-loader {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
     border-radius: 4px;
-    border: 1px solid #e9ecef;
 }
 
-.phone-number:hover {
-    background: #e9ecef;
-    border-color: #007bff;
-} */
-
-/* .phone-number.phone-revealed {
-    background: #d4edda;
-    border-color: #28a745;
-    color: #155724;
-    font-weight: bold;
+.skeleton-table-row {
+    height: 60px;
+    margin-bottom: 8px;
+    border-radius: 8px;
 }
 
-.phone-number::after {
-    content: '👁️';
-    margin-left: 5px;
-    font-size: 0.8em;
-    opacity: 0.6;
+.skeleton-stat-card {
+    height: 100px;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
 
-.phone-number.phone-revealed::after {
-    content: '✓';
-    color: #28a745;
-} */
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
 
-/* Tooltip for phone numbers */
-/* .phone-number {
+/* Enhanced button states */
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+
+.btn-processing {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    pointer-events: none;
+}
+
+/* Modal loading state */
+.modal-loading {
     position: relative;
 }
 
-.phone-number::before {
-    content: 'Click to reveal full number';
+.modal-loading::after {
+    content: '';
     position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+/* Error state styling */
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.btn-retry {
+    background: #007bff;
     color: white;
-    padding: 5px 10px;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.btn-retry:hover {
+    background: #0056b3;
+}
+
+/* Enhanced statistics cards loading */
+.stats-cards.loading {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Export loading state */
+.export-loading {
+    position: relative;
+}
+
+.export-loading::after {
+    content: 'Exporting...';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #007bff;
+}
+
+/* WhatsApp reminder loading */
+.whatsapp-loading {
+    position: relative;
+}
+
+.whatsapp-loading::after {
+    content: 'Preparing...';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 4px;
     font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 1000;
+    font-weight: 600;
+    color: #25D366;
 }
 
-.phone-number:hover::before {
-    opacity: 1;
+
+/* Enhanced error states */
+.stat-card.error-state {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
 }
 
-.phone-number.phone-revealed::before {
-    content: 'Click to hide number';
-} */
+.stat-card.error-state .stat-icon {
+    background: #dc3545;
+}
 
-
-
-/* Popup Phone Styling */
-/* .phone-display {
-    cursor: pointer;
-    user-select: none;
-    padding: 2px 6px;
-    border-radius: 3px;
+.stat-card.missing {
     background: #f8f9fa;
-    display: inline-block;
-    margin: 2px 0;
-    transition: all 0.3s ease;
+    border: 2px dashed #dee2e6;
+    color: #6c757d;
 }
 
-.phone-display:hover {
-    background: #e9ecef;
+.stat-card.missing .stat-icon {
+    background: #6c757d;
 }
 
-.phone-display.phone-revealed {
-    background: #d4edda;
-    color: #155724;
-    font-weight: bold;
-} */
+/* Warning state for when statistics can't be updated */
+.stats-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: center;
+    color: #856404;
+}
+
+.stats-warning i {
+    margin-right: 8px;
+    color: #ffc107;
+}
+
+/* Loading state improvements */
+.stats-cards.loading .stat-card {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-card.missing {
+        grid-column: 1 / -1;
+    }
+}

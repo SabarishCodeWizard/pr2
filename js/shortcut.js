@@ -1,4 +1,4 @@
-// Product Shortcuts Management - Firebase Version
+// Product Shortcuts Management - Firebase Version with Loading Spinners
 class ShortcutManager {
     constructor() {
         this.currentEditId = null;
@@ -6,10 +6,86 @@ class ShortcutManager {
     }
 
     async init() {
-        // Wait for database to be ready using the new ensureInitialized method
-        await db.ensureInitialized();
-        await this.loadShortcuts();
-        this.setupEventListeners();
+        try {
+            this.showLoading('Initializing Shortcuts Manager', 'Loading your product shortcuts...');
+            
+            // Wait for database to be ready using the new ensureInitialized method
+            await db.ensureInitialized();
+            
+            // Show skeleton loading for table
+            this.showTableSkeleton();
+            
+            await this.loadShortcuts();
+            this.setupEventListeners();
+            
+            this.hideLoading();
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error initializing shortcut manager:', error);
+            this.showErrorState('Failed to initialize shortcuts manager. Please refresh the page.');
+        }
+    }
+
+    // Loading spinner functions
+    showLoading(message = 'Loading...', subtext = '') {
+        this.hideLoading();
+        
+        const loadingHTML = `
+            <div class="loading-overlay" id="shortcutsLoading">
+                <div class="professional-spinner"></div>
+                <div class="spinner-text">${message}</div>
+                ${subtext ? `<div class="spinner-subtext">${subtext}</div>` : ''}
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', loadingHTML);
+    }
+
+    hideLoading() {
+        const existingLoader = document.getElementById('shortcutsLoading');
+        if (existingLoader) {
+            existingLoader.remove();
+        }
+    }
+
+    showTableSkeleton() {
+        const tableBody = document.getElementById('shortcutsTableBody');
+        if (!tableBody) return;
+        
+        let skeletonHTML = '';
+        for (let i = 0; i < 5; i++) {
+            skeletonHTML += `
+                <tr>
+                    <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                    <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                    <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                </tr>
+            `;
+        }
+        tableBody.innerHTML = skeletonHTML;
+    }
+
+    showErrorState(message) {
+        const tableBody = document.getElementById('shortcutsTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 40px; color: #e74c3c;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                        <h3>Error Loading Shortcuts</h3>
+                        <p>${message}</p>
+                        <button onclick="shortcutManager.retryInitialization()" class="btn-retry">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    async retryInitialization() {
+        await this.init();
     }
 
     setupEventListeners() {
@@ -43,6 +119,24 @@ class ShortcutManager {
                 this.addShortcut();
             }
         });
+
+        // Add loading state to form inputs
+        this.setupFormLoadingStates();
+    }
+
+    setupFormLoadingStates() {
+        const formInputs = document.querySelectorAll('#shortcutKey, #fullDescription');
+        formInputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#007bff';
+                this.style.boxShadow = '0 0 0 2px rgba(0, 123, 255, 0.25)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.borderColor = '#ddd';
+                this.style.boxShadow = 'none';
+            });
+        });
     }
 
     async addShortcut() {
@@ -54,7 +148,16 @@ class ShortcutManager {
             return;
         }
 
+        const addButton = document.getElementById('addShortcut');
+        const originalText = addButton.innerHTML;
+
         try {
+            // Show button loading state
+            addButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            addButton.classList.add('btn-processing');
+
+            this.showLoading('Adding Shortcut', 'Saving to database...');
+
             const shortcutData = {
                 shortcutKey: shortcutKey.toUpperCase(),
                 fullDescription: fullDescription,
@@ -70,11 +173,28 @@ class ShortcutManager {
             // Reload shortcuts
             await this.loadShortcuts();
             
-            // Show success message
+            this.hideLoading();
+            
+            // Show success state on button
+            addButton.innerHTML = '<i class="fas fa-check"></i> Added!';
+            addButton.classList.remove('btn-processing');
+            addButton.classList.add('btn-success');
+            
+            setTimeout(() => {
+                addButton.innerHTML = originalText;
+                addButton.classList.remove('btn-success');
+            }, 2000);
+            
             this.showMessage('Shortcut added successfully!', 'success');
             
         } catch (error) {
+            this.hideLoading();
             console.error('Error adding shortcut:', error);
+            
+            // Reset button state
+            addButton.innerHTML = originalText;
+            addButton.classList.remove('btn-processing');
+            
             this.showMessage('Error adding shortcut. Please try again.', 'error');
         }
     }
@@ -93,11 +213,14 @@ class ShortcutManager {
 
     async loadShortcuts() {
         try {
+            // Show table skeleton while loading
+            this.showTableSkeleton();
+            
             const shortcuts = await this.getAllShortcuts();
             this.renderShortcuts(shortcuts);
         } catch (error) {
             console.error('Error loading shortcuts:', error);
-            this.renderShortcuts([]); // Render empty state on error
+            this.showErrorState('Failed to load shortcuts. Please try again.');
         }
     }
 
@@ -114,7 +237,7 @@ class ShortcutManager {
             return shortcuts.sort((a, b) => a.shortcutKey.localeCompare(b.shortcutKey));
         } catch (error) {
             console.error('Error getting all shortcuts from Firebase:', error);
-            return [];
+            throw error;
         }
     }
 
@@ -131,7 +254,8 @@ class ShortcutManager {
                 <tr>
                     <td colspan="3" style="text-align: center; padding: 40px; color: #7f8c8d;">
                         <i class="fas fa-clipboard-list" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
-                        <p>No shortcuts found. Add your first shortcut above!</p>
+                        <h3>No Shortcuts Found</h3>
+                        <p>Add your first product shortcut using the form above!</p>
                     </td>
                 </tr>
             `;
@@ -158,6 +282,8 @@ class ShortcutManager {
 
     async editShortcut(shortcutKey) {
         try {
+            this.showLoading('Loading Shortcut', 'Fetching shortcut details...');
+            
             const shortcut = await this.getShortcut(shortcutKey);
             if (shortcut) {
                 this.currentEditId = shortcutKey;
@@ -165,7 +291,10 @@ class ShortcutManager {
                 document.getElementById('editFullDescription').value = shortcut.fullDescription;
                 document.getElementById('editModal').style.display = 'block';
             }
+            
+            this.hideLoading();
         } catch (error) {
+            this.hideLoading();
             console.error('Error loading shortcut for edit:', error);
             this.showMessage('Error loading shortcut for editing', 'error');
         }
@@ -197,7 +326,16 @@ class ShortcutManager {
             return;
         }
 
+        const saveButton = document.getElementById('saveEdit');
+        const originalText = saveButton.innerHTML;
+
         try {
+            // Show button loading state
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveButton.classList.add('btn-processing');
+
+            this.showLoading('Updating Shortcut', 'Saving changes to database...');
+
             const shortcutData = {
                 shortcutKey: shortcutKey.toUpperCase(),
                 fullDescription: fullDescription,
@@ -212,10 +350,20 @@ class ShortcutManager {
             await this.saveShortcut(shortcutData);
             await this.loadShortcuts();
             this.closeModal();
+            
+            this.hideLoading();
+            
+            // Show success state
             this.showMessage('Shortcut updated successfully!', 'success');
             
         } catch (error) {
+            this.hideLoading();
             console.error('Error updating shortcut:', error);
+            
+            // Reset button state
+            saveButton.innerHTML = originalText;
+            saveButton.classList.remove('btn-processing');
+            
             this.showMessage('Error updating shortcut. Please try again.', 'error');
         }
     }
@@ -225,16 +373,36 @@ class ShortcutManager {
             return;
         }
 
+        const deleteButtons = document.querySelectorAll(`.btn-delete[onclick*="${shortcutKey}"]`);
+        
         try {
+            // Show loading on delete buttons
+            deleteButtons.forEach(button => {
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                button.classList.add('btn-processing');
+            });
+
+            this.showLoading('Deleting Shortcut', 'Removing from database...');
+
             await db.ensureInitialized();
             await db.firestore.collection('shortcuts').doc(shortcutKey).delete();
             console.log('Shortcut deleted successfully from Firebase');
 
             await this.loadShortcuts();
+            
+            this.hideLoading();
             this.showMessage('Shortcut deleted successfully!', 'success');
             
         } catch (error) {
+            this.hideLoading();
             console.error('Error deleting shortcut:', error);
+            
+            // Reset button states
+            deleteButtons.forEach(button => {
+                button.innerHTML = '<i class="fas fa-trash"></i> Delete';
+                button.classList.remove('btn-processing');
+            });
+            
             this.showMessage('Error deleting shortcut. Please try again.', 'error');
         }
     }
@@ -242,6 +410,12 @@ class ShortcutManager {
     searchShortcuts(query) {
         const rows = document.querySelectorAll('#shortcutsTableBody tr');
         const searchTerm = query.toLowerCase();
+
+        // Show loading for search if many items
+        if (rows.length > 10) {
+            this.showLoading('Searching', 'Filtering shortcuts...');
+            setTimeout(() => this.hideLoading(), 300);
+        }
 
         rows.forEach(row => {
             const shortcutKey = row.cells[0].textContent.toLowerCase();
@@ -258,6 +432,11 @@ class ShortcutManager {
     closeModal() {
         document.getElementById('editModal').style.display = 'none';
         this.currentEditId = null;
+        
+        // Reset modal button states
+        const saveButton = document.getElementById('saveEdit');
+        saveButton.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        saveButton.classList.remove('btn-processing');
     }
 
     showMessage(message, type) {
@@ -270,17 +449,24 @@ class ShortcutManager {
         // Create new message
         const messageDiv = document.createElement('div');
         messageDiv.className = `shortcut-message shortcut-message-${type}`;
-        messageDiv.textContent = message;
+        messageDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            ${message}
+        `;
         messageDiv.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
             padding: 15px 20px;
-            border-radius: 6px;
+            border-radius: 8px;
             color: white;
             font-weight: 600;
             z-index: 1001;
             animation: slideInRight 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `;
 
         if (type === 'success') {
@@ -310,44 +496,41 @@ class ShortcutManager {
     }
 }
 
-// Add the ensureInitialized method to your Database class if not already present
-// Add this to your db.js file if you haven't already:
-/*
-async ensureInitialized() {
-    if (!this.initialized && !this.initializing) {
-        await this.init();
-    } else if (this.initializing) {
-        // Wait for initialization to complete
-        await new Promise(resolve => {
-            const checkInitialized = () => {
-                if (this.initialized) {
-                    resolve();
-                } else {
-                    setTimeout(checkInitialized, 100);
-                }
-            };
-            checkInitialized();
-        });
-    }
-}
-*/
-
-// Initialize when DOM is loaded
+// Enhanced initialization with error handling
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        // Create shortcuts manager - it will handle its own initialization
+        // Show initial loading
+        const mainContent = document.querySelector('.main') || document.querySelector('.container');
+        if (mainContent) {
+            mainContent.style.opacity = '0.7';
+        }
+
+        // Create shortcuts manager
         window.shortcutManager = new ShortcutManager();
+        
+        // Restore opacity after initialization
+        setTimeout(() => {
+            if (mainContent) {
+                mainContent.style.opacity = '1';
+            }
+        }, 500);
+        
     } catch (error) {
         console.error('Failed to initialize shortcut manager:', error);
-        // Show error message to user
+        
+        // Show comprehensive error state
         const tableBody = document.getElementById('shortcutsTableBody');
         if (tableBody) {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="3" style="text-align: center; padding: 40px; color: #e74c3c;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
-                        <p>Failed to load shortcuts. Please refresh the page.</p>
-                        <p style="font-size: 12px; margin-top: 10px;">Error: ${error.message}</p>
+                        <h3>Failed to Load Shortcuts</h3>
+                        <p>There was an error initializing the shortcuts manager.</p>
+                        <p style="font-size: 12px; margin-top: 10px; color: #7f8c8d;">Error: ${error.message}</p>
+                        <button onclick="location.reload()" class="btn-retry" style="margin-top: 20px;">
+                            <i class="fas fa-redo"></i> Reload Page
+                        </button>
                     </td>
                 </tr>
             `;

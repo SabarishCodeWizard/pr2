@@ -36,139 +36,255 @@ function logout() {
 }
 
 
-// Customer Details Page Functionality
 document.addEventListener('DOMContentLoaded', async function () {
-
     if (!checkAuthentication()) {
         return;
     }
 
-    // Initialize database
-    await db.init();
+    try {
+        showLoading('Loading Customer Details', 'Initializing database and loading customer data...');
 
-    // Load all customers
-    loadAllCustomers();
+        // Setup event listeners first
+        setupEventListeners();
 
-    // Add event listeners
-    document.getElementById('searchBtn').addEventListener('click', searchCustomers);
-    document.getElementById('clearSearch').addEventListener('click', clearSearch);
-    document.getElementById('refreshBtn').addEventListener('click', loadAllCustomers);
-    document.getElementById('exportBtn').addEventListener('click', exportCustomers);
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+        // Check if required DOM elements exist
+        const requiredElements = [
+            'customerTableBody', 'noCustomers'
+        ];
 
-    // Search on Enter key
-    document.getElementById('customerSearch').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            searchCustomers();
+        const missingElements = requiredElements.filter(id => !document.getElementById(id));
+        if (missingElements.length > 0) {
+            console.error('Missing required DOM elements:', missingElements);
+            throw new Error(`Missing required page elements: ${missingElements.join(', ')}`);
         }
-    });
+
+        // Show skeleton loading
+        showStatsSkeleton();
+        showTableSkeleton();
+
+        // Initialize database
+        await db.init();
+
+        // Load all customers
+        await loadAllCustomers();
+
+        hideLoading();
+
+    } catch (error) {
+        hideLoading();
+        console.error('Error during customer details page initialization:', error);
+        showErrorState('Failed to load customer data: ' + error.message);
+    }
 });
 
-// Load all customers with statistics
+
+// Load all customers with statistics - ENHANCED error handling
 async function loadAllCustomers() {
     try {
+        showLoading('Loading Customers', 'Processing customer data and calculating statistics...');
+
         const invoices = await db.getAllInvoices();
-        const customers = await processCustomerData(invoices); // Made async
+        const customers = await processCustomerData(invoices);
+
+        // Check if we have valid data
+        if (!customers || !Array.isArray(customers)) {
+            throw new Error('Invalid customer data received');
+        }
 
         updateStatistics(customers);
         displayCustomers(customers);
+
+        hideLoading();
+
     } catch (error) {
+        hideLoading();
         console.error('Error loading customers:', error);
-        alert('Error loading customer data.');
+        showErrorState('Error loading customer data: ' + error.message);
     }
 }
 
-// Process invoice data to get customer summaries - Updated for returns
-async function processCustomerData(invoices) {
-    const customerMap = new Map();
 
-    // First, process all invoices
-    invoices.forEach(invoice => {
-        const customerName = invoice.customerName;
 
-        if (!customerMap.has(customerName)) {
-            customerMap.set(customerName, {
-                name: customerName,
-                phone: invoice.customerPhone,
-                address: invoice.customerAddress,
-                totalInvoices: 0,
-                totalCurrentBillAmount: 0,
-                totalAmount: 0,
-                amountPaid: 0,
-                balanceDue: 0,
-                totalReturns: 0, // Added for returns
-                adjustedBalanceDue: 0, // Added for returns
-                allInvoiceNumbers: [],
-                invoices: []
-            });
-        }
 
-        const customer = customerMap.get(customerName);
-        customer.totalInvoices++;
-        customer.totalCurrentBillAmount += invoice.subtotal;
-        customer.totalAmount += invoice.grandTotal;
-        customer.amountPaid += invoice.amountPaid;
+// Add event listeners - FIXED naming conflict
+function setupEventListeners() {
+    // Add event listeners if elements exist
+    const searchBtn = document.getElementById('searchBtn');
+    const clearSearchBtn = document.getElementById('clearSearch'); // Renamed variable
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const customerSearch = document.getElementById('customerSearch');
 
-        // Store invoice number and invoice data
-        customer.allInvoiceNumbers.push(invoice.invoiceNo);
-        customer.invoices.push(invoice);
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchCustomers);
+    }
 
-        // Update last invoice info
-        const invoiceDate = new Date(invoice.invoiceDate);
-        if (!customer.lastInvoiceDate || invoiceDate > new Date(customer.lastInvoiceDate)) {
-            customer.lastInvoiceDate = invoice.invoiceDate;
-            customer.lastInvoiceNo = invoice.invoiceNo;
-        }
-    });
+    if (clearSearchBtn) { // Use the renamed variable
+        clearSearchBtn.addEventListener('click', clearSearch); // This now calls the function
+    }
 
-    // After processing all invoices, calculate returns and adjusted balances
-    const customers = Array.from(customerMap.values());
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadAllCustomers);
+    }
 
-    // Calculate returns for each customer
-    for (let customer of customers) {
-        // Sort invoices by invoice number (newest first)
-        customer.invoices.sort((a, b) => {
-            const numA = parseInt(a.invoiceNo) || 0;
-            const numB = parseInt(b.invoiceNo) || 0;
-            return numB - numA;
-        });
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportCustomers);
+    }
 
-        // Calculate total returns for this customer
-        customer.totalReturns = 0;
-        try {
-            for (let invoice of customer.invoices) {
-                const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
-                const invoiceReturns = returns.reduce((sum, returnItem) => sum + returnItem.returnAmount, 0);
-                customer.totalReturns += invoiceReturns;
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // Search on Enter key
+    if (customerSearch) {
+        customerSearch.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchCustomers();
             }
-        } catch (error) {
-            console.error('Error calculating returns for customer:', customer.name, error);
-            // If there's an error (like returns store doesn't exist), set returns to 0
-            customer.totalReturns = 0;
-        }
-
-        // Set balance due to the most recent invoice's balance due
-        if (customer.invoices.length > 0) {
-            customer.balanceDue = customer.invoices[0].balanceDue;
-            customer.adjustedBalanceDue = customer.balanceDue - customer.totalReturns;
-        }
-
-        // Sort invoice numbers in descending order (newest first)
-        customer.allInvoiceNumbers.sort((a, b) => {
-            const numA = parseInt(a) || 0;
-            const numB = parseInt(b) || 0;
-            return numB - numA;
         });
-
-        // Remove the invoices array as we don't need it anymore
-        delete customer.invoices;
     }
-
-    return customers;
 }
 
-// Update statistics cards with color coding - Updated for returns
+
+// Process invoice data to get customer summaries - ENHANCED error handling
+async function processCustomerData(invoices) {
+    try {
+        showLoading('Processing Data', 'Analyzing invoices and calculating returns...');
+
+        // Validate input
+        if (!invoices || !Array.isArray(invoices)) {
+            console.warn('No invoices found or invalid data format');
+            return [];
+        }
+
+        const customerMap = new Map();
+
+        // Process invoices with error handling
+        invoices.forEach(invoice => {
+            try {
+                // Skip invalid invoices
+                if (!invoice || !invoice.customerName) {
+                    console.warn('Skipping invalid invoice:', invoice);
+                    return;
+                }
+
+                const customerName = invoice.customerName;
+
+                if (!customerMap.has(customerName)) {
+                    customerMap.set(customerName, {
+                        name: customerName,
+                        phone: invoice.customerPhone || '',
+                        address: invoice.customerAddress || '',
+                        totalInvoices: 0,
+                        totalCurrentBillAmount: 0,
+                        totalAmount: 0,
+                        amountPaid: 0,
+                        balanceDue: 0,
+                        totalReturns: 0,
+                        adjustedBalanceDue: 0,
+                        allInvoiceNumbers: [],
+                        invoices: []
+                    });
+                }
+
+                const customer = customerMap.get(customerName);
+                customer.totalInvoices++;
+                customer.totalCurrentBillAmount += parseFloat(invoice.subtotal) || 0;
+                customer.totalAmount += parseFloat(invoice.grandTotal) || 0;
+                customer.amountPaid += parseFloat(invoice.amountPaid) || 0;
+
+                // Store invoice number and invoice data
+                if (invoice.invoiceNo) {
+                    customer.allInvoiceNumbers.push(invoice.invoiceNo);
+                }
+                customer.invoices.push(invoice);
+
+                // Update last invoice info
+                if (invoice.invoiceDate) {
+                    const invoiceDate = new Date(invoice.invoiceDate);
+                    if (!customer.lastInvoiceDate || invoiceDate > new Date(customer.lastInvoiceDate)) {
+                        customer.lastInvoiceDate = invoice.invoiceDate;
+                        customer.lastInvoiceNo = invoice.invoiceNo;
+                    }
+                }
+            } catch (invoiceError) {
+                console.error('Error processing invoice:', invoiceError, invoice);
+            }
+        });
+
+        // After processing all invoices, calculate returns and adjusted balances
+        const customers = Array.from(customerMap.values());
+
+        // Calculate returns for each customer
+        for (let customer of customers) {
+            try {
+                // Sort invoices by invoice number (newest first)
+                customer.invoices.sort((a, b) => {
+                    const numA = parseInt(a.invoiceNo) || 0;
+                    const numB = parseInt(b.invoiceNo) || 0;
+                    return numB - numA;
+                });
+
+                // Calculate total returns for this customer
+                customer.totalReturns = 0;
+                try {
+                    for (let invoice of customer.invoices) {
+                        if (invoice.invoiceNo) {
+                            const returns = await db.getReturnsByInvoice(invoice.invoiceNo);
+                            const invoiceReturns = returns.reduce((sum, returnItem) => sum + (parseFloat(returnItem.returnAmount) || 0), 0);
+                            customer.totalReturns += invoiceReturns;
+                        }
+                    }
+                } catch (returnsError) {
+                    console.error('Error calculating returns for customer:', customer.name, returnsError);
+                    customer.totalReturns = 0;
+                }
+
+                // Set balance due to the most recent invoice's balance due
+                if (customer.invoices.length > 0) {
+                    customer.balanceDue = parseFloat(customer.invoices[0].balanceDue) || 0;
+                    customer.adjustedBalanceDue = customer.balanceDue - customer.totalReturns;
+                }
+
+                // Sort invoice numbers in descending order (newest first)
+                customer.allInvoiceNumbers.sort((a, b) => {
+                    const numA = parseInt(a) || 0;
+                    const numB = parseInt(b) || 0;
+                    return numB - numA;
+                });
+
+                // Remove the invoices array as we don't need it anymore
+                delete customer.invoices;
+            } catch (customerError) {
+                console.error('Error processing customer:', customer.name, customerError);
+            }
+        }
+
+        return customers;
+
+    } catch (error) {
+        console.error('Error in processCustomerData:', error);
+        return [];
+    }
+}
+
+
+// Update statistics cards with color coding - FIXED for actual HTML structure
 function updateStatistics(customers) {
+    // Get all DOM elements first with null checks
+    const totalCustomersEl = document.getElementById('totalCustomers');
+    const totalInvoicesEl = document.getElementById('totalInvoices');
+    const totalRevenueEl = document.getElementById('totalRevenue');
+    const totalPaidEl = document.getElementById('totalPaid');
+    const pendingBalanceEl = document.getElementById('pendingBalance');
+
+    // Check if required elements exist - if not, skip statistics update
+    if (!totalCustomersEl || !totalInvoicesEl || !totalRevenueEl || !totalPaidEl || !pendingBalanceEl) {
+        console.warn('Statistics elements not found in DOM, skipping statistics update');
+        return;
+    }
+
     const totalCustomers = customers.length;
     const totalInvoices = customers.reduce((sum, customer) => sum + customer.totalInvoices, 0);
     const totalCurrentBillAmount = customers.reduce((sum, customer) => sum + customer.totalCurrentBillAmount, 0);
@@ -178,11 +294,11 @@ function updateStatistics(customers) {
     // CORRECTED: Calculate pending balance as (Total Amount - Total Paid - Total Returns)
     const pendingBalance = totalCurrentBillAmount - totalPaid - totalReturns;
 
-    // Update the values
-    document.getElementById('totalCustomers').textContent = totalCustomers.toLocaleString();
-    document.getElementById('totalInvoices').textContent = totalInvoices.toLocaleString();
-    document.getElementById('totalRevenue').textContent = `₹${Utils.formatCurrency(totalCurrentBillAmount)}`;
-    document.getElementById('totalPaid').textContent = `₹${Utils.formatCurrency(totalPaid)}`;
+    // Update the values with null checks
+    totalCustomersEl.textContent = totalCustomers.toLocaleString();
+    totalInvoicesEl.textContent = totalInvoices.toLocaleString();
+    totalRevenueEl.textContent = `₹${Utils.formatCurrency(totalCurrentBillAmount)}`;
+    totalPaidEl.textContent = `₹${Utils.formatCurrency(totalPaid)}`;
 
     // Add returns statistics if there are returns
     if (totalReturns > 0) {
@@ -190,24 +306,33 @@ function updateStatistics(customers) {
         let returnsCard = document.getElementById('totalReturns');
         if (!returnsCard) {
             const statsCards = document.querySelector('.stats-cards');
-            const returnsHTML = `
-                <div class="stat-card" id="totalReturns">
-                    <div class="stat-icon">
-                        <i class="fas fa-undo"></i>
+            if (statsCards) {
+                const returnsHTML = `
+                    <div class="stat-card" id="totalReturns">
+                        <div class="stat-icon">
+                            <i class="fas fa-undo"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalReturnsValue">-₹${Utils.formatCurrency(totalReturns)}</h3>
+                            <p>Total Returns</p>
+                        </div>
                     </div>
-                    <div class="stat-info">
-                        <h3 id="totalReturnsValue">-₹${Utils.formatCurrency(totalReturns)}</h3>
-                        <p>Total Returns</p>
-                    </div>
-                </div>
-            `;
-            // Insert before pending balance card
-            const pendingBalanceCard = document.querySelector('.stat-card:last-child');
-            pendingBalanceCard.insertAdjacentHTML('beforebegin', returnsHTML);
-            returnsCard = document.getElementById('totalReturns');
-            returnsCard.classList.add('negative-value');
+                `;
+                // Insert before pending balance card
+                const pendingBalanceCard = document.querySelector('.stat-card:last-child');
+                if (pendingBalanceCard) {
+                    pendingBalanceCard.insertAdjacentHTML('beforebegin', returnsHTML);
+                    returnsCard = document.getElementById('totalReturns');
+                    if (returnsCard) {
+                        returnsCard.classList.add('negative-value');
+                    }
+                }
+            }
         } else {
-            document.getElementById('totalReturnsValue').textContent = `-₹${Utils.formatCurrency(totalReturns)}`;
+            const totalReturnsValueEl = document.getElementById('totalReturnsValue');
+            if (totalReturnsValueEl) {
+                totalReturnsValueEl.textContent = `-₹${Utils.formatCurrency(totalReturns)}`;
+            }
         }
     } else {
         // Remove returns card if no returns
@@ -217,44 +342,57 @@ function updateStatistics(customers) {
         }
     }
 
-    document.getElementById('pendingBalance').textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
+    pendingBalanceEl.textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
 
-    // Apply color coding to statistics cards
+    // Apply color coding to statistics cards with null checks
     const statsCards = document.querySelectorAll('.stat-card');
 
-    // Total Customers - always positive
-    statsCards[0].classList.add('positive-value');
+    if (statsCards.length > 0) {
+        // Total Customers - always positive
+        if (statsCards[0]) statsCards[0].classList.add('positive-value');
 
-    // Total Invoices - always positive
-    statsCards[1].classList.add('positive-value');
+        // Total Invoices - always positive
+        if (statsCards[1]) statsCards[1].classList.add('positive-value');
 
-    // Total Revenue - always positive
-    statsCards[2].classList.add('positive-value');
+        // Total Revenue - always positive
+        if (statsCards[2]) statsCards[2].classList.add('positive-value');
 
-    // Total Paid - always positive
-    statsCards[3].classList.add('positive-value');
+        // Total Paid - always positive
+        if (statsCards[3]) statsCards[3].classList.add('positive-value');
 
-    // Total Returns - always negative (red)
-    const returnsCard = document.getElementById('totalReturns');
-    if (returnsCard) {
-        returnsCard.classList.add('negative-value');
-    }
+        // Total Returns - always negative (red)
+        const returnsCard = document.getElementById('totalReturns');
+        if (returnsCard) {
+            returnsCard.classList.add('negative-value');
+        }
 
-    // Pending Balance - color based on value
-    const pendingBalanceCard = document.querySelector('.stat-card:last-child');
-    if (pendingBalance > 0) {
-        pendingBalanceCard.classList.add('negative-value');
-    } else if (pendingBalance < 0) {
-        pendingBalanceCard.classList.add('positive-value');
-    } else {
-        pendingBalanceCard.classList.add('neutral-value');
+        // Pending Balance - color based on value
+        const pendingBalanceCard = document.querySelector('.stat-card:last-child');
+        if (pendingBalanceCard) {
+            if (pendingBalance > 0) {
+                pendingBalanceCard.classList.add('negative-value');
+            } else if (pendingBalance < 0) {
+                pendingBalanceCard.classList.add('positive-value');
+            } else {
+                pendingBalanceCard.classList.add('neutral-value');
+            }
+        }
     }
 }
 
-// Update the displayCustomers function to hide phone numbers
+
+
+
+// Update the displayCustomers function with null checks and FIXED this reference
 function displayCustomers(customers) {
     const tableBody = document.getElementById('customerTableBody');
     const noCustomers = document.getElementById('noCustomers');
+
+    // Check if required elements exist
+    if (!tableBody || !noCustomers) {
+        console.error('Required table elements not found in DOM');
+        return;
+    }
 
     if (customers.length === 0) {
         tableBody.innerHTML = '';
@@ -278,15 +416,15 @@ function displayCustomers(customers) {
             <td>
                 <div class="customer-name">
                     <i class="fas fa-user"></i>
-                    ${customer.name}
+                    ${escapeHtml(customer.name)}
                     ${customer.totalReturns > 0 ? `<span class="customer-return-badge" title="This customer has returns">🔄</span>` : ''}
                 </div>
             </td>
             <td class="phone-number" title="Click to reveal full number" onclick="togglePhoneNumber(this, '${customer.phone || ''}')">
-                ${formattedPhone}
+                ${escapeHtml(formattedPhone)}
             </td>
-            <td title="${customer.address || 'N/A'}">
-                ${customer.address ? (customer.address.length > 30 ? customer.address.substring(0, 30) + '...' : customer.address) : 'N/A'}
+            <td title="${escapeHtml(customer.address || 'N/A')}">
+                ${customer.address ? (customer.address.length > 30 ? escapeHtml(customer.address.substring(0, 30)) + '...' : escapeHtml(customer.address)) : 'N/A'}
             </td>
             <td>${customer.totalInvoices}</td>
             <td>
@@ -295,10 +433,10 @@ function displayCustomers(customers) {
                     <div class="invoice-numbers-list">
                         ${customer.allInvoiceNumbers.map(invoiceNo =>
             `<span class="invoice-number-badge" 
-                                  onclick="viewInvoice('${invoiceNo}')"
-                                  onmouseenter="showInvoicePopup('${invoiceNo}', this)"
+                                  onclick="viewInvoice('${escapeHtml(invoiceNo)}')"
+                                  onmouseenter="showInvoicePopup('${escapeHtml(invoiceNo)}', this)"
                                   onmouseleave="setTimeout(() => closeInvoicePopup(), 100)">
-                                #${invoiceNo}
+                                #${escapeHtml(invoiceNo)}
                             </span>`
         ).join('')}
                     </div>
@@ -322,6 +460,62 @@ function displayCustomers(customers) {
         </tr>
     `}).join('');
 }
+
+// Add escapeHtml function to prevent XSS
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// Search customers - UPDATED with loading
+async function searchCustomers() {
+    const searchTerm = document.getElementById('customerSearch').value.trim().toLowerCase();
+
+    if (!searchTerm) {
+        await loadAllCustomers();
+        return;
+    }
+
+    try {
+        showLoading('Searching Customers', `Searching for "${searchTerm}"...`);
+
+        const invoices = await db.getAllInvoices();
+        let customers = await processCustomerData(invoices);
+
+        // Filter customers based on search term
+        customers = customers.filter(customer =>
+            customer.name.toLowerCase().includes(searchTerm) ||
+            (customer.phone && customer.phone.includes(searchTerm)) ||
+            (customer.address && customer.address.toLowerCase().includes(searchTerm)) ||
+            customer.allInvoiceNumbers.some(invoiceNo => invoiceNo.toLowerCase().includes(searchTerm))
+        );
+
+        updateStatistics(customers);
+        displayCustomers(customers);
+
+        hideLoading();
+
+    } catch (error) {
+        hideLoading();
+        console.error('Error searching customers:', error);
+        alert('Error searching customers.');
+    }
+}
+
+
+// Clear search
+function clearSearch() {
+    document.getElementById('customerSearch').value = '';
+    loadAllCustomers();
+}
+
+
 
 // Add this utility function to format phone numbers
 function formatPhoneNumber(phone) {
@@ -369,31 +563,66 @@ function togglePhoneNumber(element, fullPhoneNumber) {
 }
 
 
+// Add function for toggling phone in popup
+function togglePopupPhone(element, fullPhoneNumber) {
+    const currentText = element.textContent.replace('📞 ', '');
+    const cleanFullPhone = fullPhoneNumber.replace(/\D/g, '');
+
+    if (currentText.includes('*')) {
+        element.textContent = '📞 ' + cleanFullPhone;
+        element.classList.add('phone-revealed');
+    } else {
+        element.textContent = '📞 ' + formatPhoneNumber(fullPhoneNumber);
+        element.classList.remove('phone-revealed');
+    }
+}
+
+
 // View specific invoice - redirect to invoice-history page with search filter
 function viewInvoice(invoiceNo) {
     // Redirect to invoice-history page with the invoice number as search parameter
     window.location.href = `invoice-history.html?search=${invoiceNo}`;
 }
 
-// Show invoice details popup on hover - Updated with returns information
+// Show invoice details popup on hover - UPDATED with loading
 async function showInvoicePopup(invoiceNo, element) {
     try {
+        // Show mini loading for popup
+        const popup = document.createElement('div');
+        popup.className = 'invoice-popup loading';
+        popup.innerHTML = `
+            <div class="invoice-popup-content">
+                <div class="popup-header">
+                    <h4>Loading Invoice #${invoiceNo}</h4>
+                </div>
+                <div class="popup-body">
+                    <div class="loading-spinner-mini"></div>
+                    <p>Loading invoice details...</p>
+                </div>
+            </div>
+        `;
+
+        popup.style.position = 'fixed';
+        popup.style.left = '20px';
+        popup.style.top = '20px';
+        popup.style.zIndex = '1000';
+        document.body.appendChild(popup);
+
         const invoiceData = await db.getInvoice(invoiceNo);
-        if (!invoiceData) return;
+        if (!invoiceData) {
+            popup.remove();
+            return;
+        }
 
         // Calculate previous balance and returns
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
         const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
 
-
         // Format phone number for display
         const formattedPhone = invoiceData.customerPhone ? formatPhoneNumber(invoiceData.customerPhone) : 'N/A';
 
-
-        // Create popup element
-        const popup = document.createElement('div');
-        popup.className = 'invoice-popup';
+        // Update popup with actual data
         popup.innerHTML = `
             <div class="invoice-popup-content">
                 <div class="popup-header">
@@ -497,14 +726,6 @@ async function showInvoicePopup(invoiceNo, element) {
             </div>
         `;
 
-        // Position the popup in top-left corner of the screen
-        popup.style.position = 'fixed';
-        popup.style.left = '20px';
-        popup.style.top = '20px';
-        popup.style.zIndex = '1000';
-
-        document.body.appendChild(popup);
-
         // Close popup when clicking outside
         const closeOnClickOutside = (e) => {
             if (!popup.contains(e.target) && e.target !== element) {
@@ -513,30 +734,16 @@ async function showInvoicePopup(invoiceNo, element) {
             }
         };
 
-        // Add slight delay to prevent immediate close
         setTimeout(() => {
             document.addEventListener('click', closeOnClickOutside);
         }, 100);
 
     } catch (error) {
         console.error('Error loading invoice details:', error);
+        closeInvoicePopup();
     }
 }
 
-
-// Add function for toggling phone in popup
-function togglePopupPhone(element, fullPhoneNumber) {
-    const currentText = element.textContent.replace('📞 ', '');
-    const cleanFullPhone = fullPhoneNumber.replace(/\D/g, '');
-    
-    if (currentText.includes('*')) {
-        element.textContent = '📞 ' + cleanFullPhone;
-        element.classList.add('phone-revealed');
-    } else {
-        element.textContent = '📞 ' + formatPhoneNumber(fullPhoneNumber);
-        element.classList.remove('phone-revealed');
-    }
-}
 
 // Close invoice popup
 function closeInvoicePopup() {
@@ -546,134 +753,292 @@ function closeInvoicePopup() {
     }
 }
 
-// Search customers
-async function searchCustomers() {
-    const searchTerm = document.getElementById('customerSearch').value.trim().toLowerCase();
 
-    if (!searchTerm) {
-        loadAllCustomers();
-        return;
-    }
 
-    try {
-        const invoices = await db.getAllInvoices();
-        let customers = await processCustomerData(invoices); // Made async
 
-        // Filter customers based on search term
-        customers = customers.filter(customer =>
-            customer.name.toLowerCase().includes(searchTerm) ||
-            (customer.phone && customer.phone.includes(searchTerm)) ||
-            (customer.address && customer.address.toLowerCase().includes(searchTerm)) ||
-            customer.allInvoiceNumbers.some(invoiceNo => invoiceNo.toLowerCase().includes(searchTerm))
-        );
-
-        updateStatistics(customers);
-        displayCustomers(customers);
-    } catch (error) {
-        console.error('Error searching customers:', error);
-        alert('Error searching customers.');
-    }
-}
-
-// Clear search
-function clearSearch() {
-    document.getElementById('customerSearch').value = '';
-    loadAllCustomers();
-}
-
-// Export customers function (placeholder - implement as needed)
+// Export customers to CSV - UPDATED with loading
 async function exportCustomers() {
     try {
+        showLoading('Preparing Export', 'Collecting customer data and generating CSV...');
+
         const invoices = await db.getAllInvoices();
         const customers = await processCustomerData(invoices);
 
-        // Convert to CSV or implement your export logic here
-        console.log('Exporting customers:', customers);
-        alert('Export feature to be implemented');
+        if (customers.length === 0) {
+            hideLoading();
+            alert('No customer data to export.');
+            return;
+        }
+
+        // Create CSV content
+        let csvContent = 'Customer Name,Phone,Address,Total Invoices,Total Amount,Amount Paid,Returns,Balance Due,Last Invoice,Last Invoice Date\n';
+
+        customers.forEach(customer => {
+            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
+
+            const row = [
+                `"${customer.name.replace(/"/g, '""')}"`,
+                `"${customer.phone || 'N/A'}"`,
+                `"${(customer.address || 'N/A').replace(/"/g, '""')}"`,
+                customer.totalInvoices,
+                customer.totalCurrentBillAmount,
+                customer.amountPaid,
+                customer.totalReturns,
+                customerBalance,
+                customer.lastInvoiceNo || 'N/A',
+                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
+            ].join(',');
+
+            csvContent += row + '\n';
+        });
+
+        // Create and download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.setAttribute('href', url);
+        link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        hideLoading();
+        showExportSuccess(customers.length);
 
     } catch (error) {
+        hideLoading();
         console.error('Error exporting customers:', error);
-        alert('Error exporting customer data.');
+        alert('Error exporting customer data. Please try again.');
     }
 }
 
-// // Logout function
-// function logout() {
-//     if (confirm('Are you sure you want to logout?')) {
-//         window.location.href = 'login.html';
-//     }
-// }
 
-// Add these CSS styles for the new elements
-const returnStyles = `
-    .customer-return-badge {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 50%;
-        padding: 2px 5px;
-        font-size: 10px;
-        margin-left: 5px;
-        cursor: help;
+
+
+// Show export success message
+function showExportSuccess(customerCount) {
+    // Create success notification
+    const notification = document.createElement('div');
+    notification.className = 'export-notification success';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-check-circle"></i>
+            <div class="notification-text">
+                <strong>Export Successful!</strong>
+                <p>Exported ${customerCount} customers to CSV file</p>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    // Add to page
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Enhanced Export with Options - UPDATED with loading
+async function exportCustomersWithOptions() {
+    try {
+        showLoading('Loading Export Options', 'Preparing customer data for export...');
+
+        const invoices = await db.getAllInvoices();
+        const customers = await processCustomerData(invoices);
+
+        if (customers.length === 0) {
+            hideLoading();
+            alert('No customer data to export.');
+            return;
+        }
+
+        hideLoading();
+        showExportOptionsModal(customers);
+
+    } catch (error) {
+        hideLoading();
+        console.error('Error exporting customers:', error);
+        alert('Error exporting customer data. Please try again.');
+    }
+}
+
+// Show export options modal
+function showExportOptionsModal(customers) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="export-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-download"></i> Export Customer Data</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="option-group">
+                        <label>Export Format:</label>
+                        <select id="exportFormat" class="export-select">
+                            <option value="csv">CSV (Excel)</option>
+                            <option value="json">JSON</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label>Include Columns:</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="phone" checked> Phone Numbers
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="address" checked> Address
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="invoices" checked> Invoice Details
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="exportColumns" value="returns" checked> Return Information
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="export-preview">
+                        <label>Data Summary:</label>
+                        <div class="preview-stats">
+                            <div class="stat"><strong>${customers.length}</strong> Customers</div>
+                            <div class="stat"><strong>${customers.reduce((sum, c) => sum + c.totalInvoices, 0)}</strong> Total Invoices</div>
+                            <div class="stat"><strong>₹${Utils.formatCurrency(customers.reduce((sum, c) => sum + c.totalCurrentBillAmount, 0))}</strong> Total Amount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelExport">Cancel</button>
+                <button class="btn-primary" id="confirmExport">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listeners for export modal
+    const closeBtn = modal.querySelector('.close-modal');
+    const cancelBtn = modal.querySelector('#cancelExport');
+    const confirmBtn = modal.querySelector('#confirmExport');
+
+    closeBtn.addEventListener('click', () => modal.remove());
+    cancelBtn.addEventListener('click', () => modal.remove());
+
+    confirmBtn.addEventListener('click', () => {
+        const format = modal.querySelector('#exportFormat').value;
+        const selectedColumns = Array.from(modal.querySelectorAll('input[name="exportColumns"]:checked'))
+            .map(input => input.value);
+
+        modal.remove();
+        performExport(customers, format, selectedColumns);
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+// Perform the actual export based on options
+function performExport(customers, format, columns) {
+    let content, mimeType, fileExtension;
+
+    if (format === 'csv') {
+        // Generate CSV based on selected columns
+        let csvContent = 'Customer Name';
+
+        if (columns.includes('phone')) csvContent += ',Phone';
+        if (columns.includes('address')) csvContent += ',Address';
+        csvContent += ',Total Invoices,Total Amount,Amount Paid';
+        if (columns.includes('returns')) csvContent += ',Returns';
+        csvContent += ',Balance Due,Last Invoice,Last Invoice Date\n';
+
+        customers.forEach(customer => {
+            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
+
+            let row = [`"${customer.name.replace(/"/g, '""')}"`];
+
+            if (columns.includes('phone')) row.push(`"${customer.phone || 'N/A'}"`);
+            if (columns.includes('address')) row.push(`"${(customer.address || 'N/A').replace(/"/g, '""')}"`);
+
+            row.push(
+                customer.totalInvoices,
+                customer.totalCurrentBillAmount,
+                customer.amountPaid
+            );
+
+            if (columns.includes('returns')) row.push(customer.totalReturns);
+
+            row.push(
+                customerBalance,
+                customer.lastInvoiceNo || 'N/A',
+                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
+            );
+
+            csvContent += row.join(',') + '\n';
+        });
+
+        content = csvContent;
+        mimeType = 'text/csv;charset=utf-8;';
+        fileExtension = 'csv';
+    } else {
+        // JSON export
+        const exportData = customers.map(customer => {
+            const data = {
+                name: customer.name,
+                totalInvoices: customer.totalInvoices,
+                totalAmount: customer.totalCurrentBillAmount,
+                amountPaid: customer.amountPaid,
+                balanceDue: customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns,
+                lastInvoiceNo: customer.lastInvoiceNo,
+                lastInvoiceDate: customer.lastInvoiceDate
+            };
+
+            if (columns.includes('phone')) data.phone = customer.phone;
+            if (columns.includes('address')) data.address = customer.address;
+            if (columns.includes('returns')) data.returns = customer.totalReturns;
+            if (columns.includes('invoices')) data.invoiceNumbers = customer.allInvoiceNumbers;
+
+            return data;
+        });
+
+        content = JSON.stringify(exportData, null, 2);
+        mimeType = 'application/json;charset=utf-8;';
+        fileExtension = 'json';
     }
 
-    .amount-return {
-        color: #dc3545 !important;
-        font-weight: 600;
-    }
+    // Download file
+    const blob = new Blob([content], { type: mimeType });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
 
-    .returns-preview {
-        margin-top: 15px;
-        padding: 10px;
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 6px;
-    }
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.${fileExtension}`);
+    link.style.visibility = 'hidden';
 
-    .btn-view-returns {
-        background: #17a2b8;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        margin-top: 8px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    .btn-view-returns:hover {
-        background: #138496;
-    }
-
-    .btn-return {
-        background: #ffc107;
-        color: #212529;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 12px;
-    }
-
-    .btn-return:hover {
-        background: #e0a800;
-    }
-
-    .stat-card.returns-value .stat-icon {
-        background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
-    }
-`;
-
-// Add the styles to the document
-const style = document.createElement('style');
-style.textContent = returnStyles;
-document.head.appendChild(style);
+    showExportSuccess(customers.length);
+}
 
 
 // WhatsApp Reminder Functions
@@ -685,6 +1050,7 @@ function createWhatsAppReminderButton(customer) {
     return button;
 }
 
+// WhatsApp Reminder Functions - UPDATED with loading
 function openReminderModal(customer) {
     // Create modal overlay
     const modalOverlay = document.createElement('div');
@@ -758,6 +1124,7 @@ function openReminderModal(customer) {
     // Add event listeners
     setupReminderModalEvents(customer);
 }
+
 
 function setupReminderModalEvents(customer) {
     const modal = document.getElementById('reminderModal');
@@ -924,16 +1291,23 @@ function updateMessageStats(message) {
     messageCount.textContent = Math.ceil(message.length / 160); // WhatsApp message segments
 }
 
+// Update the sendWhatsAppReminder function with loading
 function sendWhatsAppReminder(phoneNumber, message) {
     if (!phoneNumber) {
         alert('Phone number not available for this customer.');
         return;
     }
 
-    // Clean phone number (remove spaces, dashes, etc.)
+    // Show loading on the send button
+    const sendButton = document.getElementById('sendWhatsApp');
+    const originalText = sendButton.innerHTML;
+    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...';
+    sendButton.classList.add('btn-processing');
+
+    // Clean phone number
     const cleanPhone = phoneNumber.replace(/\D/g, '');
 
-    // Add country code if not present (assuming India +91)
+    // Add country code if not present
     let formattedPhone = cleanPhone;
     if (!formattedPhone.startsWith('91') && formattedPhone.length === 10) {
         formattedPhone = '91' + formattedPhone;
@@ -945,286 +1319,283 @@ function sendWhatsAppReminder(phoneNumber, message) {
     // Create WhatsApp URL
     const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
 
-    // Open in new tab
-    window.open(whatsappUrl, '_blank');
+    // Reset button after short delay
+    setTimeout(() => {
+        sendButton.innerHTML = originalText;
+        sendButton.classList.remove('btn-processing');
 
-    // Close modal
-    const modal = document.getElementById('reminderModal');
-    if (modal) modal.remove();
+        // Open in new tab
+        window.open(whatsappUrl, '_blank');
 
-    // Log the action (you can save this to your database)
-    console.log(`WhatsApp reminder sent to ${customer.name}: ${phoneNumber}`);
-}
-
-// Export customers to CSV
-async function exportCustomers() {
-    try {
-        const invoices = await db.getAllInvoices();
-        const customers = await processCustomerData(invoices);
-
-        if (customers.length === 0) {
-            alert('No customer data to export.');
-            return;
-        }
-
-        // Create CSV content
-        let csvContent = 'Customer Name,Phone,Address,Total Invoices,Total Amount,Amount Paid,Returns,Balance Due,Last Invoice,Last Invoice Date\n';
-
-        customers.forEach(customer => {
-            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
-            
-            const row = [
-                `"${customer.name.replace(/"/g, '""')}"`,
-                `"${customer.phone || 'N/A'}"`,
-                `"${(customer.address || 'N/A').replace(/"/g, '""')}"`,
-                customer.totalInvoices,
-                customer.totalCurrentBillAmount,
-                customer.amountPaid,
-                customer.totalReturns,
-                customerBalance,
-                customer.lastInvoiceNo || 'N/A',
-                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
-            ].join(',');
-
-            csvContent += row + '\n';
-        });
-
-        // Create and download CSV file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        const timestamp = new Date().toISOString().split('T')[0];
-        link.setAttribute('href', url);
-        link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.csv`);
-        link.style.visibility = 'hidden';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Close modal
+        const modal = document.getElementById('reminderModal');
+        if (modal) modal.remove();
 
         // Show success message
-        showExportSuccess(customers.length);
+        showMessage('WhatsApp opened with reminder message!', 'success');
 
-    } catch (error) {
-        console.error('Error exporting customers:', error);
-        alert('Error exporting customer data. Please try again.');
-    }
+    }, 1000);
 }
 
-// Show export success message
-function showExportSuccess(customerCount) {
-    // Create success notification
-    const notification = document.createElement('div');
-    notification.className = 'export-notification success';
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-check-circle"></i>
-            <div class="notification-text">
-                <strong>Export Successful!</strong>
-                <p>Exported ${customerCount} customers to CSV file</p>
-            </div>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
+
+
+// Add this function for showing messages
+function showMessage(message, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `notification ${type}`;
+    messageDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        ${message}
+    `;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 1001;
+        animation: slideInRight 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+    `;
+
+    document.body.appendChild(messageDiv);
+
+    setTimeout(() => {
+        if (messageDiv.parentElement) {
+            messageDiv.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => messageDiv.remove(), 300);
+        }
+    }, 3000);
+}
+
+
+
+// Add these CSS styles for the new elements
+const returnStyles = `
+    .customer-return-badge {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 50%;
+        padding: 2px 5px;
+        font-size: 10px;
+        margin-left: 5px;
+        cursor: help;
+    }
+
+    .amount-return {
+        color: #dc3545 !important;
+        font-weight: 600;
+    }
+
+    .returns-preview {
+        margin-top: 15px;
+        padding: 10px;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+    }
+
+    .btn-view-returns {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-view-returns:hover {
+        background: #138496;
+    }
+
+    .btn-return {
+        background: #ffc107;
+        color: #212529;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    .btn-return:hover {
+        background: #e0a800;
+    }
+
+    .stat-card.returns-value .stat-icon {
+        background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+    }
+`;
+
+// Add the styles to the document
+const style = document.createElement('style');
+style.textContent = returnStyles;
+document.head.appendChild(style);
+
+
+
+// Professional loading spinner functions
+function showLoading(message = 'Loading...', subtext = '') {
+    // Remove existing loading overlay if any
+    hideLoading();
+
+    const loadingHTML = `
+        <div class="loading-overlay" id="globalLoading">
+            <div class="professional-spinner"></div>
+            <div class="spinner-text">${message}</div>
+            ${subtext ? `<div class="spinner-subtext">${subtext}</div>` : ''}
         </div>
     `;
 
-    // Add to page
-    document.body.appendChild(notification);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
+    document.body.insertAdjacentHTML('beforeend', loadingHTML);
 }
 
-// Enhanced Export with Options (Alternative Version)
-async function exportCustomersWithOptions() {
-    try {
-        const invoices = await db.getAllInvoices();
-        const customers = await processCustomerData(invoices);
-
-        if (customers.length === 0) {
-            alert('No customer data to export.');
-            return;
-        }
-
-        // Show export options modal
-        showExportOptionsModal(customers);
-
-    } catch (error) {
-        console.error('Error exporting customers:', error);
-        alert('Error exporting customer data. Please try again.');
+function hideLoading() {
+    const existingLoader = document.getElementById('globalLoading');
+    if (existingLoader) {
+        existingLoader.remove();
     }
 }
 
-// Show export options modal
-function showExportOptionsModal(customers) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="export-modal">
-            <div class="modal-header">
-                <h3><i class="fas fa-download"></i> Export Customer Data</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="export-options">
-                    <div class="option-group">
-                        <label>Export Format:</label>
-                        <select id="exportFormat" class="export-select">
-                            <option value="csv">CSV (Excel)</option>
-                            <option value="json">JSON</option>
-                        </select>
-                    </div>
-                    
-                    <div class="option-group">
-                        <label>Include Columns:</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="exportColumns" value="phone" checked> Phone Numbers
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="exportColumns" value="address" checked> Address
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="exportColumns" value="invoices" checked> Invoice Details
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="exportColumns" value="returns" checked> Return Information
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="export-preview">
-                        <label>Data Summary:</label>
-                        <div class="preview-stats">
-                            <div class="stat"><strong>${customers.length}</strong> Customers</div>
-                            <div class="stat"><strong>${customers.reduce((sum, c) => sum + c.totalInvoices, 0)}</strong> Total Invoices</div>
-                            <div class="stat"><strong>₹${Utils.formatCurrency(customers.reduce((sum, c) => sum + c.totalCurrentBillAmount, 0))}</strong> Total Amount</div>
-                        </div>
-                    </div>
+// Show skeleton loading for customer table - FIXED
+function showTableSkeleton() {
+    const tableBody = document.getElementById('customerTableBody');
+    if (!tableBody) {
+        console.warn('Table body not found');
+        return;
+    }
+
+    let skeletonHTML = '';
+    for (let i = 0; i < 8; i++) {
+        skeletonHTML += `
+            <tr>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+                <td><div class="skeleton-loader skeleton-table-row"></div></td>
+            </tr>
+        `;
+    }
+    tableBody.innerHTML = skeletonHTML;
+}
+
+// Show skeleton loading for statistics cards - FIXED
+function showStatsSkeleton() {
+    const statsContainer = document.querySelector('.stats-cards');
+    if (!statsContainer) {
+        console.warn('Stats container not found');
+        return;
+    }
+
+    statsContainer.classList.add('loading');
+
+    let skeletonHTML = '';
+    // Create 5 skeleton cards (matching your HTML structure)
+    for (let i = 0; i < 5; i++) {
+        skeletonHTML += `
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="skeleton-loader" style="height: 24px; width: 80px; margin-bottom: 8px;"></div>
+                    <div class="skeleton-loader" style="height: 16px; width: 60px;"></div>
                 </div>
             </div>
-            
-            <div class="modal-footer">
-                <button class="btn-secondary" id="cancelExport">Cancel</button>
-                <button class="btn-primary" id="confirmExport">
-                    <i class="fas fa-download"></i> Export Data
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Event listeners for export modal
-    const closeBtn = modal.querySelector('.close-modal');
-    const cancelBtn = modal.querySelector('#cancelExport');
-    const confirmBtn = modal.querySelector('#confirmExport');
-
-    closeBtn.addEventListener('click', () => modal.remove());
-    cancelBtn.addEventListener('click', () => modal.remove());
-    
-    confirmBtn.addEventListener('click', () => {
-        const format = modal.querySelector('#exportFormat').value;
-        const selectedColumns = Array.from(modal.querySelectorAll('input[name="exportColumns"]:checked'))
-            .map(input => input.value);
-        
-        modal.remove();
-        performExport(customers, format, selectedColumns);
-    });
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
+        `;
+    }
+    statsContainer.innerHTML = skeletonHTML;
 }
 
-// Perform the actual export based on options
-function performExport(customers, format, columns) {
-    let content, mimeType, fileExtension;
 
-    if (format === 'csv') {
-        // Generate CSV based on selected columns
-        let csvContent = 'Customer Name';
-        
-        if (columns.includes('phone')) csvContent += ',Phone';
-        if (columns.includes('address')) csvContent += ',Address';
-        csvContent += ',Total Invoices,Total Amount,Amount Paid';
-        if (columns.includes('returns')) csvContent += ',Returns';
-        csvContent += ',Balance Due,Last Invoice,Last Invoice Date\n';
+function hideStatsSkeleton() {
+    const statsContainer = document.querySelector('.stats-cards');
+    if (statsContainer) {
+        statsContainer.classList.remove('loading');
+    }
+}
+// Enhanced loading with timeout
+function showLoadingWithTimeout(message, subtext = '', timeout = 30000) {
+    showLoading(message, subtext);
 
-        customers.forEach(customer => {
-            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
-            
-            let row = [`"${customer.name.replace(/"/g, '""')}"`];
-            
-            if (columns.includes('phone')) row.push(`"${customer.phone || 'N/A'}"`);
-            if (columns.includes('address')) row.push(`"${(customer.address || 'N/A').replace(/"/g, '""')}"`);
-            
-            row.push(
-                customer.totalInvoices,
-                customer.totalCurrentBillAmount,
-                customer.amountPaid
-            );
-            
-            if (columns.includes('returns')) row.push(customer.totalReturns);
-            
-            row.push(
-                customerBalance,
-                customer.lastInvoiceNo || 'N/A',
-                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
-            );
+    // Auto-hide after timeout to prevent stuck loading
+    setTimeout(() => {
+        hideLoading();
+    }, timeout);
+}
 
-            csvContent += row.join(',') + '\n';
-        });
+// Show success state for buttons
+function showButtonSuccess(buttonId, duration = 2000) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        const originalHTML = button.innerHTML;
+        const originalBackground = button.style.background;
 
-        content = csvContent;
-        mimeType = 'text/csv;charset=utf-8;';
-        fileExtension = 'csv';
-    } else {
-        // JSON export
-        const exportData = customers.map(customer => {
-            const data = {
-                name: customer.name,
-                totalInvoices: customer.totalInvoices,
-                totalAmount: customer.totalCurrentBillAmount,
-                amountPaid: customer.amountPaid,
-                balanceDue: customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns,
-                lastInvoiceNo: customer.lastInvoiceNo,
-                lastInvoiceDate: customer.lastInvoiceDate
-            };
+        button.innerHTML = '<i class="fas fa-check"></i> Success!';
+        button.classList.add('btn-success');
 
-            if (columns.includes('phone')) data.phone = customer.phone;
-            if (columns.includes('address')) data.address = customer.address;
-            if (columns.includes('returns')) data.returns = customer.totalReturns;
-            if (columns.includes('invoices')) data.invoiceNumbers = customer.allInvoiceNumbers;
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            if (originalBackground) {
+                button.style.background = originalBackground;
+            }
+        }, duration);
+    }
+}
 
-            return data;
-        });
-
-        content = JSON.stringify(exportData, null, 2);
-        mimeType = 'application/json;charset=utf-8;';
-        fileExtension = 'json';
+// Show error state
+function showErrorState(message) {
+    const tableBody = document.getElementById('customerTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: #e74c3c;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                    <h3>Error Loading Customer Data</h3>
+                    <p>${message}</p>
+                    <button onclick="retryLoadCustomers()" class="btn-retry">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </td>
+            </tr>
+        `;
     }
 
-    // Download file
-    const blob = new Blob([content], { type: mimeType });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    const timestamp = new Date().toISOString().split('T')[0];
-    link.setAttribute('href', url);
-    link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.${fileExtension}`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Also show error in stats
+    const statsContainer = document.querySelector('.stats-cards');
+    if (statsContainer) {
+        statsContainer.innerHTML = `
+            <div class="stat-card error-state">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Error</h3>
+                    <p>Failed to load statistics</p>
+                </div>
+            </div>
+        `;
+    }
+}
 
-    showExportSuccess(customers.length);
+async function retryLoadCustomers() {
+    await loadAllCustomers();
 }
