@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 
-// Load all customers with statistics - ENHANCED error handling
 async function loadAllCustomers() {
     try {
         showLoading('Loading Customers', 'Processing customer data and calculating statistics...');
@@ -91,13 +90,21 @@ async function loadAllCustomers() {
             throw new Error('Invalid customer data received');
         }
 
+        console.log('✅ Customer data processed, updating statistics...');
+        
+        // Update statistics FIRST (while skeleton is still showing)
         updateStatistics(customers);
+        
+        // THEN hide skeleton and display customers
+        hideStatsSkeleton();
         displayCustomers(customers);
 
         hideLoading();
+        console.log('✅ All customer data loaded successfully');
 
     } catch (error) {
         hideLoading();
+        hideStatsSkeleton(); // Ensure skeleton is hidden on error
         console.error('Error loading customers:', error);
         showErrorState('Error loading customer data: ' + error.message);
     }
@@ -270,8 +277,10 @@ async function processCustomerData(invoices) {
 }
 
 
-// Update statistics cards with color coding - FIXED for actual HTML structure
+// Update statistics cards with robust error handling
 function updateStatistics(customers) {
+    console.log('🔄 Starting statistics update...');
+    
     // Get all DOM elements first with null checks
     const totalCustomersEl = document.getElementById('totalCustomers');
     const totalInvoicesEl = document.getElementById('totalInvoices');
@@ -279,34 +288,72 @@ function updateStatistics(customers) {
     const totalPaidEl = document.getElementById('totalPaid');
     const pendingBalanceEl = document.getElementById('pendingBalance');
 
-    // Check if required elements exist - if not, skip statistics update
+    // Debug: Check what elements we found
+    console.log('🔍 Statistics elements found:', {
+        totalCustomers: !!totalCustomersEl,
+        totalInvoices: !!totalInvoicesEl,
+        totalRevenue: !!totalRevenueEl,
+        totalPaid: !!totalPaidEl,
+        pendingBalance: !!pendingBalanceEl
+    });
+
+    // Check if required elements exist - if not, try to recover
     if (!totalCustomersEl || !totalInvoicesEl || !totalRevenueEl || !totalPaidEl || !pendingBalanceEl) {
-        console.warn('Statistics elements not found in DOM, skipping statistics update');
-        return;
+        console.warn('⚠️ Some statistics elements not found, attempting recovery...');
+        
+        // Try to restore original HTML if possible
+        const statsContainer = document.querySelector('.stats-cards');
+        if (statsContainer && statsContainer.dataset.originalHTML) {
+            console.log('🔄 Restoring original statistics HTML...');
+            statsContainer.innerHTML = statsContainer.dataset.originalHTML;
+            // Retry getting elements after restoration
+            return updateStatistics(customers); // Recursive call
+        } else {
+            console.error('❌ Cannot recover statistics elements, skipping update');
+            return;
+        }
     }
 
+    // Calculate statistics
     const totalCustomers = customers.length;
     const totalInvoices = customers.reduce((sum, customer) => sum + customer.totalInvoices, 0);
     const totalCurrentBillAmount = customers.reduce((sum, customer) => sum + customer.totalCurrentBillAmount, 0);
     const totalPaid = customers.reduce((sum, customer) => sum + customer.amountPaid, 0);
     const totalReturns = customers.reduce((sum, customer) => sum + customer.totalReturns, 0);
-
-    // CORRECTED: Calculate pending balance as (Total Amount - Total Paid - Total Returns)
     const pendingBalance = totalCurrentBillAmount - totalPaid - totalReturns;
 
-    // Update the values with null checks
+    console.log('📈 Calculated statistics:', {
+        totalCustomers,
+        totalInvoices,
+        totalCurrentBillAmount,
+        totalPaid,
+        totalReturns,
+        pendingBalance
+    });
+
+    // Update the values
     totalCustomersEl.textContent = totalCustomers.toLocaleString();
     totalInvoicesEl.textContent = totalInvoices.toLocaleString();
     totalRevenueEl.textContent = `₹${Utils.formatCurrency(totalCurrentBillAmount)}`;
     totalPaidEl.textContent = `₹${Utils.formatCurrency(totalPaid)}`;
+    pendingBalanceEl.textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
 
-    // Add returns statistics if there are returns
+    // Handle returns statistics
+    handleReturnsStatistics(totalReturns);
+
+    // Apply color coding
+    applyStatisticsColorCoding(pendingBalance);
+
+    console.log('✅ Statistics updated successfully');
+}
+
+// Handle returns statistics
+function handleReturnsStatistics(totalReturns) {
     if (totalReturns > 0) {
-        // Create or update returns statistics card
         let returnsCard = document.getElementById('totalReturns');
         if (!returnsCard) {
-            const statsCards = document.querySelector('.stats-cards');
-            if (statsCards) {
+            const statsContainer = document.querySelector('.stats-cards');
+            if (statsContainer) {
                 const returnsHTML = `
                     <div class="stat-card" id="totalReturns">
                         <div class="stat-icon">
@@ -318,14 +365,9 @@ function updateStatistics(customers) {
                         </div>
                     </div>
                 `;
-                // Insert before pending balance card
                 const pendingBalanceCard = document.querySelector('.stat-card:last-child');
                 if (pendingBalanceCard) {
                     pendingBalanceCard.insertAdjacentHTML('beforebegin', returnsHTML);
-                    returnsCard = document.getElementById('totalReturns');
-                    if (returnsCard) {
-                        returnsCard.classList.add('negative-value');
-                    }
                 }
             }
         } else {
@@ -335,49 +377,34 @@ function updateStatistics(customers) {
             }
         }
     } else {
-        // Remove returns card if no returns
         const returnsCard = document.getElementById('totalReturns');
         if (returnsCard) {
             returnsCard.remove();
         }
     }
+}
 
-    pendingBalanceEl.textContent = `₹${Utils.formatCurrency(pendingBalance)}`;
-
-    // Apply color coding to statistics cards with null checks
+// Apply color coding to statistics
+function applyStatisticsColorCoding(pendingBalance) {
     const statsCards = document.querySelectorAll('.stat-card');
-
-    if (statsCards.length > 0) {
-        // Total Customers - always positive
-        if (statsCards[0]) statsCards[0].classList.add('positive-value');
-
-        // Total Invoices - always positive
-        if (statsCards[1]) statsCards[1].classList.add('positive-value');
-
-        // Total Revenue - always positive
-        if (statsCards[2]) statsCards[2].classList.add('positive-value');
-
-        // Total Paid - always positive
-        if (statsCards[3]) statsCards[3].classList.add('positive-value');
-
-        // Total Returns - always negative (red)
-        const returnsCard = document.getElementById('totalReturns');
-        if (returnsCard) {
-            returnsCard.classList.add('negative-value');
-        }
-
-        // Pending Balance - color based on value
-        const pendingBalanceCard = document.querySelector('.stat-card:last-child');
-        if (pendingBalanceCard) {
+    
+    statsCards.forEach((card, index) => {
+        card.classList.remove('positive-value', 'negative-value', 'neutral-value');
+        
+        if (card.id === 'totalReturns') {
+            card.classList.add('negative-value');
+        } else if (card.id === 'pendingBalance') {
             if (pendingBalance > 0) {
-                pendingBalanceCard.classList.add('negative-value');
+                card.classList.add('negative-value');
             } else if (pendingBalance < 0) {
-                pendingBalanceCard.classList.add('positive-value');
+                card.classList.add('positive-value');
             } else {
-                pendingBalanceCard.classList.add('neutral-value');
+                card.classList.add('neutral-value');
             }
+        } else {
+            card.classList.add('positive-value');
         }
-    }
+    });
 }
 
 
@@ -1496,7 +1523,7 @@ function showTableSkeleton() {
     tableBody.innerHTML = skeletonHTML;
 }
 
-// Show skeleton loading for statistics cards - FIXED
+// Show skeleton loading for statistics cards - PRESERVE ORIGINAL CONTENT
 function showStatsSkeleton() {
     const statsContainer = document.querySelector('.stats-cards');
     if (!statsContainer) {
@@ -1504,31 +1531,19 @@ function showStatsSkeleton() {
         return;
     }
 
+    // Just add a loading class for visual indication
     statsContainer.classList.add('loading');
-
-    let skeletonHTML = '';
-    // Create 5 skeleton cards (matching your HTML structure)
-    for (let i = 0; i < 5; i++) {
-        skeletonHTML += `
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <div class="stat-info">
-                    <div class="skeleton-loader" style="height: 24px; width: 80px; margin-bottom: 8px;"></div>
-                    <div class="skeleton-loader" style="height: 16px; width: 60px;"></div>
-                </div>
-            </div>
-        `;
-    }
-    statsContainer.innerHTML = skeletonHTML;
+    
+    // Don't modify the content - just show visual loading state
+    console.log('📊 Statistics skeleton shown (content preserved)');
 }
 
-
+// Hide skeleton and ensure statistics are ready
 function hideStatsSkeleton() {
     const statsContainer = document.querySelector('.stats-cards');
     if (statsContainer) {
         statsContainer.classList.remove('loading');
+        console.log('📊 Statistics skeleton hidden');
     }
 }
 // Enhanced loading with timeout
