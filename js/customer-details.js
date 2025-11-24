@@ -472,7 +472,7 @@ function displayCustomers(customers) {
             <td class="amount-positive">₹${Utils.formatCurrency(customer.totalCurrentBillAmount)}</td>
             <td class="amount-positive">₹${Utils.formatCurrency(customer.amountPaid)}</td>
             <td class="${customer.totalReturns > 0 ? 'amount-negative' : 'amount-neutral'}">
-                ${customer.totalReturns > 0 ? `-₹${Utils.formatCurrency(customer.totalReturns)}` : '₹0.00'}
+                ${customer.totalReturns > 0 ? `₹${Utils.formatCurrency(customer.totalReturns)}` : '₹0.00'}
             </td>
             <td class="${customerBalance > 0 ? 'amount-negative' : (customerBalance < 0 ? 'amount-positive' : 'amount-neutral')}">
                 ₹${Utils.formatCurrency(customerBalance)}

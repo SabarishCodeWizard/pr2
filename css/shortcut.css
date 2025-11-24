@@ -1,375 +1,476 @@
+/* --- 1. CSS Variables & Global Reset (Adopted from Recycle Bin) --- */
+:root {
+    /* Color Palette */
+    --primary-color: #007bff; /* Blue for branding/primary action */
+    --primary-hover: #0056b3;
+    --secondary-color: #6c757d; /* Gray for secondary elements/neutral */
+    --success-color: #28a745; /* Green for success/restore */
+    --danger-color: #dc3545; /* Red for delete/warning */
+    --bg-light: #f8f9fa; /* Very light gray background */
+    --bg-white: #ffffff; /* White for content areas */
+    --text-dark: #343a40; /* Dark text */
+    --border-light: #dee2e6; /* Light border color */
+    --shadow-light: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+
+    /* Typography */
+    --font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Spacing */
+    --padding-sm: 8px;
+    --padding-md: 15px;
+    --padding-lg: 20px;
+}
+
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-    background-color: #000;
+    font-family: var(--font-family);
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
 }
 
-.main {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    height: 1px;
-    width: 1px;
-    background-color: #fff;
-    border-radius: 50%;
-    box-shadow: -42vw -4vh 0px 0px #fff, 25vw -41vh 0px 0px #fff, -20vw 49vh 0px 1px #fff, 5vw 40vh 1px 1px #fff, 29vw 19vh 1px 0px #fff, -44vw -13vh 0px 0px #fff, 46vw 41vh 0px 1px #fff, -3vw -45vh 0px 1px #fff, 47vw 35vh 1px 0px #fff, 12vw -8vh 1px 0px #fff, -34vw 48vh 1px 1px #fff, 32vw 26vh 1px 1px #fff, 32vw -41vh 1px 1px #fff, 0vw 37vh 1px 1px #fff, 34vw -26vh 1px 0px #fff, -14vw -49vh 1px 0px #fff, -12vw 45vh 0px 1px #fff, -44vw -33vh 0px 1px #fff, -13vw 41vh 0px 0px #fff, -36vw -11vh 0px 1px #fff, -23vw -24vh 1px 0px #fff, -38vw -27vh 0px 1px #fff, 16vw -19vh 0px 0px #fff, 28vw 33vh 1px 0px #fff, -49vw -4vh 0px 0px #fff, 16vw 32vh 0px 1px #fff, 36vw -18vh 1px 0px #fff, -25vw -30vh 1px 0px #fff, -23vw 24vh 0px 1px #fff, -2vw -35vh 1px 1px #fff, -25vw 9vh 0px 0px #fff, -15vw -34vh 0px 0px #fff, -8vw -19vh 1px 0px #fff, -20vw -20vh 1px 1px #fff, 42vw 50vh 0px 1px #fff, -32vw 10vh 1px 0px #fff, -23vw -17vh 0px 0px #fff, 44vw 15vh 1px 0px #fff, -40vw 33vh 1px 1px #fff, -43vw 8vh 0px 0px #fff, -48vw -15vh 1px 1px #fff, -24vw 17vh 0px 0px #fff, -31vw 50vh 1px 0px #fff, 36vw -38vh 0px 1px #fff, -7vw 48vh 0px 0px #fff, 15vw -32vh 0px 0px #fff, 29vw -41vh 0px 0px #fff, 2vw 37vh 1px 0px #fff, 7vw -40vh 1px 1px #fff, 15vw 18vh 0px 0px #fff, 25vw -13vh 1px 1px #fff, -46vw -12vh 1px 1px #fff, -18vw 22vh 0px 0px #fff, 23vw -9vh 1px 0px #fff, 50vw 12vh 0px 1px #fff, 45vw 2vh 0px 0px #fff, 14vw -48vh 1px 0px #fff, 23vw 43vh 0px 1px #fff, -40vw 16vh 1px 1px #fff, 20vw -31vh 0px 1px #fff, -17vw 44vh 1px 1px #fff, 18vw -45vh 0px 0px #fff, 33vw -6vh 0px 0px #fff, 0vw 7vh 0px 1px #fff, -10vw -18vh 0px 1px #fff, -19vw 5vh 1px 0px #fff, 1vw 42vh 0px 0px #fff, 22vw 48vh 0px 1px #fff, 39vw -8vh 1px 1px #fff, -6vw -42vh 1px 0px #fff, -47vw 34vh 0px 0px #fff, -46vw 19vh 0px 1px #fff, -12vw -32vh 0px 0px #fff, -45vw -38vh 0px 1px #fff, -28vw 18vh 1px 0px #fff, -38vw -46vh 1px 1px #fff, 49vw -6vh 1px 1px #fff, -28vw 18vh 1px 1px #fff, 10vw -24vh 0px 1px #fff, -5vw -11vh 1px 1px #fff, 33vw -8vh 1px 0px #fff, -16vw 17vh 0px 0px #fff, 18vw 27vh 0px 1px #fff, -8vw -10vh 1px 1px #fff;
-
-    /* stars were too big with the layers above but left the code in case no one cares  -- as in, if noone's just that  one other loner who actually cares    */
-
-    box-shadow: 24vw 9vh 1px 0px #fff, 12vw -24vh 0px 1px #fff, -45vw -22vh 0px 0px #fff, -37vw -40vh 0px 1px #fff, 29vw 19vh 0px 1px #fff, 4vw -8vh 0px 1px #fff, -5vw 21vh 1px 1px #fff, -27vw 26vh 1px 1px #fff, -47vw -3vh 1px 1px #fff, -28vw -30vh 0px 1px #fff, -43vw -27vh 0px 1px #fff, 4vw 22vh 1px 1px #fff, 36vw 23vh 0px 0px #fff, -21vw 24vh 1px 1px #fff, -16vw 2vh 1px 0px #fff, -16vw -6vh 0px 0px #fff, 5vw 26vh 0px 0px #fff, -34vw 41vh 0px 0px #fff, 1vw 42vh 1px 1px #fff, 11vw -13vh 1px 1px #fff, 48vw -8vh 1px 0px #fff, 22vw -15vh 0px 0px #fff, 45vw 49vh 0px 0px #fff, 43vw -27vh 1px 1px #fff, 20vw -2vh 0px 0px #fff, 8vw 22vh 0px 1px #fff, 39vw 48vh 1px 1px #fff, -21vw -11vh 0px 1px #fff, -40vw 45vh 0px 1px #fff, 11vw -30vh 1px 0px #fff, 26vw 30vh 1px 0px #fff, 45vw -29vh 0px 1px #fff, -2vw 18vh 0px 0px #fff, -29vw -45vh 1px 0px #fff, -7vw -27vh 1px 1px #fff, 42vw 24vh 0px 0px #fff, 45vw -48vh 1px 0px #fff, -36vw -18vh 0px 0px #fff, -44vw 13vh 0px 1px #fff, 36vw 16vh 0px 1px #fff, 40vw 24vh 0px 0px #fff, 18vw 11vh 0px 0px #fff, -15vw -23vh 1px 0px #fff, -24vw 48vh 0px 1px #fff, 27vw -45vh 1px 0px #fff, -2vw -24vh 0px 1px #fff, -15vw -28vh 0px 0px #fff, -43vw 13vh 1px 0px #fff, 7vw 27vh 1px 0px #fff, 47vw 5vh 0px 0px #fff, -45vw 15vh 1px 1px #fff, -5vw -28vh 0px 1px #fff, 38vw 25vh 1px 1px #fff, -39vw -1vh 1px 0px #fff, 5vw 0vh 1px 0px #fff, 49vw 13vh 0px 0px #fff, 48vw 10vh 0px 1px #fff, 19vw -28vh 0px 0px #fff, 4vw 7vh 0px 0px #fff, 21vw 21vh 1px 1px #fff, -15vw -15vh 0px 1px #fff, -6vw -42vh 1px 0px #fff, -15vw 48vh 1px 1px #fff, -23vw 25vh 1px 1px #fff, -48vw 25vh 0px 1px #fff, -31vw -19vh 0px 1px #fff, 4vw 37vh 1px 1px #fff, -43vw 28vh 0px 0px #fff, 3vw -25vh 0px 1px #fff, -39vw 14vh 0px 1px #fff, -40vw 31vh 0px 1px #fff, 35vw -36vh 1px 1px #fff, 16vw 49vh 0px 0px #fff, 6vw 39vh 0px 0px #fff, 3vw -35vh 0px 1px #fff, -44vw -2vh 1px 0px #fff, -6vw 21vh 1px 0px #fff, 48vw 9vh 1px 1px #fff, -43vw 30vh 1px 1px #fff, 29vw -12vh 1px 1px #fff, -48vw 13vh 1px 0px #fff, -42vw 32vh 1px 1px #fff, 34vw 15vh 1px 1px #fff, 29vw -37vh 1px 1px #fff, 28vw 2vh 0px 0px #fff;
-    animation: zoom 16s alternate infinite;
-}
-
-@keyframes zoom {
-    0% {
-        transform: scale(1);
-    }
-
-    100% {
-        transform: scale(1.5);
-    }
-}
-
+/* --- 2. Main Layout and Structure (Sidebar/Main Content) --- */
+/* Your HTML uses .container as the wrapper for both controls and content.
+   We'll use it to set up the main flex layout. */
 .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 25px;
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
-/* ------------------------------
-    HEADER + NAVIGATION
---------------------------------*/
+/* --- 3. Sidebar (Controls) - Consistent Dark Theme --- */
+/* The shortcut page HTML structure puts the controls and content side-by-side
+   on desktop, but your initial HTML used a header-like structure. 
+   We style it here as a traditional sidebar for desktop view, like the reference. */
+.controls {
+    width: 250px;
+    background-color: var(--text-dark); /* Dark background from reference */
+    color: var(--bg-white);
+    padding: var(--padding-lg);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
+}
+
 .bill-system-header {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 700;
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+    text-align: center;
 }
 
 .brand-name {
-    color: #0a3d62;
+    display: block;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
     text-decoration: none;
-    font-weight: 800;
+    margin-bottom: 5px;
 }
 
 .system-name {
-    margin-left: 10px;
-    font-size: 17px;
-    font-weight: 500;
-    color: #576574;
+    display: block;
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+    letter-spacing: 1px;
 }
 
-.controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: white;
-    padding: 15px 20px;
-    border-radius: 10px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.controls a {
-    margin-left: 12px;
-    padding: 8px 14px;
+/* Nav Buttons Styling (Match Reference Style) */
+.dashboard,.logout-btn, 
+.view-history-btn {
+    display: block;
+    padding: 12px 15px;
     text-decoration: none;
-    font-size: 14px;
+    color: var(--bg-white);
+    background-color: var(--secondary-color);
+    border: none;
+    text-align: center;
+    cursor: pointer;
+    font-size: 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
     font-weight: 600;
-    color: #0a3d62;
-    border-radius: 6px;
-    transition: 0.2s ease;
-    border: 1px solid transparent;
+    margin-bottom: 10px; /* Separates the links */
+}
+.logout-btn {
+    background-color: var(--danger-color);
+    margin-top: 20px;
+}
+.logout-btn:hover { background-color: #c82333; }
+
+.dashboard {
+    background-color: var(--success-color);
+}
+.dashboard:hover {
+    background-color: #1e7e34;
 }
 
-.controls a:hover {
-    background: #dce9f4;
+.view-history-btn:hover:not(.active) {
+    background-color: #5a6268;
 }
 
-.controls .active {
-    background: #0a3d62;
-    color: white;
+.view-history-btn.active {
+    background-color: var(--primary-color);
 }
 
-/* ------------------------------
-    SHORTCUT MANAGEMENT SECTION
---------------------------------*/
+.view-history-btn.active:hover {
+    background-color: var(--primary-hover);
+}
+
+
+/* --- 4. Main Content Area --- */
 .shortcut-management {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    flex-grow: 1;
+    padding: 30px;
+    background-color: var(--bg-white);
+    position: relative;
+}
+
+/* --- 5. Shortcut Header & Management Sections --- */
+.shortcut-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--primary-color); /* Use primary color for main page header */
+    padding-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .shortcut-header h2 {
+    color: var(--primary-color);
+    font-size: 1.8rem;
     margin: 0;
-    font-size: 22px;
-    color: #0a3d62;
 }
 
 .shortcut-header p {
-    margin-top: 4px;
-    color: #7a8ca0;
-    font-size: 14px;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin: 0;
 }
 
-/* ------------------------------
-    FORM STYLES
---------------------------------*/
-.shortcut-form {
-    margin-top: 25px;
-    padding: 20px;
-    background: #f8fafc;
-    border-radius: 10px;
-    border: 1px solid #e9edf1;
+/* --- 6. Shortcut Form (Card Style) --- */
+.shortcut-form, .shortcuts-list {
+    background: var(--bg-white);
+    padding: var(--padding-lg);
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    margin-bottom: 25px;
+    border-top: 5px solid var(--primary-color); /* Highlight form card */
 }
 
-.shortcut-form h3 {
-    margin-top: 0;
-    font-size: 18px;
-    color: #0a3d62;
+.shortcut-form h3, .shortcuts-list h3 {
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: var(--text-dark);
+    font-size: 1.2rem;
 }
 
 .form-row {
     display: flex;
-    gap: 15px;
-    align-items: flex-end;
-    flex-wrap: wrap;
+    gap: var(--padding-md);
+    align-items: flex-end; 
+}
+
+.form-group {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .form-group label {
-    font-size: 14px;
-    color: #34495e;
     font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: var(--text-dark);
 }
 
-.form-group input {
-    width: 240px;
-    padding: 10px 12px;
-    border: 1px solid #cbd4db;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: 0.2s;
+input[type="text"] {
+    padding: 10px 12px; /* Slightly larger padding */
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
 }
 
-.form-group input:focus {
+input[type="text"]:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
     outline: none;
-    border-color: #0a3d62;
-    box-shadow: 0 0 0 2px rgba(10,61,98,0.15);
 }
 
-/* ------------------------------
-    BUTTONS
---------------------------------*/
 .btn-primary {
-    background: #0a3d62;
+    background-color: var(--primary-color);
     color: white;
-    padding: 10px 18px;
-    border-radius: 6px;
     border: none;
-    font-size: 14px;
+    padding: 10px 15px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: 0.2s;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.btn-primary:hover {
-    background: #062a44;
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
 }
 
-.btn-secondary {
-    background: #bdc3c7;
-    color: #2d3436;
-    padding: 10px 18px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-    transition: 0.2s;
+.btn-processing {
+    background-color: var(--secondary-color);
+    pointer-events: none;
+}
+.btn-success {
+    background-color: var(--success-color) !important;
 }
 
-.btn-secondary:hover {
-    background: #a4aeb2;
+/* --- 7. Shortcuts List & Table (Card Style) --- */
+.shortcuts-list {
+    border-top: 5px solid var(--secondary-color); /* Secondary color for list card */
 }
 
-.btn-edit, .btn-delete {
-    padding: 6px 12px;
-    border-radius: 5px;
-    font-size: 13px;
-    cursor: pointer;
-    border: none;
+.search-box {
+    position: relative;
+    margin-bottom: var(--padding-md);
 }
 
-.btn-edit {
-    background: #0984e3;
-    color: white;
+.search-box input {
+    padding-left: 40px;
+    background-color: var(--bg-light); /* Highlight search input */
+    border: 1px solid var(--border-light);
 }
 
-.btn-edit:hover {
-    background: #086fc0;
+.search-box .fas {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    color: var(--secondary-color);
+    font-size: 0.9rem;
 }
 
-.btn-delete {
-    background: #e84118;
-    color: white;
-}
-
-.btn-delete:hover {
-    background: #c23616;
-}
-
-/* ------------------------------
-    TABLE STYLING
---------------------------------*/
 .table-container {
-    margin-top: 20px;
     overflow-x: auto;
 }
 
 #shortcutsTable {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.95rem;
+}
+
+#shortcutsTable th,
+#shortcutsTable td {
+    padding: 12px var(--padding-sm);
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
 }
 
 #shortcutsTable th {
-    text-align: left;
-    padding: 12px;
-    background: #0a3d62;
+    background-color: var(--bg-light);
+    font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+#shortcutsTable tbody tr:hover {
+    background-color: #fcfcfd;
+}
+
+/* Column Widths */
+#shortcutsTable th:nth-child(1), #shortcutsTable td:nth-child(1) { width: 25%; font-weight: 600; color: var(--primary-hover); } 
+#shortcutsTable th:nth-child(2), #shortcutsTable td:nth-child(2) { width: 50%; } 
+#shortcutsTable th:nth-child(3), #shortcutsTable td:nth-child(3) { width: 25%; }
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.btn-edit,
+.btn-delete,
+.btn-retry {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.btn-edit {
+    background-color: #ffc107; /* Warning color */
+    color: var(--text-dark);
+}
+
+.btn-edit:hover {
+    background-color: #e0a800;
+}
+
+.btn-delete {
+    background-color: var(--danger-color);
     color: white;
-    font-size: 14px;
 }
 
-#shortcutsTable td {
-    padding: 12px;
-    border-bottom: 1px solid #ecf0f1;
-    font-size: 14px;
+.btn-delete:hover {
+    background-color: #c82333;
 }
 
-#shortcutsTable tr:hover {
-    background: #f1f6fa;
+.btn-retry {
+    background-color: var(--primary-color);
+    color: white;
+    margin-top: 20px;
+    padding: 10px 20px;
 }
 
-/* ------------------------------
-    SEARCH BOX
---------------------------------*/
-.search-box {
-    margin-top: 10px;
-    position: relative;
+/* Empty/Error State */
+#shortcutsTableBody tr td[colspan="3"] {
+    border-bottom: none !important;
+    color: var(--secondary-color);
+    padding: 40px 20px;
 }
 
-.search-box input {
-    width: 260px;
-    padding: 10px 35px 10px 12px;
-    border: 1px solid #c8d1d8;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.search-box i {
-    position: absolute;
-    right: 12px;
-    top: 10px;
-    color: #546e7a;
-}
-
-/* ------------------------------
-    MODAL
---------------------------------*/
+/* --- 8. Modal Styling (Adopted from Recycle Bin) --- */
 .modal {
     display: none;
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.45);
-    display: none;
-    align-items: center;
-    justify-content: center;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
 }
 
 .modal-content {
-    background: white;
-    width: 380px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    background-color: var(--bg-white);
+    margin: 10% auto;
+    padding: var(--padding-lg);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    max-width: 450px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 10px;
+    margin-bottom: var(--padding-md);
+}
+
+.modal-header h3 {
+    color: var(--primary-color);
 }
 
 .close-modal {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
     cursor: pointer;
-    font-size: 22px;
-    color: #b2bec3;
+    color: var(--secondary-color);
+    line-height: 1;
+    transition: color 0.2s ease;
 }
 
 .close-modal:hover {
-    color: #636e72;
+    color: var(--danger-color);
 }
 
-.modal-body .form-group {
-    margin-bottom: 12px;
+.modal-footer {
+    padding-top: var(--padding-md);
+    border-top: 1px solid var(--border-light);
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
-/* ------------------------------
-    NOTIFICATION MESSAGE
---------------------------------*/
-.shortcut-message {
-    font-size: 14px;
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
 }
 
-/* Animations */
-@keyframes slideInRight {
-    from { opacity: 0; transform: translateX(40px); }
-    to { opacity: 1; transform: translateX(0); }
+.btn-secondary:hover {
+    background-color: #5a6268;
 }
-@keyframes slideOutRight {
-    from { opacity: 1; transform: translateX(0); }
-    to { opacity: 0; transform: translateX(40px); }
-}
-/* Professional Loading Spinner for Shortcuts */
+
+/* --- 9. Loading and Toast Styles (Adopted from Recycle Bin) --- */
+/* (Styles for .loading-overlay, .professional-spinner, .toast-notification, etc., are copied directly
+   from the bottom sections of your recycle-bin.css as they are shared utility styles) */
+
 .loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.95);
+    background-color: rgba(255, 255, 255, 0.9);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
-    backdrop-filter: blur(5px);
+    z-index: 2000;
 }
 
 .professional-spinner {
-    width: 60px;
-    height: 60px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #007bff;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top: 4px solid var(--primary-color);
     border-radius: 50%;
+    width: 40px;
+    height: 40px;
     animation: spin 1s linear infinite;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .spinner-text {
-    font-size: 16px;
-    color: #333;
-    font-weight: 500;
-    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-dark);
 }
 
 .spinner-subtext {
-    font-size: 14px;
-    color: #666;
-    margin-top: 8px;
-    text-align: center;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-top: 5px;
 }
 
 @keyframes spin {
@@ -377,220 +478,132 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Shortcuts specific loading states */
-.shortcuts-loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-/* Skeleton loading for shortcuts table */
 .skeleton-loader {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
+    background: #f0f0f0;
+    background-image: linear-gradient(to right, #f0f0f0 0%, #e0e0e0 20%, #f0f0f0 40%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear;
     border-radius: 4px;
 }
 
 .skeleton-table-row {
-    height: 60px;
-    margin-bottom: 8px;
-    border-radius: 8px;
+    height: 30px; /* Approximate height of a table row */
+    width: 90%;
+    margin: 5px 0;
 }
 
-.skeleton-input {
-    height: 45px;
-    margin-bottom: 15px;
-    border-radius: 6px;
+@keyframes shimmer {
+    0% { background-position: -800px 0; }
+    100% { background-position: 800px 0; }
 }
 
-@keyframes loading {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
+/* Toast Notification Styles (Matches recycle-bin) */
+.shortcut-message {
+    /* Overrides the inline styles in JS to ensure consistency */
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    padding: 12px 15px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    font-weight: 600 !important;
+    z-index: 1500 !important;
+    animation: slideInRight 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    color: white !important;
 }
 
-/* Enhanced button states */
-.btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-    transform: scale(1.02);
-    transition: all 0.3s ease;
+.shortcut-message-success {
+    background: var(--success-color) !important;
+}
+.shortcut-message-error {
+    background: var(--danger-color) !important;
 }
 
-.btn-processing {
-    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
-    pointer-events: none;
-}
-
-/* Modal loading state */
-.modal-loading {
-    position: relative;
-}
-
-.modal-loading::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-}
-
-/* Error state styling */
-.error-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #666;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin: 20px 0;
-}
-
-.btn-retry {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 15px;
-    font-size: 14px;
-}
-
-.btn-retry:hover {
-    background: #0056b3;
-}
-
-/* Enhanced message animations */
+/* Keyframe for toast slide-in/out */
 @keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
-
 @keyframes slideOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
 }
 
 
-
-/* Enhanced form styles */
-.form-group {
-    position: relative;
-}
-
-.form-group.loading::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Improved button styles */
-.action-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.btn-edit, .btn-delete {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.btn-edit {
-    background: #007bff;
-    color: white;
-}
-
-.btn-edit:hover {
-    background: #0056b3;
-    transform: translateY(-1px);
-}
-
-.btn-delete {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-delete:hover {
-    background: #c82333;
-    transform: translateY(-1px);
-}
-
-/* Enhanced modal styles */
-.modal-content {
-    position: relative;
-}
-
-.modal-loading .modal-content::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Responsive improvements */
+/* --- 10. Responsive Design for Mobile/Small Screens --- */
 @media (max-width: 768px) {
-    .action-buttons {
+    /* Switch to mobile view: Sidebar becomes top navigation */
+    .container {
         flex-direction: column;
     }
+
+    /* Controls (Sidebar) becomes a full-width header/nav */
+    .controls {
+        width: 100%;
+        height: auto;
+        padding: var(--padding-md);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        flex-direction: row; /* Layout links horizontally */
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .bill-system-header {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
     
-    .btn-edit, .btn-delete {
+    .system-name {
+        font-size: 0.75rem;
+    }
+
+    /* Navigation buttons alignment */
+    .dashboard,
+    .view-history-btn {
+        flex-grow: 1;
+        width: 48%; /* Adjust for side-by-side buttons */
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+    }
+
+    /* Main Content */
+    .shortcut-management {
+        padding: 20px 15px;
+    }
+
+    /* Form and Table Layout */
+    .form-row {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .btn-primary {
         width: 100%;
         justify-content: center;
     }
-    
-    .professional-spinner {
-        width: 50px;
-        height: 50px;
+
+    /* Table Actions */
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
     }
-    
-    .spinner-text {
-        font-size: 14px;
+    .btn-edit,
+    .btn-delete {
+        width: 100%;
+        justify-content: center;
     }
-    
-    .spinner-subtext {
-        font-size: 12px;
+
+    /* Modal */
+    .modal-content {
+        margin: 20% 15px;
     }
 }
