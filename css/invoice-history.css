@@ -153,7 +153,7 @@ body {
     padding: 12px;
     border-radius: 6px;
     box-shadow: var(--shadow-light);
-    border-left: 4px solid var(--primary-color);
+    border-left: 4px solid var(--secondary-color);
     cursor: pointer;
     transition: transform 0.1s, box-shadow 0.2s;
 }
@@ -198,11 +198,11 @@ body {
     padding: var(--padding-lg);
     border-radius: 8px;
     box-shadow: var(--shadow-light);
-    border-top: 4px solid var(--purple-color);
+    border-top: 4px solid var(--secondary-color);
 }
 
 .customer-statement-section h3 {
-    color: var(--purple-color);
+    color: var(--secondary-color);
     margin-bottom: 15px;
     font-size: 1.3rem;
 }
