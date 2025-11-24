@@ -1,17 +1,26 @@
 /* --- 1. CSS Variables & Global Reset (Adopted from Recycle Bin) --- */
 :root {
     /* Color Palette */
-    --primary-color: #007bff; /* Blue for branding/primary action */
+    --primary-color: #007bff;
+    /* Blue for branding/primary action */
     --primary-hover: #0056b3;
-    --secondary-color: #6c757d; /* Gray for secondary elements/neutral */
-    --success-color: #28a745; /* Green for success/restore */
-    --danger-color: #dc3545; /* Red for delete/warning */
-    --bg-light: #f8f9fa; /* Very light gray background */
-    --bg-white: #ffffff; /* White for content areas */
-    --text-dark: #343a40; /* Dark text */
-    --border-light: #dee2e6; /* Light border color */
+    --secondary-color: #6c757d;
+    /* Gray for secondary elements/neutral */
+    --success-color: #28a745;
+    /* Green for success/restore */
+    --danger-color: #dc3545;
+    /* Red for delete/warning */
+    --bg-light: #f8f9fa;
+    /* Very light gray background */
+    --bg-white: #ffffff;
+    /* White for content areas */
+    --text-dark: #343a40;
+    /* Dark text */
+    --border-light: #dee2e6;
+    /* Light border color */
     --shadow-light: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    --purple-color: #6f42c1;
 
     /* Typography */
     --font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -52,13 +61,15 @@ body {
    We style it here as a traditional sidebar for desktop view, like the reference. */
 .controls {
     width: 250px;
-    background-color: var(--text-dark); /* Dark background from reference */
+    background-color: var(--text-dark);
+    /* Dark background from reference */
     color: var(--bg-white);
     padding: var(--padding-lg);
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0; /* Prevent sidebar from shrinking */
+    flex-shrink: 0;
+    /* Prevent sidebar from shrinking */
 }
 
 .bill-system-header {
@@ -70,7 +81,7 @@ body {
 
 .brand-name {
     display: block;
-    color: var(--primary-color);
+    color: var(--bg-white);
     font-size: 1.5rem;
     font-weight: 700;
     text-decoration: none;
@@ -80,12 +91,13 @@ body {
 .system-name {
     display: block;
     font-size: 0.8rem;
-    color: var(--secondary-color);
+    color: var(--bg-light);
     letter-spacing: 1px;
 }
 
 /* Nav Buttons Styling (Match Reference Style) */
-.dashboard,.logout-btn, 
+.dashboard,
+.logout-btn,
 .view-history-btn {
     display: block;
     padding: 12px 15px;
@@ -99,17 +111,23 @@ body {
     border-radius: 4px;
     transition: background-color 0.2s, color 0.2s;
     font-weight: 600;
-    margin-bottom: 10px; /* Separates the links */
+    margin-bottom: 10px;
+    /* Separates the links */
 }
+
 .logout-btn {
     background-color: var(--danger-color);
     margin-top: 20px;
 }
-.logout-btn:hover { background-color: #c82333; }
+
+.logout-btn:hover {
+    background-color: #c82333;
+}
 
 .dashboard {
     background-color: var(--success-color);
 }
+
 .dashboard:hover {
     background-color: #1e7e34;
 }
@@ -140,13 +158,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid var(--primary-color); /* Use primary color for main page header */
+    border-bottom: 2px solid var(--text-dark);
+    /* Use primary color for main page header */
     padding-bottom: 20px;
     margin-bottom: 25px;
 }
 
 .shortcut-header h2 {
-    color: var(--primary-color);
+    color: var(--danger-color);
     font-size: 1.8rem;
     margin: 0;
 }
@@ -158,16 +177,21 @@ body {
 }
 
 /* --- 6. Shortcut Form (Card Style) --- */
-.shortcut-form, .shortcuts-list {
+.shortcut-form,
+.shortcuts-list {
     background: var(--bg-white);
     padding: var(--padding-lg);
     border-radius: 8px;
     box-shadow: var(--shadow-light);
     margin-bottom: 25px;
-    border-top: 5px solid var(--primary-color); /* Highlight form card */
+    border: 2px solid var(--border-light);
+    border-top: 5px solid var(--success-color);
+    /* Highlight form card */
+
 }
 
-.shortcut-form h3, .shortcuts-list h3 {
+.shortcut-form h3,
+.shortcuts-list h3 {
     border-bottom: 1px solid var(--border-light);
     padding-bottom: 10px;
     margin-bottom: 20px;
@@ -178,7 +202,7 @@ body {
 .form-row {
     display: flex;
     gap: var(--padding-md);
-    align-items: flex-end; 
+    align-items: flex-end;
 }
 
 .form-group {
@@ -195,7 +219,8 @@ body {
 }
 
 input[type="text"] {
-    padding: 10px 12px; /* Slightly larger padding */
+    padding: 10px 12px;
+    /* Slightly larger padding */
     border: 1px solid var(--border-light);
     border-radius: 4px;
     font-size: 1rem;
@@ -210,7 +235,7 @@ input[type="text"]:focus {
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
+    background-color: var(--success-color);
     color: white;
     border: none;
     padding: 10px 15px;
@@ -233,13 +258,15 @@ input[type="text"]:focus {
     background-color: var(--secondary-color);
     pointer-events: none;
 }
+
 .btn-success {
     background-color: var(--success-color) !important;
 }
 
 /* --- 7. Shortcuts List & Table (Card Style) --- */
 .shortcuts-list {
-    border-top: 5px solid var(--secondary-color); /* Secondary color for list card */
+    border-top: 5px solid var(--secondary-color);
+    /* Secondary color for list card */
 }
 
 .search-box {
@@ -249,7 +276,8 @@ input[type="text"]:focus {
 
 .search-box input {
     padding-left: 40px;
-    background-color: var(--bg-light); /* Highlight search input */
+    background-color: var(--bg-light);
+    /* Highlight search input */
     border: 1px solid var(--border-light);
 }
 
@@ -281,9 +309,9 @@ input[type="text"]:focus {
 }
 
 #shortcutsTable th {
-    background-color: var(--bg-light);
+    background-color: var(--purple-color);
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--bg-white);
     text-transform: uppercase;
     font-size: 0.8rem;
     letter-spacing: 0.5px;
@@ -293,10 +321,11 @@ input[type="text"]:focus {
     background-color: #fcfcfd;
 }
 
-/* Column Widths */
-#shortcutsTable th:nth-child(1), #shortcutsTable td:nth-child(1) { width: 25%; font-weight: 600; color: var(--primary-hover); } 
-#shortcutsTable th:nth-child(2), #shortcutsTable td:nth-child(2) { width: 50%; } 
-#shortcutsTable th:nth-child(3), #shortcutsTable td:nth-child(3) { width: 25%; }
+
+#shortcutsTable th:nth-child(3),
+#shortcutsTable td:nth-child(3) {
+    width: 25%;
+}
 
 .action-buttons {
     display: flex;
@@ -321,7 +350,8 @@ input[type="text"]:focus {
 }
 
 .btn-edit {
-    background-color: #ffc107; /* Warning color */
+    background-color: #ffc107;
+    /* Warning color */
     color: var(--text-dark);
 }
 
@@ -377,8 +407,15 @@ input[type="text"]:focus {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modal-header {
@@ -474,8 +511,13 @@ input[type="text"]:focus {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .skeleton-loader {
@@ -488,14 +530,20 @@ input[type="text"]:focus {
 }
 
 .skeleton-table-row {
-    height: 30px; /* Approximate height of a table row */
+    height: 30px;
+    /* Approximate height of a table row */
     width: 90%;
     margin: 5px 0;
 }
 
 @keyframes shimmer {
-    0% { background-position: -800px 0; }
-    100% { background-position: 800px 0; }
+    0% {
+        background-position: -800px 0;
+    }
+
+    100% {
+        background-position: 800px 0;
+    }
 }
 
 /* Toast Notification Styles (Matches recycle-bin) */
@@ -519,23 +567,40 @@ input[type="text"]:focus {
 .shortcut-message-success {
     background: var(--success-color) !important;
 }
+
 .shortcut-message-error {
     background: var(--danger-color) !important;
 }
 
 /* Keyframe for toast slide-in/out */
 @keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
+
 @keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 }
 
 
 /* --- 10. Responsive Design for Mobile/Small Screens --- */
 @media (max-width: 768px) {
+
     /* Switch to mobile view: Sidebar becomes top navigation */
     .container {
         flex-direction: column;
@@ -547,7 +612,8 @@ input[type="text"]:focus {
         height: auto;
         padding: var(--padding-md);
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        flex-direction: row; /* Layout links horizontally */
+        flex-direction: row;
+        /* Layout links horizontally */
         flex-wrap: wrap;
         justify-content: space-between;
         align-items: center;
@@ -560,7 +626,7 @@ input[type="text"]:focus {
         padding-bottom: 5px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .system-name {
         font-size: 0.75rem;
     }
@@ -569,7 +635,8 @@ input[type="text"]:focus {
     .dashboard,
     .view-history-btn {
         flex-grow: 1;
-        width: 48%; /* Adjust for side-by-side buttons */
+        width: 48%;
+        /* Adjust for side-by-side buttons */
         margin-bottom: 5px;
         font-size: 0.85rem;
     }
@@ -596,6 +663,7 @@ input[type="text"]:focus {
         flex-direction: column;
         gap: 5px;
     }
+
     .btn-edit,
     .btn-delete {
         width: 100%;

@@ -14,6 +14,7 @@
     --text-dark: #343a40; /* Dark text */
     --border-light: #dee2e6; /* Light border color */
     --shadow-light: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --purple-color: #6f42c1;
 }
 
 * {
@@ -55,7 +56,7 @@ body {
 
 .brand-name {
     display: block;
-    color: var(--primary-color);
+    color: var(--bg-white);
     font-size: 1.5rem;
     font-weight: 700;
     text-decoration: none;
@@ -65,7 +66,7 @@ body {
 .system-name {
     display: block;
     font-size: 0.8rem;
-    color: var(--secondary-color);
+    color: var(--bg-light);
     letter-spacing: 1px;
 }
 
@@ -118,7 +119,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 2px solid var(--danger-color); /* Red border for bin */
+    border-bottom: 2px solid var(--text-dark); /* Red border for bin */
     padding-bottom: 20px;
     margin-bottom: 25px;
 }
@@ -231,7 +232,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background-color: var(--bg-light);
+    background-color: var(--purple-color);
     border-bottom: 1px solid var(--border-light);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
@@ -239,12 +240,12 @@ body {
 
 .content-header h3 {
     font-size: 1.1rem;
-    color: var(--text-dark);
+    color: var(--bg-white);
     margin: 0;
 }
 
 .content-header h3 i {
-    color: var(--primary-color);
+    color: var(--bg-white);
     margin-right: 8px;
 }
 
@@ -645,3 +646,102 @@ body {
         width: 100%;
     }
 }
+
+/* --- recycle-bin.css --- */
+
+/* ... (Omitted existing styles for brevity, assume they are still there) ... */
+
+/* --- ITEM ACTIONS STYLES --- */
+.btn-restore {
+    background-color: var(--success-color); /* Green for recovery */
+    color: white;
+}
+.btn-restore:hover { background-color: #1e7e34; }
+
+.btn-permanent-delete {
+    background-color: var(--danger-color);
+    color: white;
+}
+.btn-permanent-delete:hover { background-color: #c82333; }
+
+/* --- MODAL OVERLAYS (Confirmation Dialogs) --- */
+/* ... (Omitted general modal styles) ... */
+
+/* --- 1. RESTORE MODAL SPECIFIC STYLES --- */
+#restoreModal .modal-header h3 {
+    /* Set header to success color to match the action */
+    color: var(--success-color); 
+}
+
+#restoreModal .modal-header h3 i {
+    color: var(--success-color);
+}
+
+#confirmRestore {
+    background-color: var(--success-color);
+    color: white;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+#confirmRestore:hover {
+    background-color: #1e7e34; /* Darker green hover */
+}
+
+/* --- 2. DELETE/EMPTY BIN MODAL SPECIFIC STYLES --- */
+#deleteModal .modal-header h3,
+#emptyBinModal .modal-header h3 {
+    /* Set header to danger color to match the action */
+    color: var(--danger-color);
+}
+
+#deleteModal .modal-header h3 i,
+#emptyBinModal .modal-header h3 i {
+    color: var(--danger-color);
+}
+
+#confirmDelete,
+#confirmEmptyBin {
+    /* Use btn-danger styles defined earlier, adding weight for emphasis */
+    background-color: var(--danger-color);
+    color: white;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+#confirmDelete:hover,
+#confirmEmptyBin:hover {
+    background-color: #c82333; /* Darker red hover */
+}
+
+/* New style for the common btn-primary to ensure it looks right in modals if used */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* The existing warning-message is good, keeping it as-is: */
+.warning-message {
+    background-color: #f8d7da;
+    color: var(--danger-color);
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* ... (Omitted the rest of the existing styles) ... */

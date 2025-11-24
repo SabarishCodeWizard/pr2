@@ -62,7 +62,7 @@ body {
 
 .brand-name {
     display: block;
-    color: var(--primary-color);
+    color: var(--bg-white);
     font-size: 1.5rem;
     font-weight: 700;
     text-decoration: none;
@@ -72,7 +72,7 @@ body {
 .system-name {
     display: block;
     font-size: 0.8rem;
-    color: var(--secondary-color);
+    color: var(--bg-light);
     letter-spacing: 1px;
 }
 
@@ -231,7 +231,7 @@ body {
 }
 
 #generateCustomerStatement {
-    background-color: var(--purple-color);
+    background-color: var(--success-color);
     color: white;
 }
 #generateCustomerStatement:hover {
@@ -455,7 +455,7 @@ body {
 }
 
 .date-group-header {
-    background-color: var(--bg-light);
+    background-color: var(--purple-color    );
     padding: 15px 20px;
     border-bottom: 2px solid var(--border-light);
     display: flex;
@@ -465,7 +465,7 @@ body {
 
 .date-title {
     font-size: 1.2rem;
-    color: var(--primary-color);
+    color: var(--bg-white);
     margin: 0;
 }
 
@@ -475,7 +475,7 @@ body {
 
 .invoice-count {
     font-size: 0.9rem;
-    color: var(--secondary-color);
+    color: var(--bg-white);
     font-weight: 600;
 }
 
