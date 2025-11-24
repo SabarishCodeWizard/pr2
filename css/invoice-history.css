@@ -99,13 +99,13 @@ body {
 
 
 .dashboard {
-    background-color: var(--success-color);
+    background-color: var(--info-color);
 }
 .dashboard:hover {
-    background-color: #1e7e34;
+    background-color: #138496;
 }
 .view-history-btn {
-    background-color: var(--secondary-color); 
+    background-color: var(--text-dark); 
 }
 .view-history-btn:hover { background-color:  #4a5157; }
 

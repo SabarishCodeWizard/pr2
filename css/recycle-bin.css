@@ -81,7 +81,7 @@ body {
     padding: 12px 15px;
     text-decoration: none;
     color: var(--bg-white);
-    background-color: var(--secondary-color);
+    background-color: var(--text-dark);
     border: none;
     text-align: center;
     cursor: pointer;
@@ -92,10 +92,10 @@ body {
 }
 
 .dashboard {
-    background-color: var(--success-color);
+    background-color: var(--danger-color);
 }
 .dashboard:hover {
-    background-color: #1e7e34;
+    background-color: #bd2130;
 }
 
 .nav-btn:hover { background-color: #5a6268; }
