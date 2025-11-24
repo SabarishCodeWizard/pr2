@@ -378,7 +378,7 @@ body {
 }
 
 #productTable th {
-    background-color: var(--purple-color);
+    background-color: rgb(56, 52, 52);
     font-weight: 700;
     color: var(--bg-white);
     text-transform: uppercase;
