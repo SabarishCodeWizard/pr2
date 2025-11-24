@@ -281,7 +281,7 @@ body {
 
 .bill-to h3 {
     font-size: 1.1rem;
-    color: var(--primary-color);
+    color: var(--secondary-color);
     border-bottom: 1px dashed var(--border-light);
     padding-bottom: 5px;
     margin-bottom: 10px;
