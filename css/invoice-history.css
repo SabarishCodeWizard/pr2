@@ -171,7 +171,7 @@ body {
 
 .recent-invoice-item .invoice-number {
     font-weight: 700;
-    color: var(--primary-color);
+    color: var(--danger-color);
     margin-bottom: 5px;
 }
 
