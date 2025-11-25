@@ -9,13 +9,13 @@ class Database {
 
         // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
         this.firebaseConfig = {
-            apiKey: "AIzaSyBHQEyCf27I_y0o7QFvdHwN_86PH7ugYbQ",
-            authDomain: "prfabricsbilling.firebaseapp.com",
-            projectId: "prfabricsbilling",
-            storageBucket: "prfabricsbilling.firebasestorage.app",
-            messagingSenderId: "591557598182",
-            appId: "1:591557598182:web:f63108b79c4861812ad427",
-            measurementId: "G-SKPHVM350N"
+            apiKey: "AIzaSyB4uggcqtYonFXSnl8rUGbsgkk-nqchuy8",
+            authDomain: "prnogst.firebaseapp.com",
+            projectId: "prnogst",
+            storageBucket: "prnogst.firebasestorage.app",
+            messagingSenderId: "517006377488",
+            appId: "1:517006377488:web:a0465788b8bcb4cd7bc095",
+            measurementId: "G-9D28MJCD8N"
         };
     }
 
