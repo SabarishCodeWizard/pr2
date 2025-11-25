@@ -325,7 +325,8 @@ async function saveBill() {
     }
 
     try {
-        showLoading('Saving Bill', 'Please wait while we save your invoice...');
+        // Use content loading for saving
+        showLoading('Saving Bill', 'Please wait while we save your invoice...', 'content');
 
         const invoiceData = await Utils.getFormData();
         const isEditing = !!invoiceData.invoiceNo;
@@ -390,7 +391,7 @@ async function saveBill() {
             await Utils.updateSubsequentInvoices(invoiceData.customerName, invoiceData.invoiceNo);
         }
 
-        hideLoading();
+        hideLoading('content');
         showButtonSuccess('saveBill');
 
         // Show success message with details
@@ -399,7 +400,7 @@ async function saveBill() {
         }, 100);
 
     } catch (error) {
-        hideLoading();
+        hideLoading('content');
         console.error('Error saving bill:', error);
         alert('Error saving bill. Please try again.');
     }
@@ -410,11 +411,12 @@ async function saveBill() {
 // Update resetForm with loading
 function resetForm() {
     if (confirm('Are you sure you want to reset the form? All unsaved data will be lost.')) {
-        showLoading('Resetting Form', 'Clearing all fields...');
+        // Use content loading for reset
+        showLoading('Resetting Form', 'Clearing all fields...', 'content');
 
         setTimeout(() => {
             Utils.resetForm();
-            hideLoading();
+            hideLoading('content');
 
             // Refresh suggestions after reset
             setTimeout(() => {
@@ -435,12 +437,16 @@ function applySuggestedInvoiceNumber() {
         // Show confirmation feedback
         const applyBtn = document.getElementById('applySuggestion');
         const originalText = applyBtn.innerHTML;
+        // NOTE: Keeping the color change inline for simplicity, 
+        // as the hover style is overridden by the class.
+        const originalBackground = applyBtn.style.background; 
+
         applyBtn.innerHTML = '<i class="fas fa-check"></i> Applied!';
-        applyBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        applyBtn.style.background = '#20c997'; // A lighter, distinct success color
 
         setTimeout(() => {
             applyBtn.innerHTML = originalText;
-            applyBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            applyBtn.style.background = originalBackground; // Revert to original background
         }, 2000);
     }
 }
@@ -450,21 +456,22 @@ function applySuggestedInvoiceNumber() {
 // Update loadInvoiceForEditing with loading
 async function loadInvoiceForEditing(invoiceNo) {
     try {
-        showLoading('Loading Invoice', `Loading invoice #${invoiceNo} for editing...`);
+        // Use content loading for editing
+        showLoading('Loading Invoice', `Loading invoice #${invoiceNo} for editing...`, 'content');
 
         const invoiceData = await db.getInvoice(invoiceNo);
         if (invoiceData) {
             Utils.setFormData(invoiceData);
             document.getElementById('invoiceNo').readOnly = true;
 
-            hideLoading();
+            hideLoading('content');
             showButtonSuccess('saveBill');
         } else {
-            hideLoading();
+            hideLoading('content');
             alert('Invoice not found!');
         }
     } catch (error) {
-        hideLoading();
+        hideLoading('content');
         console.error('Error loading invoice:', error);
         alert('Error loading invoice for editing.');
     }
@@ -477,7 +484,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     try {
-        showLoading('Loading Billing System', 'Initializing database and loading form...');
+        // Use content loading for initial load
+        showLoading('Loading Billing System', 'Initializing database and loading form...', 'content');
 
         // Initialize database
         await db.init();
@@ -509,12 +517,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Update PDF generation with loading
         document.getElementById('generatePDF').addEventListener('click', async function () {
             try {
-                showLoading('Generating PDF', 'Creating your invoice document...');
+                // Use content loading for PDF generation
+                showLoading('Generating PDF', 'Creating your invoice document...', 'content');
                 await PDFGenerator.generatePDF();
-                hideLoading();
+                hideLoading('content');
                 showButtonSuccess('generatePDF');
             } catch (error) {
-                hideLoading();
+                hideLoading('content');
                 console.error('Error generating PDF:', error);
                 alert('Error generating PDF. Please try again.');
             }
@@ -540,9 +549,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             clearTimeout(this.autoFillTimeout);
             this.autoFillTimeout = setTimeout(async () => {
                 if (phone.length >= 10) {
-                    showLoading('Checking Customer', 'Looking up customer details...');
+                    // Use content loading for customer check
+                    showLoading('Checking Customer', 'Looking up customer details...', 'content');
                     await Utils.checkCustomerByPhone(phone);
-                    hideLoading();
+                    hideLoading('content');
                 }
             }, 800);
         });
@@ -577,9 +587,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('customerName').addEventListener('input', function () {
             clearTimeout(this.debounce);
             this.debounce = setTimeout(async () => {
-                showLoading('Calculating Balance', 'Checking previous balance...');
+                // Use content loading for balance calculation
+                showLoading('Calculating Balance', 'Checking previous balance...', 'content');
                 await Utils.calculateAndSetPreviousBalance();
-                hideLoading();
+                hideLoading('content');
             }, 500);
         });
 
@@ -593,14 +604,15 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Initial calculations
         Utils.updateCalculations();
 
-        hideLoading();
+        hideLoading('content');
 
     } catch (error) {
-        hideLoading();
+        // Use GLOBAL loading for critical init failure
+        hideLoading('global');
         console.error('Error during page initialization:', error);
 
         // Show error state
-        const mainContainer = document.querySelector('.main');
+        const mainContainer = document.querySelector('.main-content-wrapper');
         if (mainContainer) {
             mainContainer.innerHTML = `
                 <div class="error-state">
@@ -622,60 +634,60 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 
 // Professional loading spinner functions
-function showLoading(message = 'Loading...', subtext = '') {
-    // Remove existing loading overlay if any
-    hideLoading();
+/**
+ * Shows a professional loading spinner overlay.
+ * @param {string} message - The main message (e.g., "Saving Bill").
+ * @param {string} subtext - The secondary message (e.g., "Please wait...").
+ * @param {('global'|'content')} [target='global'] - Where to place the overlay.
+ */
+function showLoading(message = 'Loading...', subtext = '', target = 'global') {
+    // Determine the container and class name based on the target
+    let container;
+    let className;
+    let idName;
+    
+    if (target === 'content') {
+        container = document.querySelector('.main-content-wrapper');
+        className = 'content-loading-overlay';
+        idName = 'contentLoading';
+    } else {
+        // Default to global (full screen)
+        container = document.body;
+        className = 'loading-overlay';
+        idName = 'globalLoading';
+    }
+
+    if (!container) return;
+
+    // Remove existing loader of the same type if any
+    hideLoading(target);
 
     const loadingHTML = `
-        <div class="loading-overlay" id="globalLoading">
+        <div class="${className}" id="${idName}">
             <div class="professional-spinner"></div>
             <div class="spinner-text">${message}</div>
             ${subtext ? `<div class="spinner-subtext">${subtext}</div>` : ''}
         </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', loadingHTML);
+    // Prepend the overlay for content (to cover existing elements)
+    if (target === 'content') {
+        container.insertAdjacentHTML('afterbegin', loadingHTML);
+    } else {
+        container.insertAdjacentHTML('beforeend', loadingHTML);
+    }
 }
 
-function hideLoading() {
-    const existingLoader = document.getElementById('globalLoading');
+/**
+ * Hides a specific loading spinner.
+ * @param {('global'|'content')} [target='global'] - Which overlay to hide.
+ */
+function hideLoading(target = 'global') {
+    const idName = target === 'content' ? 'contentLoading' : 'globalLoading';
+    const existingLoader = document.getElementById(idName);
     if (existingLoader) {
         existingLoader.remove();
     }
-}
-
-// Show form skeleton loading
-function showFormSkeletonLoading() {
-    const formContainer = document.querySelector('.invoice-container');
-    if (!formContainer) return;
-
-    formContainer.classList.add('form-loading');
-
-    // Create skeleton for form fields
-    const skeletonHTML = `
-        <div class="skeleton-loader skeleton-input" style="width: 100%; height: 40px;"></div>
-        <div class="skeleton-loader skeleton-input" style="width: 80%; height: 40px;"></div>
-        <div class="skeleton-loader skeleton-input" style="width: 90%; height: 40px;"></div>
-    `;
-
-    // You can add more specific skeleton elements as needed
-}
-
-function hideFormSkeletonLoading() {
-    const formContainer = document.querySelector('.invoice-container');
-    if (formContainer) {
-        formContainer.classList.remove('form-loading');
-    }
-}
-
-// Enhanced loading with timeout
-function showLoadingWithTimeout(message, subtext = '', timeout = 30000) {
-    showLoading(message, subtext);
-
-    // Auto-hide after timeout to prevent stuck loading
-    setTimeout(() => {
-        hideLoading();
-    }, timeout);
 }
 
 // Show success state for buttons
@@ -683,17 +695,16 @@ function showButtonSuccess(buttonId, duration = 2000) {
     const button = document.getElementById(buttonId);
     if (button) {
         const originalHTML = button.innerHTML;
-        const originalBackground = button.style.background;
+        // Save the background before applying success style
+        const originalBackground = button.style.backgroundColor || window.getComputedStyle(button).backgroundColor; 
 
         button.innerHTML = '<i class="fas fa-check"></i> Success!';
-        button.classList.add('btn-success');
+        button.style.backgroundColor = 'var(--success-color)'; // Apply success color directly
 
         setTimeout(() => {
             button.innerHTML = originalHTML;
-            button.classList.remove('btn-success');
-            if (originalBackground) {
-                button.style.background = originalBackground;
-            }
+            // Restore original background
+            button.style.backgroundColor = originalBackground;
         }, duration);
     }
 }

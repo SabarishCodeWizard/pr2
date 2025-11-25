@@ -167,9 +167,7 @@ body {
     margin-left: 250px; 
     flex-grow: 1; /* Takes up the remaining horizontal space */
     min-height: 100vh; /* Ensures the wrapper fills the screen height for scrolling */
-    /* overflow-y: auto is not strictly needed here as the body/html handles the scroll, 
-       but if you want to contain the scroll only to this element, you'd add it here. 
-       We will allow the body to scroll for full page effect. */
+    position: relative; /* IMPORTANT: Enables content-loading-overlay positioning */
 }
 /* =========================================== */
 
@@ -653,6 +651,7 @@ body {
 }
 
 /* --- 9. Loading & Utility States --- */
+/* Global/Full-screen Loading (For initialization, full reset, or unrecoverable error) */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -665,6 +664,22 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 2000;
+}
+
+/* Content-specific Loading Overlay (More professional and less intrusive) */
+.content-loading-overlay {
+    position: absolute; /* Relative to .main-content-wrapper */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7); /* Slightly transparent */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1500; /* Above invoice content, below global overlay */
+    transition: opacity 0.3s;
 }
 
 .professional-spinner {

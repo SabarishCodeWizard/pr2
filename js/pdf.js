@@ -21,7 +21,7 @@ class PDFGenerator {
             return [];
         }
     }
-    
+
     // Save as PDF file
     static async saveAsPDF() {
         if (!Utils.validateForm()) {
@@ -370,6 +370,103 @@ class PDFGenerator {
                     margin-top: 50px;
                     font-size: 12px;
                 }
+.developer-credit {
+    /* From Option 3 - Floating & Fixed Positioning */
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    animation: float 3s ease-in-out infinite;
+    
+    /* From Option 4 - Tag/Label Styling */
+    background: #F8F9FA;
+    color: #495057;
+    padding: 12px 20px;
+    border-left: 4px solid #007BFF;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 2px 2px 15px rgba(0,0,0,0.1);
+    
+    /* Combined Text Styling */
+    text-align: center;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Floating animation from Option 3 */
+@keyframes float {
+    0%, 100% { 
+        transform: translateY(0) translateX(0); 
+    }
+    50% { 
+        transform: translateY(-5px) translateX(0); 
+    }
+}
+
+/* Developer emoji from Option 4 */
+.developer-credit:before {
+    content: '👨‍💻';
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+/* Link styling - Combined best of both */
+.developer-credit a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: bold;
+    background: white;
+    padding: 3px 10px;
+    border-radius: 15px;
+    border: 1px solid #007BFF;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Phone icon from Option 3 adaptation */
+.developer-credit a:before {
+    content: '📞';
+    margin-right: 4px;
+    font-size: 10px;
+}
+
+/* Hover effects - Combined */
+.developer-credit a:hover {
+    background: #007BFF;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Optional: Add a subtle pulse effect for attention */
+@keyframes subtlePulse {
+    0%, 100% { 
+        box-shadow: 2px 2px 15px rgba(0,0,0,0.1);
+    }
+    50% { 
+        box-shadow: 2px 2px 20px rgba(0, 123, 255, 0.2);
+    }
+}
+
+.developer-credit {
+    animation: float 3s ease-in-out infinite, subtlePulse 4s ease-in-out infinite;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+    .developer-credit {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        margin: 0;
+        border-radius: 8px;
+        border-left: 4px solid #007BFF;
+        font-size: 10px;
+        padding: 10px 15px;
+    }
+}
                 .signature-line {
                     border-top: 1px solid #333;
                     margin: 25px 0 5px;
@@ -572,6 +669,9 @@ class PDFGenerator {
                     </div>
                 </div>
 
+                <div class="developer-credit">
+    Software created by <strong>Sabarish R</strong>. For custom billing solutions, contact: <a href="tel:7845081278">7845081278</a>
+</div>
                 <!-- Print Instructions -->
                 <div class="no-print" style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #007bff;">
                     <h4 style="margin: 0 0 10px 0; color: #007bff;">Instructions:</h4>

@@ -7,27 +7,27 @@ class ShortcutManager {
 
     async init() {
         try {
-            this.showLoading('Initializing Shortcuts Manager', 'Loading your product shortcuts...');
+            // REMOVED: this.showLoading('Initializing Shortcuts Manager', 'Loading your product shortcuts...');
             
             // Wait for database to be ready using the new ensureInitialized method
             await db.ensureInitialized();
             
-            // Show skeleton loading for table
+            // Show skeleton loading for table before loading data
             this.showTableSkeleton();
             
             await this.loadShortcuts();
             this.setupEventListeners();
             
-            this.hideLoading();
+            // REMOVED: this.hideLoading();
             
         } catch (error) {
-            this.hideLoading();
+            // REMOVED: this.hideLoading();
             console.error('Error initializing shortcut manager:', error);
             this.showErrorState('Failed to initialize shortcuts manager. Please refresh the page.');
         }
     }
 
-    // Loading spinner functions
+    // Loading spinner functions (Kept for action buttons/modals, but removed from init/load)
     showLoading(message = 'Loading...', subtext = '') {
         this.hideLoading();
         
@@ -156,6 +156,7 @@ class ShortcutManager {
             addButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
             addButton.classList.add('btn-processing');
 
+            // Show global loading only for the database write
             this.showLoading('Adding Shortcut', 'Saving to database...');
 
             const shortcutData = {
@@ -170,7 +171,7 @@ class ShortcutManager {
             document.getElementById('shortcutKey').value = '';
             document.getElementById('fullDescription').value = '';
             
-            // Reload shortcuts
+            // Reload shortcuts (this will include the table skeleton while loading)
             await this.loadShortcuts();
             
             this.hideLoading();
@@ -202,6 +203,7 @@ class ShortcutManager {
     async saveShortcut(shortcutData) {
         await db.ensureInitialized();
         try {
+            // Using the shortcut key as the document ID for easy lookup/overwrite
             await db.firestore.collection('shortcuts').doc(shortcutData.shortcutKey).set(shortcutData);
             console.log('Shortcut saved successfully to Firebase');
             return shortcutData.shortcutKey;
@@ -213,7 +215,7 @@ class ShortcutManager {
 
     async loadShortcuts() {
         try {
-            // Show table skeleton while loading
+            // Show table skeleton while loading (non-blocking visual feedback)
             this.showTableSkeleton();
             
             const shortcuts = await this.getAllShortcuts();
@@ -407,26 +409,54 @@ class ShortcutManager {
         }
     }
 
-    searchShortcuts(query) {
+    async searchShortcuts(query) {
+        // Show table skeleton immediately if data is not loaded yet
+        const tableBody = document.getElementById('shortcutsTableBody');
         const rows = document.querySelectorAll('#shortcutsTableBody tr');
+        
+        if (rows.length === 0 || rows[0].classList.contains('skeleton-loader')) {
+            // Data hasn't loaded yet, just wait for loadShortcuts
+            return;
+        }
+        
         const searchTerm = query.toLowerCase();
 
-        // Show loading for search if many items
-        if (rows.length > 10) {
+        // Use temporary global loading for large filtering operations for better perceived speed
+        if (rows.length > 20) {
             this.showLoading('Searching', 'Filtering shortcuts...');
             setTimeout(() => this.hideLoading(), 300);
         }
 
+        let foundCount = 0;
         rows.forEach(row => {
+            // Check if the row contains skeleton data or empty message before trying to filter
+            if (row.querySelector('.skeleton-loader') || row.cells.length < 3) {
+                row.style.display = ''; 
+                return;
+            }
+            
             const shortcutKey = row.cells[0].textContent.toLowerCase();
             const fullDescription = row.cells[1].textContent.toLowerCase();
             
             if (shortcutKey.includes(searchTerm) || fullDescription.includes(searchTerm)) {
                 row.style.display = '';
+                foundCount++;
             } else {
                 row.style.display = 'none';
             }
         });
+        
+        // Handle no results found after filtering
+        if (foundCount === 0 && searchTerm !== '') {
+            if (!document.getElementById('noSearchResults')) {
+                tableBody.insertAdjacentHTML('afterbegin', `<tr id="noSearchResults"><td colspan="3" style="text-align: center; padding: 20px; color: #e74c3c;">No results found for "${query}".</td></tr>`);
+            } else {
+                document.getElementById('noSearchResults').style.display = '';
+                document.getElementById('noSearchResults').cells[0].textContent = `No results found for "${query}".`;
+            }
+        } else if (document.getElementById('noSearchResults')) {
+             document.getElementById('noSearchResults').style.display = 'none';
+        }
     }
 
     closeModal() {
@@ -499,21 +529,10 @@ class ShortcutManager {
 // Enhanced initialization with error handling
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        // Show initial loading
-        const mainContent = document.querySelector('.main') || document.querySelector('.container');
-        if (mainContent) {
-            mainContent.style.opacity = '0.7';
-        }
-
+        // REMOVED: Initial mainContent opacity manipulation
+        
         // Create shortcuts manager
         window.shortcutManager = new ShortcutManager();
-        
-        // Restore opacity after initialization
-        setTimeout(() => {
-            if (mainContent) {
-                mainContent.style.opacity = '1';
-            }
-        }, 500);
         
     } catch (error) {
         console.error('Failed to initialize shortcut manager:', error);
@@ -536,4 +555,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             `;
         }
     }
+    
+    // Auth check
+    function checkAuthentication() {
+        const isAuthenticated = localStorage.getItem('isAuthenticated');
+        if (!isAuthenticated || isAuthenticated !== 'true') {
+            window.location.href = 'login.html';
+        }
+    }
+    checkAuthentication();
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    });
 });

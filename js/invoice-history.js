@@ -48,12 +48,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     try {
-        showLoading('Loading Invoice History', 'Initializing database and loading recent invoices...');
-
         // Initialize database
+        // NOTE: showLoading is removed as requested for a better UX.
         await db.init();
 
-        // Load recent invoices
+        // Load recent invoices - uses its own skeleton loading now
         await loadRecentInvoices();
 
         // Check for URL parameters
@@ -64,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             document.getElementById('searchInput').value = searchParam;
         }
 
-        // Load all invoices
+        // Load all invoices - uses skeleton loading now
         await loadInvoices();
 
         // Add event listeners
@@ -74,17 +73,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('generateCustomerStatement').addEventListener('click', searchCustomerInvoices);
         document.getElementById('clearCustomerStatement').addEventListener('click', clearCustomerStatement);
 
-        hideLoading();
-
     } catch (error) {
-        hideLoading();
         console.error('Error during page initialization:', error);
         alert('Error loading invoice history page. Please refresh.');
     }
 });
 
 
-// Update searchCustomerInvoices with loading
+// Update searchCustomerInvoices with section-specific skeleton loading
 async function searchCustomerInvoices() {
     const customerName = document.getElementById('customerSearch').value.trim();
 
@@ -94,14 +90,13 @@ async function searchCustomerInvoices() {
     }
 
     try {
-        showLoading('Searching Customer Invoices', `Looking for invoices for ${customerName}...`);
+        // Show skeleton loading for customer statement area
+        showSkeletonLoadingCustomerStatement();
 
         const invoices = await db.getAllInvoices();
         const customerInvoices = invoices.filter(invoice =>
             invoice.customerName.toLowerCase().includes(customerName.toLowerCase())
         );
-
-        hideLoading();
 
         if (customerInvoices.length === 0) {
             document.getElementById('customerStatementResults').innerHTML = `
@@ -115,8 +110,8 @@ async function searchCustomerInvoices() {
 
         displayCustomerStatementResults(customerName, customerInvoices);
     } catch (error) {
-        hideLoading();
         console.error('Error searching customer invoices:', error);
+        document.getElementById('customerStatementResults').innerHTML = `<p class="error-state">Error loading customer statement.</p>`;
         alert('Error searching customer invoices.');
     }
 
@@ -698,9 +693,12 @@ async function generateCombinedPDFStatement(customerName, invoices) {
     }
 }
 
-// Load and display recent invoices (last 5 by invoice number)
+// Load and display recent invoices (last 5 by invoice number) - with skeleton loading
 async function loadRecentInvoices() {
     try {
+        // Show skeleton loading for recent invoices
+        showSkeletonLoadingRecentInvoices(5);
+
         const invoices = await db.getAllInvoices();
 
         // Sort by invoice number in descending order (highest numbers first)
@@ -716,6 +714,9 @@ async function loadRecentInvoices() {
         displayRecentInvoices(recentInvoices);
     } catch (error) {
         console.error('Error loading recent invoices:', error);
+        // Display error message
+        const recentInvoicesList = document.getElementById('recentInvoicesList');
+        recentInvoicesList.innerHTML = '<p class="error-state">Error loading recent invoices.</p>';
     }
 }
 // Display recent invoices at the top
@@ -902,16 +903,16 @@ async function displayInvoices(invoices) {
                     </button>
 
                     
-    ${invoice.amountPaid > 0 ? `
-        <button class="btn-payment-history" onclick="viewPaymentHistory('${invoice.invoiceNo}')">
-            <i class="fas fa-history"></i> Payment History (₹${Utils.formatCurrency(invoice.amountPaid)})
-        </button>
-    ` : ''}
-                ${invoice.totalReturns > 0 ? `
-                    <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
-                        <i class="fas fa-history"></i> View/Undo Returns (₹${Utils.formatCurrency(invoice.totalReturns)})
-                    </button>
-                ` : ''}
+        ${invoice.amountPaid > 0 ? `
+            <button class="btn-payment-history" onclick="viewPaymentHistory('${invoice.invoiceNo}')">
+                <i class="fas fa-history"></i> Payment History (₹${Utils.formatCurrency(invoice.amountPaid)})
+            </button>
+        ` : ''}
+                    ${invoice.totalReturns > 0 ? `
+                        <button class="btn-return-status" onclick="viewReturnStatus('${invoice.invoiceNo}')">
+                            <i class="fas fa-history"></i> View/Undo Returns (₹${Utils.formatCurrency(invoice.totalReturns)})
+                        </button>
+                    ` : ''}
                     <button class="btn-delete" onclick="deleteInvoice('${invoice.invoiceNo}')">Delete</button>
                 </div>
             </div>
@@ -1045,30 +1046,30 @@ ${invoicesWithReturns.map((invoice, index) => {
             // Build product details
             const productDetails = invoice.products && invoice.products.length > 0 ?
                 `\n📦 *PRODUCTS:*\n${invoice.products.map((product, index) =>
-                    `   ${index + 1}. ${product.description}\n      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
+                    `   ${index + 1}. ${product.description}\n      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)} = ₹${Utils.formatCurrency(product.amount)}`
                 ).join('\n')}` : '';
 
             // Build return details
             const returnDetails = invoice.returns && invoice.returns.length > 0 ?
                 `\n🔄 *RETURNS:*\n${invoice.returns.map((returnItem, index) =>
-                    `   ${index + 1}. ${returnItem.description}\n      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
+                    `   ${index + 1}. ${returnItem.description}\n      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)} = -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
                 ).join('\n')}` : '';
 
             return `*INVOICE #${invoice.invoiceNo}* ${index < invoicesWithReturns.length - 1 ? '┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄' : ''}
 📅 Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
 
 💰 *BILL SUMMARY:*
-   Current Bill: ₹${Utils.formatCurrency(invoice.subtotal)}
-   ${previousBalance > 0 ? `Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
-   Total Amount: ₹${Utils.formatCurrency(invoice.grandTotal)}
-   Amount Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}${paymentDetails}
-   ${invoice.totalReturns > 0 ? `Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
+   Current Bill: ₹${Utils.formatCurrency(invoice.subtotal)}
+   ${previousBalance > 0 ? `Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
+   Total Amount: ₹${Utils.formatCurrency(invoice.grandTotal)}
+   Amount Paid: ₹${Utils.formatCurrency(invoice.amountPaid)}${paymentDetails}
+   ${invoice.totalReturns > 0 ? `Returns: -₹${Utils.formatCurrency(invoice.totalReturns)}` : ''}
 
 ${productDetails}${returnDetails}
 
 ${invoice.totalReturns > 0 ?
-                    `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` :
-                    `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
+                `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` :
+                `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
         }).join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1078,9 +1079,9 @@ ${invoice.totalReturns > 0 ?
 📊 Total Invoices: ${totalInvoices}
 💰 Total Current Bill Amount: ₹${Utils.formatCurrency(totalCurrentBillAmount)}
 💳 Total Amount Paid: ₹${Utils.formatCurrency(totalPaid)}
-${totalCashPaid > 0 ? `   💵 Cash: ₹${Utils.formatCurrency(totalCashPaid)}` : ''}
-${totalUpiPaid > 0 ? `   📱 UPI: ₹${Utils.formatCurrency(totalUpiPaid)}` : ''}
-${totalAccountPaid > 0 ? `   🏦 Account: ₹${Utils.formatCurrency(totalAccountPaid)}` : ''}
+${totalCashPaid > 0 ? `   💵 Cash: ₹${Utils.formatCurrency(totalCashPaid)}` : ''}
+${totalUpiPaid > 0 ? `   📱 UPI: ₹${Utils.formatCurrency(totalUpiPaid)}` : ''}
+${totalAccountPaid > 0 ? `   🏦 Account: ₹${Utils.formatCurrency(totalAccountPaid)}` : ''}
 ${totalReturns > 0 ? `🔄 Total Returns: -₹${Utils.formatCurrency(totalReturns)}` : ''}
 
 ${totalReturns > 0 ?
@@ -1168,9 +1169,9 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
 *PRODUCT DETAILS*
 ────────────────────────────────
 ${invoiceData.products.map((product, index) =>
-            `   ${index + 1}. ${product.description}
-      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)}
-      Amount: ₹${Utils.formatCurrency(product.amount)}`
+            `   ${index + 1}. ${product.description}
+      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)}
+      Amount: ₹${Utils.formatCurrency(product.amount)}`
         ).join('\n\n')}
 
 ${totalReturns > 0 ? `
@@ -1179,9 +1180,9 @@ ${totalReturns > 0 ? `
 *RETURN DETAILS*
 ────────────────────────────────
 ${returns.map((returnItem, index) =>
-            `   ${index + 1}. ${returnItem.description}
-      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)}
-      Amount: -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
+            `   ${index + 1}. ${returnItem.description}
+      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)}
+      Amount: -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
         ).join('\n\n')}
 ` : ''}
 
@@ -1779,8 +1780,7 @@ async function addReturn(invoiceNo) {
                     <div class="return-products-section">
                         <h4>Return Products</h4>
                         <div class="return-products-list" id="returnProductsList">
-                            <!-- Return items will be added here -->
-                        </div>
+                            </div>
                         <button type="button" class="btn-add-return-item" onclick="addReturnItemFromDialog()">
                             <i class="fas fa-plus"></i> Add Return Item
                         </button>
@@ -2966,7 +2966,7 @@ function hideLoading() {
     }
 }
 
-// Show skeleton loading for invoice list
+// Show skeleton loading for invoice list (main content)
 function showSkeletonLoading(count = 3) {
     const invoicesList = document.getElementById('invoicesList');
     if (!invoicesList) return;
@@ -2978,6 +2978,34 @@ function showSkeletonLoading(count = 3) {
 
     invoicesList.innerHTML = skeletonHTML;
 }
+
+// NEW: Show skeleton loading for recent invoices
+function showSkeletonLoadingRecentInvoices(count = 5) {
+    const recentInvoicesList = document.getElementById('recentInvoicesList');
+    if (!recentInvoicesList) return;
+
+    let skeletonHTML = '';
+    for (let i = 0; i < count; i++) {
+        // Use a slightly different skeleton style for the horizontal layout
+        skeletonHTML += `<div class="skeleton-loader skeleton-recent-item"></div>`;
+    }
+    recentInvoicesList.innerHTML = skeletonHTML;
+}
+
+// NEW: Show skeleton loading for customer statement search results
+function showSkeletonLoadingCustomerStatement(count = 3) {
+    const customerStatementResults = document.getElementById('customerStatementResults');
+    if (!customerStatementResults) return;
+
+    let skeletonHTML = `
+        <div class="skeleton-loader skeleton-summary-stats"></div>
+        <div class="skeleton-loader skeleton-customer-invoice"></div>
+        <div class="skeleton-loader skeleton-customer-invoice"></div>
+        <div class="skeleton-loader skeleton-customer-invoice"></div>
+    `;
+    customerStatementResults.innerHTML = skeletonHTML;
+}
+
 
 // Enhanced loading with timeout
 function showLoadingWithTimeout(message, subtext = '', timeout = 30000) {
@@ -3009,16 +3037,3 @@ async function getDateWiseStatistics() {
         return null;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

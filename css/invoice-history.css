@@ -1273,3 +1273,96 @@ body {
         font-size: 0.9rem;
     }
 }
+
+/* ... existing CSS up to Section 9 ... */
+
+/* --- 9. Loading and Toast Messages --- */
+
+/* Professional Spinner (from JS) */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.professional-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.spinner-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.spinner-subtext {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-top: 5px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Skeleton Loader BASE */
+.skeleton-loader {
+    /* Base for the shimmer effect */
+    background: #f0f0f0;
+    background-image: linear-gradient(to right, #f0f0f0 0%, #e0e0e0 20%, #f0f0f0 40%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -800px 0; }
+    100% { background-position: 800px 0; }
+}
+
+/* Specific Skeleton Styles (mimicking element shapes) */
+.skeleton-invoice-item {
+    height: 150px; /* For the main invoice list items */
+}
+
+/* NEW: For recent invoices (horizontal cards) */
+.skeleton-recent-item {
+    height: 70px;
+    width: 200px;
+    flex-shrink: 0;
+    display: inline-block; /* Allows horizontal alignment */
+}
+
+/* NEW: For customer statement summary stats */
+.skeleton-summary-stats {
+    height: 70px;
+    margin-bottom: 25px;
+}
+
+/* NEW: For customer statement invoice list items */
+.skeleton-customer-invoice {
+    height: 40px;
+    margin-bottom: 10px;
+}
+
+/* Toast Messages */
+.operation-toast {
+/* ... existing toast CSS ... */
+}

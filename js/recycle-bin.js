@@ -7,6 +7,9 @@ class RecycleBinManager {
     }
 
     async init() {
+        // Show skeleton immediately
+        this.showBinSkeletonLoading();
+        
         await this.setupEventListeners();
         await this.loadRecycleBinItems();
     }
@@ -34,6 +37,12 @@ class RecycleBinManager {
 
         // Modal event listeners
         this.setupModalEventListeners();
+        
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
     }
 
     setupModalEventListeners() {
@@ -75,7 +84,7 @@ class RecycleBinManager {
 
         // Close modals on X button
         document.querySelectorAll('.close-modal').forEach(button => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (e) => {
                 button.closest('.modal-overlay').style.display = 'none';
             });
         });
@@ -83,19 +92,23 @@ class RecycleBinManager {
 
     async loadRecycleBinItems() {
         try {
+            // Show skeleton loading before fetching
             this.showBinSkeletonLoading();
-            showLoading('Loading Recycle Bin', 'Retrieving deleted items...');
+
+            // REMOVED: showLoading('Loading Recycle Bin', 'Retrieving deleted items...');
 
             const items = await db.getRecycleBinItems();
             this.loadedItems = items;
+            
+            // Re-render data
             this.displayItems(items);
             this.updateStatistics(items);
 
-            hideLoading();
+            // REMOVED: hideLoading();
             this.hideBinSkeletonLoading();
 
         } catch (error) {
-            hideLoading();
+            // REMOVED: hideLoading();
             this.hideBinSkeletonLoading();
             console.error('Error loading recycle bin items:', error);
             this.showError('Failed to load recycle bin items');
@@ -155,7 +168,7 @@ class RecycleBinManager {
                 </div>
             </div>
         </div>
-    `;
+        `;
     }
 
     attachItemEventListeners() {
@@ -187,10 +200,17 @@ class RecycleBinManager {
             oldestDate = new Date(Math.min(...dates));
         }
 
-        document.getElementById('totalItems').textContent = totalItems;
-        document.getElementById('totalInvoices').textContent = invoiceItems;
-        document.getElementById('oldestItem').textContent = oldestDate ?
-            `${Math.floor((new Date() - oldestDate) / (1000 * 60 * 60 * 24))} days` : '-';
+        // Only update if elements exist (hideBinSkeletonLoading clears the skeleton placeholders)
+        const totalItemsEl = document.getElementById('totalItems');
+        const totalInvoicesEl = document.getElementById('totalInvoices');
+        const oldestItemEl = document.getElementById('oldestItem');
+        
+        if (totalItemsEl) totalItemsEl.textContent = totalItems;
+        if (totalInvoicesEl) totalInvoicesEl.textContent = invoiceItems;
+        if (oldestItemEl) {
+             oldestItemEl.textContent = oldestDate ?
+                `${Math.floor((new Date() - oldestDate) / (1000 * 60 * 60 * 24))} days` : '-';
+        }
     }
 
     filterItems() {
@@ -231,16 +251,21 @@ class RecycleBinManager {
     async confirmRestore() {
         if (!this.currentRestoreItem) return;
 
+        const restoreButton = document.getElementById('confirmRestore');
+
         try {
             showLoading('Restoring Item', 'Please wait while we restore the item...');
             
-            const restoreButton = document.querySelector(`[data-id="${this.currentRestoreItem}"]`);
             await db.restoreFromRecycleBin(this.currentRestoreItem);
             
+            // Find the element *before* reloading, as the ID might be reused or item removed
+            const originalButton = document.querySelector(`.btn-restore[data-id="${this.currentRestoreItem}"]`); 
+
             await this.loadRecycleBinItems();
             this.hideRestoreModal();
             
-            showButtonSuccess(restoreButton);
+            // Show success state on the button associated with the action
+            if (originalButton) showButtonSuccess(originalButton); 
             showToast('Item restored successfully!', 'success');
             
         } catch (error) {
@@ -299,15 +324,20 @@ class RecycleBinManager {
     }
 
     async confirmEmptyBin() {
+        const confirmButton = document.getElementById('confirmEmptyBin');
+        const originalButton = confirmButton.innerHTML;
+
         try {
+            confirmButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            confirmButton.disabled = true;
+
             showLoading('Emptying Recycle Bin', 'Permanently deleting all items...');
             
-            const emptyBinBtn = document.getElementById('emptyBinBtn');
             const deletedCount = await db.emptyRecycleBin();
             await this.loadRecycleBinItems();
             this.hideEmptyBinModal();
             
-            showButtonSuccess(emptyBinBtn);
+            showButtonSuccess(document.getElementById('emptyBinBtn'));
             showToast(`Recycle bin emptied! ${deletedCount} items deleted.`, 'success');
             
         } catch (error) {
@@ -315,6 +345,8 @@ class RecycleBinManager {
             showToast('Failed to empty recycle bin', 'error');
         } finally {
             hideLoading();
+            confirmButton.innerHTML = originalButton;
+            confirmButton.disabled = false;
         }
     }
 
@@ -332,6 +364,13 @@ class RecycleBinManager {
                     </button>
                 </div>
             `;
+        }
+        // Also clear stats skeleton on error
+        const binStats = document.querySelector('.bin-stats');
+        if (binStats) {
+            binStats.querySelector('#totalItems').textContent = 'N/A';
+            binStats.querySelector('#totalInvoices').textContent = 'N/A';
+            binStats.querySelector('#oldestItem').textContent = 'Error';
         }
     }
 
@@ -371,28 +410,30 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     try {
-        showLoading('Initializing Recycle Bin', 'Setting up the recycle bin system...');
+        // REMOVED: showLoading('Initializing Recycle Bin', 'Setting up the recycle bin system...');
         
         await db.init();
         window.recycleBinManager = new RecycleBinManager();
         
-        hideLoading();
+        // REMOVED: hideLoading();
         
     } catch (error) {
-        hideLoading();
+        // REMOVED: hideLoading();
         console.error('Failed to initialize recycle bin:', error);
         
-        // Show error state
-        const mainContainer = document.querySelector('.main');
+        // Show persistent error state on failure
+        const mainContainer = document.querySelector('.main-content-wrapper');
         if (mainContainer) {
             mainContainer.innerHTML = `
-                <div class="error-state">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 16px;"></i>
-                    <h3>Error Initializing Recycle Bin</h3>
-                    <p>There was an error loading the recycle bin. Please refresh the page.</p>
-                    <button onclick="location.reload()" class="btn-retry">
-                        <i class="fas fa-redo"></i> Refresh Page
-                    </button>
+                <div class="recycle-bin-container">
+                    <div class="error-state" style="padding: 50px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 16px;"></i>
+                        <h3>Critical Error Initializing Recycle Bin</h3>
+                        <p>There was an error loading the database. Please check your connection or permissions.</p>
+                        <button onclick="location.reload()" class="btn-retry" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 15px; cursor: pointer;">
+                            <i class="fas fa-redo"></i> Refresh Page
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -409,7 +450,7 @@ function checkAuthentication() {
     return true;
 }
 
-// Professional loading spinner functions
+// Professional loading spinner functions (Kept for action feedback)
 function showLoading(message = 'Loading...', subtext = '') {
     // Remove existing loading overlay if any
     hideLoading();
@@ -436,6 +477,12 @@ function hideLoading() {
 function showBinSkeletonLoading() {
     const itemsList = document.getElementById('itemsList');
     const binStats = document.querySelector('.bin-stats');
+    const binContainer = document.querySelector('.recycle-bin-container');
+    
+    // Set container to loading state
+    if (binContainer) {
+        binContainer.classList.add('bin-loading');
+    }
     
     if (itemsList) {
         // Skeleton for items list
@@ -447,20 +494,18 @@ function showBinSkeletonLoading() {
     }
     
     if (binStats) {
-        // Skeleton for statistics
+        // Skeleton for statistics (clearing original content before loading)
         const statItems = binStats.querySelectorAll('.stat-item');
         statItems.forEach(stat => {
             const statInfo = stat.querySelector('.stat-info h3');
             if (statInfo) {
                 statInfo.innerHTML = '<div class="skeleton-loader" style="height: 20px; width: 60px;"></div>';
             }
+            const statPara = stat.querySelector('.stat-info p');
+            if (statPara) {
+                 statPara.innerHTML = '<div class="skeleton-loader" style="height: 12px; width: 80px; margin-top: 5px;"></div>';
+            }
         });
-    }
-    
-    // Add loading class to container
-    const binContainer = document.querySelector('.recycle-bin-container');
-    if (binContainer) {
-        binContainer.classList.add('bin-loading');
     }
 }
 
@@ -468,6 +513,17 @@ function hideBinSkeletonLoading() {
     const binContainer = document.querySelector('.recycle-bin-container');
     if (binContainer) {
         binContainer.classList.remove('bin-loading');
+    }
+    // Re-ensure text content is displayed after hiding skeleton
+    const binStats = document.querySelector('.bin-stats');
+    if (binStats) {
+        const statItems = binStats.querySelectorAll('.stat-item');
+        statItems.forEach(stat => {
+            const statInfo = stat.querySelector('.stat-info h3 .skeleton-loader');
+            if (statInfo) statInfo.remove();
+            const statPara = stat.querySelector('.stat-info p .skeleton-loader');
+            if (statPara) statPara.remove();
+        });
     }
 }
 

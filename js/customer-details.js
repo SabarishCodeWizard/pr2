@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     try {
-        showLoading('Loading Customer Details', 'Initializing database and loading customer data...');
+        // REMOVED: showLoading('Loading Customer Details', 'Initializing database and loading customer data...');
 
         // Setup event listeners first
         setupEventListeners();
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             throw new Error(`Missing required page elements: ${missingElements.join(', ')}`);
         }
 
-        // Show skeleton loading
+        // Show skeleton loading for immediate feedback
         showStatsSkeleton();
         showTableSkeleton();
 
@@ -68,10 +68,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Load all customers
         await loadAllCustomers();
 
-        hideLoading();
+        // REMOVED: hideLoading();
 
     } catch (error) {
-        hideLoading();
+        // REMOVED: hideLoading();
+        hideStatsSkeleton(); // Ensure skeleton is hidden on error
         console.error('Error during customer details page initialization:', error);
         showErrorState('Failed to load customer data: ' + error.message);
     }
@@ -80,7 +81,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 async function loadAllCustomers() {
     try {
-        showLoading('Loading Customers', 'Processing customer data and calculating statistics...');
+        // ADDED: Show skeleton loaders before fetching/processing
+        showStatsSkeleton();
+        showTableSkeleton();
+
+        // REMOVED: showLoading('Loading Customers', 'Processing customer data and calculating statistics...');
 
         const invoices = await db.getAllInvoices();
         const customers = await processCustomerData(invoices);
@@ -92,19 +97,18 @@ async function loadAllCustomers() {
 
         console.log('✅ Customer data processed, updating statistics...');
         
-        // Update statistics FIRST (while skeleton is still showing)
+        // Update statistics (this will hide the stats skeleton inside)
         updateStatistics(customers);
         
-        // THEN hide skeleton and display customers
-        hideStatsSkeleton();
+        // Display customers (this overwrites the table skeleton)
         displayCustomers(customers);
 
-        hideLoading();
+        // REMOVED: hideLoading();
         console.log('✅ All customer data loaded successfully');
 
     } catch (error) {
-        hideLoading();
-        hideStatsSkeleton(); // Ensure skeleton is hidden on error
+        // REMOVED: hideLoading();
+        hideStatsSkeleton(); // Ensure stats skeleton is hidden on error
         console.error('Error loading customers:', error);
         showErrorState('Error loading customer data: ' + error.message);
     }
@@ -136,7 +140,8 @@ function setupEventListeners() {
     }
 
     if (exportBtn) {
-        exportBtn.addEventListener('click', exportCustomers);
+        // Changed to use the advanced export options by default for better UX
+        exportBtn.addEventListener('click', exportCustomersWithOptions);
     }
 
     if (logoutBtn) {
@@ -157,7 +162,7 @@ function setupEventListeners() {
 // Process invoice data to get customer summaries - ENHANCED error handling
 async function processCustomerData(invoices) {
     try {
-        showLoading('Processing Data', 'Analyzing invoices and calculating returns...');
+        // REMOVED: showLoading('Processing Data', 'Analyzing invoices and calculating returns...');
 
         // Validate input
         if (!invoices || !Array.isArray(invoices)) {
@@ -297,21 +302,12 @@ function updateStatistics(customers) {
         pendingBalance: !!pendingBalanceEl
     });
 
-    // Check if required elements exist - if not, try to recover
+    // We rely on the skeleton cleanup to restore structure if needed, 
+    // so we just check for null elements before updating them.
     if (!totalCustomersEl || !totalInvoicesEl || !totalRevenueEl || !totalPaidEl || !pendingBalanceEl) {
-        console.warn('⚠️ Some statistics elements not found, attempting recovery...');
-        
-        // Try to restore original HTML if possible
-        const statsContainer = document.querySelector('.stats-cards');
-        if (statsContainer && statsContainer.dataset.originalHTML) {
-            console.log('🔄 Restoring original statistics HTML...');
-            statsContainer.innerHTML = statsContainer.dataset.originalHTML;
-            // Retry getting elements after restoration
-            return updateStatistics(customers); // Recursive call
-        } else {
-            console.error('❌ Cannot recover statistics elements, skipping update');
-            return;
-        }
+        console.error('❌ Missing required statistics elements, skipping update.');
+        hideStatsSkeleton(); // Important: ensure skeleton state is removed if data update fails
+        return;
     }
 
     // Calculate statistics
@@ -343,6 +339,9 @@ function updateStatistics(customers) {
 
     // Apply color coding
     applyStatisticsColorCoding(pendingBalance);
+    
+    // Hide skeleton effect
+    hideStatsSkeleton();
 
     console.log('✅ Statistics updated successfully');
 }
@@ -460,11 +459,11 @@ function displayCustomers(customers) {
                     <div class="invoice-numbers-list">
                         ${customer.allInvoiceNumbers.map(invoiceNo =>
             `<span class="invoice-number-badge" 
-                                  onclick="viewInvoice('${escapeHtml(invoiceNo)}')"
-                                  onmouseenter="showInvoicePopup('${escapeHtml(invoiceNo)}', this)"
-                                  onmouseleave="setTimeout(() => closeInvoicePopup(), 100)">
-                                #${escapeHtml(invoiceNo)}
-                            </span>`
+                                     onclick="viewInvoice('${escapeHtml(invoiceNo)}')"
+                                     onmouseenter="showInvoicePopup('${escapeHtml(invoiceNo)}', this)"
+                                     onmouseleave="setTimeout(() => closeInvoicePopup(), 100)">
+                                     #${escapeHtml(invoiceNo)}
+                                </span>`
         ).join('')}
                     </div>
                 </div>
@@ -500,9 +499,13 @@ function escapeHtml(unsafe) {
 }
 
 
-// Search customers - UPDATED with loading
+// Search customers - UPDATED with skeleton loading
 async function searchCustomers() {
     const searchTerm = document.getElementById('customerSearch').value.trim().toLowerCase();
+
+    // Show skeleton loaders before starting search
+    showStatsSkeleton();
+    showTableSkeleton();
 
     if (!searchTerm) {
         await loadAllCustomers();
@@ -510,7 +513,7 @@ async function searchCustomers() {
     }
 
     try {
-        showLoading('Searching Customers', `Searching for "${searchTerm}"...`);
+        // REMOVED: showLoading('Searching Customers', `Searching for "${searchTerm}"...`);
 
         const invoices = await db.getAllInvoices();
         let customers = await processCustomerData(invoices);
@@ -526,10 +529,11 @@ async function searchCustomers() {
         updateStatistics(customers);
         displayCustomers(customers);
 
-        hideLoading();
+        // REMOVED: hideLoading();
 
     } catch (error) {
-        hideLoading();
+        // REMOVED: hideLoading();
+        hideStatsSkeleton();
         console.error('Error searching customers:', error);
         alert('Error searching customers.');
     }
@@ -723,7 +727,7 @@ async function showInvoicePopup(invoiceNo, element) {
                                 </div>
                             `).join('')}
                             ${invoiceData.products.length > 3 ?
-                    `<div class="more-products">+ ${invoiceData.products.length - 3} more items</div>` : ''}
+                        `<div class="more-products">+ ${invoiceData.products.length - 3} more items</div>` : ''}
                         </div>
                     </div>
                     ` : ''}
@@ -783,64 +787,10 @@ function closeInvoicePopup() {
 
 
 
-// Export customers to CSV - UPDATED with loading
+// Export customers to CSV - REMOVED, relying on advanced export
 async function exportCustomers() {
-    try {
-        showLoading('Preparing Export', 'Collecting customer data and generating CSV...');
-
-        const invoices = await db.getAllInvoices();
-        const customers = await processCustomerData(invoices);
-
-        if (customers.length === 0) {
-            hideLoading();
-            alert('No customer data to export.');
-            return;
-        }
-
-        // Create CSV content
-        let csvContent = 'Customer Name,Phone,Address,Total Invoices,Total Amount,Amount Paid,Returns,Balance Due,Last Invoice,Last Invoice Date\n';
-
-        customers.forEach(customer => {
-            const customerBalance = customer.totalCurrentBillAmount - customer.amountPaid - customer.totalReturns;
-
-            const row = [
-                `"${customer.name.replace(/"/g, '""')}"`,
-                `"${customer.phone || 'N/A'}"`,
-                `"${(customer.address || 'N/A').replace(/"/g, '""')}"`,
-                customer.totalInvoices,
-                customer.totalCurrentBillAmount,
-                customer.amountPaid,
-                customer.totalReturns,
-                customerBalance,
-                customer.lastInvoiceNo || 'N/A',
-                customer.lastInvoiceDate ? new Date(customer.lastInvoiceDate).toLocaleDateString('en-IN') : 'N/A'
-            ].join(',');
-
-            csvContent += row + '\n';
-        });
-
-        // Create and download CSV file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        const timestamp = new Date().toISOString().split('T')[0];
-        link.setAttribute('href', url);
-        link.setAttribute('download', `PR_Fabrics_Customers_${timestamp}.csv`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        hideLoading();
-        showExportSuccess(customers.length);
-
-    } catch (error) {
-        hideLoading();
-        console.error('Error exporting customers:', error);
-        alert('Error exporting customer data. Please try again.');
-    }
+    // Redirect to advanced export for consistency
+    exportCustomersWithOptions();
 }
 
 
@@ -1523,7 +1473,7 @@ function showTableSkeleton() {
     tableBody.innerHTML = skeletonHTML;
 }
 
-// Show skeleton loading for statistics cards - PRESERVE ORIGINAL CONTENT
+// Show skeleton loading for statistics cards - REVISED to rely on CSS
 function showStatsSkeleton() {
     const statsContainer = document.querySelector('.stats-cards');
     if (!statsContainer) {
@@ -1531,11 +1481,37 @@ function showStatsSkeleton() {
         return;
     }
 
-    // Just add a loading class for visual indication
+    // Add the loading class. Assume CSS handles the visual effect by applying a skeleton over the existing content.
     statsContainer.classList.add('loading');
     
-    // Don't modify the content - just show visual loading state
-    console.log('📊 Statistics skeleton shown (content preserved)');
+    // Check if the original stat content is missing (e.g., due to an earlier error) and inject minimal skeleton placeholders if needed.
+    const hasContent = !!document.getElementById('totalCustomers'); 
+    if (!hasContent) {
+         statsContainer.innerHTML = `
+            <div class="stat-card skeleton-card">
+                <div class="skeleton-loader skeleton-stat-label"></div>
+                <div class="skeleton-loader skeleton-stat-value"></div>
+            </div>
+            <div class="stat-card skeleton-card">
+                <div class="skeleton-loader skeleton-stat-label"></div>
+                <div class="skeleton-loader skeleton-stat-value"></div>
+            </div>
+            <div class="stat-card skeleton-card">
+                <div class="skeleton-loader skeleton-stat-label"></div>
+                <div class="skeleton-loader skeleton-stat-value"></div>
+            </div>
+            <div class="stat-card skeleton-card">
+                <div class="skeleton-loader skeleton-stat-label"></div>
+                <div class="skeleton-loader skeleton-stat-value"></div>
+            </div>
+            <div class="stat-card skeleton-card">
+                <div class="skeleton-loader skeleton-stat-label"></div>
+                <div class="skeleton-loader skeleton-stat-value"></div>
+            </div>
+        `;
+    }
+    
+    console.log('📊 Statistics skeleton shown (CSS class added)');
 }
 
 // Hide skeleton and ensure statistics are ready
@@ -1582,7 +1558,7 @@ function showErrorState(message) {
     if (tableBody) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 40px; color: #e74c3c;">
+                <td colspan="10" style="text-align: center; padding: 40px; color: #e74c3c;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
                     <h3>Error Loading Customer Data</h3>
                     <p>${message}</p>
