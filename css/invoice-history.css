@@ -39,10 +39,10 @@ body {
 /* --- 2. Main Layout and Sidebar (Unified Theme) --- */
 .container {
     display: flex;
-    min-height: 100vh;
+    /* min-height: 100vh; - Removed for fixed layout */
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - NOW FIXED */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -51,6 +51,15 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    
+    /* === FIX: Fixed Position === */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    z-index: 1000;
+    /* =========================== */
 }
 
 .bill-system-header {
@@ -107,16 +116,25 @@ body {
 .view-history-btn {
     background-color: var(--text-dark); 
 }
-.view-history-btn:hover { background-color:  #4a5157; }
+.view-history-btn:hover { background-color:  #4a5157; }
 
 #logoutBtn {
     background-color: var(--danger-color);
 }
 #logoutBtn:hover { background-color: #c82333; }
 
+/* === NEW CLASS: Main Content Area Wrapper === */
+.main-content-wrapper {
+    /* Compensation for fixed sidebar width */
+    margin-left: 250px; 
+    flex-grow: 1; /* Takes up the remaining horizontal space */
+    min-height: 100vh; /* Ensures the wrapper covers the full viewport height */
+}
+/* =========================================== */
+
 /* --- 3. Main Content Area --- */
 .invoice-history-container {
-    flex-grow: 1;
+    /* flex-grow: 1; - Removed because wrapper handles flex now */
     padding: 30px;
     background-color: var(--bg-light);
     display: flex;
@@ -455,7 +473,7 @@ body {
 }
 
 .date-group-header {
-    background-color: var(--purple-color    );
+    background-color: var(--purple-color    );
     padding: 15px 20px;
     border-bottom: 2px solid var(--border-light);
     display: flex;
@@ -1125,25 +1143,45 @@ body {
     }
 
     .controls {
+        /* Revert to static flow for mobile */
+        position: static; 
         width: 100%;
         height: auto;
-        flex-direction: row;
-        flex-wrap: wrap;
+        /* Updated: Ensure space between header and buttons */
+        flex-direction: row; 
+        flex-wrap: wrap; 
         justify-content: space-between;
         align-items: center;
         padding: 15px;
         gap: 15px;
     }
     
+    /* Remove margin when controls are no longer fixed */
+    .main-content-wrapper {
+        margin-left: 0;
+    }
+
     .bill-system-header {
         margin-bottom: 0;
         border-bottom: none;
         padding-bottom: 0;
+        /* New: Ensure header takes full width when buttons wrap */
+        flex-basis: 100%; 
+        text-align: left;
     }
     
+    /* New: For screens below 992px, make the buttons area scrollable if needed */
     .navigation-buttons {
         flex-direction: row;
-        width: auto;
+        width: 100%; /* Take full width to manage buttons */
+        overflow-x: auto; /* Allow horizontal scrolling if buttons are too wide */
+        padding-bottom: 5px; /* Space for potential scrollbar */
+        flex-wrap: nowrap; /* Prevent vertical wrapping of buttons */
+    }
+
+    /* Existing styles for the rest of the layout */
+    .invoice-history-container {
+        padding: 15px;
     }
 }
 
@@ -1228,52 +1266,6 @@ body {
     .return-status-content .returns-list {
         max-height: 300px; /* Reduced max-height for smaller screens */
     }
-}
-
-
-/* --- 10. Responsive Design for Mobile/Small Screens --- */
-@media (max-width: 992px) {
-    /* Main Layout: Sidebar becomes a top bar */
-    .container {
-        flex-direction: column;
-    }
-
-    .controls {
-        width: 100%;
-        height: auto;
-        /* Updated: Ensure space between header and buttons */
-        flex-direction: row; 
-        flex-wrap: wrap; 
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        gap: 15px;
-    }
-    
-    .bill-system-header {
-        margin-bottom: 0;
-        border-bottom: none;
-        padding-bottom: 0;
-        /* New: Ensure header takes full width when buttons wrap */
-        flex-basis: 100%; 
-        text-align: left;
-    }
-    
-    /* New: For screens below 992px, make the buttons area scrollable if needed */
-    .navigation-buttons {
-        flex-direction: row;
-        width: 100%; /* Take full width to manage buttons */
-        overflow-x: auto; /* Allow horizontal scrolling if buttons are too wide */
-        padding-bottom: 5px; /* Space for potential scrollbar */
-        flex-wrap: nowrap; /* Prevent vertical wrapping of buttons */
-    }
-
-    /* Existing styles for the rest of the layout */
-    /* ... (rest of the 992px styles) ... */
-}
-
-@media (max-width: 768px) {
-    /* ... (rest of the 768px styles) ... */
     
     /* Update: Reduce button padding slightly for small screens */
     .view-history-btn, #logoutBtn {

@@ -39,10 +39,10 @@ body {
 /* --- 2. Main Layout and Sidebar (Unified Theme) --- */
 .container {
     display: flex;
-    min-height: 100vh;
+    /* min-height: 100vh; - Removed as controls are fixed */
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - NOW FIXED */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -52,6 +52,15 @@ body {
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     gap: 10px;
+    
+    /* === FIX: Fixed Position === */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    z-index: 1000;
+    /* =========================== */
 }
 
 .bill-system-header {
@@ -152,14 +161,26 @@ body {
     background: var(--success-color) !important;
 }
 
+/* === NEW CLASS: Main Content Area Wrapper === */
+.main-content-wrapper {
+    /* Compensation for fixed sidebar width */
+    margin-left: 250px; 
+    flex-grow: 1; /* Takes up the remaining horizontal space */
+    min-height: 100vh; /* Ensures the wrapper fills the screen height for scrolling */
+    /* overflow-y: auto is not strictly needed here as the body/html handles the scroll, 
+       but if you want to contain the scroll only to this element, you'd add it here. 
+       We will allow the body to scroll for full page effect. */
+}
+/* =========================================== */
+
 /* --- 3. Invoice Container (Main Content Area) --- */
 .invoice-container {
-    flex-grow: 1;
+    /* flex-grow: 1; -> REMOVED because the main-content-wrapper handles flex now */
     padding: var(--padding-lg);
     background-color: var(--bg-white);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     max-width: 900px; /* Standard invoice width approximation */
-    margin: 20px auto;
+    margin: 20px auto; /* Centers the invoice horizontally within the wrapper */
     border-radius: 8px;
 }
 
@@ -698,6 +719,8 @@ body {
         flex-direction: column;
     }
     .controls {
+        /* Revert to static flow for mobile */
+        position: static; 
         width: 100%;
         height: auto;
         flex-direction: row;
@@ -707,6 +730,12 @@ body {
         padding: 15px;
         gap: 15px;
     }
+    
+    /* Revert Main Content Wrapper margin for mobile */
+    .main-content-wrapper {
+        margin-left: 0;
+    }
+
     .bill-system-header, .button-group, #logoutBtn {
         margin: 0;
         padding: 0;

@@ -38,10 +38,10 @@ body {
 /* --- 2. Main Layout and Sidebar (Unified Theme) --- */
 .container {
     display: flex;
-    min-height: 100vh;
+    /* min-height: 100vh; - Removed for fixed layout */
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - NOW FIXED */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -50,6 +50,15 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    
+    /* === FIX: Fixed Position === */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    z-index: 1000;
+    /* =========================== */
 }
 
 .bill-system-header {
@@ -105,12 +114,7 @@ body {
 
 .nav-btn:hover { background-color: #4a5157; }
 
-/* .nav-btn:nth-child(3) {  
-    background-color: var(--primary-color);
-} */
-.nav-btn:nth-child(3):hover {
-    background-color: var(--primary-hover);
-}
+/* The dashboard class already applies the active style for 'Customer Details' */
 
 .logout-btn {
     background-color: var(--danger-color);
@@ -118,9 +122,18 @@ body {
 }
 .logout-btn:hover { background-color: #c82333; }
 
+/* === NEW CLASS: Main Content Area Wrapper === */
+.main-content-wrapper {
+    /* Compensation for fixed sidebar width */
+    margin-left: 250px; 
+    flex-grow: 1; /* Takes up the remaining horizontal space */
+    min-height: 100vh; /* Ensures the wrapper covers the full viewport height */
+}
+/* =========================================== */
+
 /* --- 3. Main Content Area & Search --- */
 .customer-details-container {
-    flex-grow: 1;
+    /* flex-grow: 1; - Removed because wrapper handles flex now */
     padding: 30px;
     background-color: var(--bg-light);
     display: flex;
@@ -353,7 +366,7 @@ body {
     align-items: center;
     gap: 5px;
 }
-.refresh-btn:hover { background-color: #dc3545; }
+.refresh-btn:hover { background-color: #c82333; }
 
 .table-container {
     max-width: 100%;
@@ -469,11 +482,11 @@ body {
     left: 0;
     background: white;
     border-radius: 8px;
-    box-shadow: var(--shadow-hover);
+    box-shadow: var(--shadow-light); /* Changed to use variable */
     padding: 15px;
     z-index: 10;
     min-width: 200px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light); /* Changed to use variable */
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 5px; /* Reduced margin */
@@ -499,7 +512,7 @@ body {
 
 .invoice-number-badge {
     padding: 6px 10px;
-    background: var(--light-bg);
+    background: var(--bg-light); /* Changed to use variable */
     border-radius: 6px;
     font-size: 12px;
     transition: all 0.2s ease;
@@ -977,6 +990,8 @@ body {
     }
 
     .controls {
+        /* Revert to static flow for mobile */
+        position: static; 
         width: 100%;
         height: auto;
         flex-direction: row;
@@ -987,6 +1002,11 @@ body {
         gap: 15px;
     }
     
+    /* Remove margin when controls are no longer fixed */
+    .main-content-wrapper {
+        margin-left: 0;
+    }
+
     .bill-system-header {
         margin-bottom: 0;
         padding-bottom: 0;
@@ -997,11 +1017,19 @@ body {
         gap: 10px;
         flex-grow: 1;
         justify-content: flex-end;
+        
+        /* New scroll additions for mobile nav */
+        flex-wrap: nowrap; /* CRITICAL: Prevent buttons from wrapping vertically */
+        overflow-x: auto; /* Allow horizontal scrolling if buttons overflow */
+        padding-bottom: 5px; /* Add space for the potential scrollbar */
+        width: 100%;
+        margin-top: 10px;
     }
     .nav-btn, .logout-btn {
         padding: 8px 10px;
         font-size: 0.9rem;
         flex-grow: 0;
+        flex-shrink: 0; /* Important for horizontal scrolling */
     }
 }
 
@@ -1055,33 +1083,8 @@ body {
     #customerTable {
         min-width: 900px; /* Ensure scrollability */
     }
-}
-
-/* --- 2. Responsive Styles (Mobile/Top Bar View) --- */
-
-@media (max-width: 992px) {
-    /* * When screen is narrow, switch to a horizontal row.
-     * Use flex-wrap: nowrap and overflow-x: auto to handle limited space.
-     */
-    .nav-buttons {
-        flex-direction: row; /* Change to horizontal row */
-        flex-wrap: nowrap; /* CRITICAL: Prevent buttons from wrapping vertically */
-        overflow-x: auto; /* Allow horizontal scrolling if buttons overflow */
-        padding-bottom: 5px; /* Add space for the potential scrollbar */
-        width: 100%;
-        margin-top: 10px; /* Add slight separation from content above */
-    }
-
-    /* Ensure buttons still fit nicely in the row */
-    .nav-btn, .logout-btn {
-        flex-shrink: 0; /* Prevent buttons from shrinking too much */
-        padding: 10px 12px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 768px) {
-    /* Slightly smaller padding for very small screens */
+    
+    /* Responsive buttons inside controls */
     .nav-btn, .logout-btn {
         padding: 8px 10px;
         font-size: 0.85rem;

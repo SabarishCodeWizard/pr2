@@ -33,10 +33,10 @@ body {
 /* --- MAIN LAYOUT --- */
 .container {
     display: flex;
-    min-height: 100vh;
+    /* min-height: 100vh; - Removed for fixed layout */
 }
 
-/* --- SIDEBAR (Controls) - Consistent Dark Theme --- */
+/* --- SIDEBAR (Controls) - NOW FIXED --- */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -45,6 +45,15 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    
+    /* === FIX: Fixed Position === */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    z-index: 1000;
+    /* =========================== */
 }
 
 .bill-system-header {
@@ -77,13 +86,15 @@ body {
 }
 
 .dashboard,.nav-btn, .logout-btn {
-    display: block;
+    display: flex; /* Changed to flex for icon alignment */
+    align-items: center;
+    gap: 10px;
     padding: 12px 15px;
     text-decoration: none;
     color: var(--bg-white);
     background-color: var(--text-dark);
     border: none;
-    text-align: center;
+    text-align: left; /* Changed to left for consistent sidebar buttons */
     cursor: pointer;
     font-size: 1rem;
     border-radius: 4px;
@@ -103,14 +114,25 @@ body {
 .logout-btn {
     background-color: var(--danger-color);
     margin-top: 20px;
+    justify-content: center; /* Center content in logout button */
 }
 .logout-btn:hover { background-color: #c82333; }
 
+/* === NEW CLASS: Main Content Area Wrapper === */
+.main-content-wrapper {
+    /* Compensation for fixed sidebar width */
+    margin-left: 250px; 
+    flex-grow: 1; /* Takes up the remaining horizontal space */
+    min-height: 100vh; /* Ensures the wrapper covers the full viewport height */
+}
+/* =========================================== */
+
+
 /* --- MAIN CONTENT AREA --- */
 .recycle-bin-container {
-    flex-grow: 1;
+    /* flex-grow: 1; - Removed because wrapper handles flex now */
     padding: 30px;
-    background-color: var(--bg-white);
+    background-color: var(--bg-light); /* Changed back to bg-light for consistency */
     position: relative;
 }
 
@@ -162,6 +184,9 @@ body {
     font-weight: 600;
     font-size: 0.9rem;
     transition: background-color 0.2s;
+    display: flex; /* Added for icon alignment */
+    align-items: center;
+    gap: 8px;
 }
 .btn-danger:hover:not(:disabled) { background-color: #c82333; }
 .btn-danger:disabled {
@@ -180,6 +205,9 @@ body {
     font-weight: 600;
     font-size: 0.9rem;
     transition: background-color 0.2s;
+    display: flex; /* Added for icon alignment */
+    align-items: center;
+    gap: 8px;
 }
 .btn-secondary:hover { background-color: #5a6268; }
 
@@ -193,7 +221,7 @@ body {
 
 .stat-item {
     flex: 1 1 200px;
-    background-color: var(--bg-light);
+    background-color: var(--bg-white); /* Changed to white for better contrast/card feel */
     padding: 15px;
     border-radius: 8px;
     box-shadow: var(--shadow-light);
@@ -527,6 +555,81 @@ body {
     opacity: 0;
 }
 
+/* --- 1. RESTORE MODAL SPECIFIC STYLES --- */
+#restoreModal .modal-header h3 {
+    color: var(--success-color); 
+}
+
+#restoreModal .modal-header h3 i {
+    color: var(--success-color);
+}
+
+#confirmRestore {
+    background-color: var(--success-color);
+    color: white;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+#confirmRestore:hover {
+    background-color: #1e7e34; /* Darker green hover */
+}
+
+/* --- 2. DELETE/EMPTY BIN MODAL SPECIFIC STYLES --- */
+#deleteModal .modal-header h3,
+#emptyBinModal .modal-header h3 {
+    color: var(--danger-color);
+}
+
+#deleteModal .modal-header h3 i,
+#emptyBinModal .modal-header h3 i {
+    color: var(--danger-color);
+}
+
+#confirmDelete,
+#confirmEmptyBin {
+    background-color: var(--danger-color);
+    color: white;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+#confirmDelete:hover,
+#confirmEmptyBin:hover {
+    background-color: #c82333; /* Darker red hover */
+}
+
+/* New style for the common btn-primary to ensure it looks right in modals if used */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* The existing warning-message is good, keeping it as-is: */
+.warning-message {
+    background-color: #f8d7da;
+    color: var(--danger-color);
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+
 /* ========================================================== */
 /* --- 10. RESPONSIVE DESIGN FOR MOBILE/SMALL SCREENS --- */
 /* ========================================================== */
@@ -538,6 +641,8 @@ body {
     }
 
     .controls {
+        /* Revert to static flow for mobile */
+        position: static; 
         width: 100%;
         height: auto;
         flex-direction: row;
@@ -546,6 +651,11 @@ body {
         align-items: center;
         padding: 15px;
         gap: 15px;
+    }
+    
+    /* Remove compensation margin */
+    .main-content-wrapper {
+        margin-left: 0;
     }
 
     .bill-system-header {
@@ -571,6 +681,10 @@ body {
         flex-shrink: 0; /* Prevent buttons from shrinking too much */
         padding: 10px 12px;
         font-size: 0.9rem;
+        width: auto;
+    }
+    .logout-btn {
+        flex-grow: 1; /* Allow logout button to take remaining space if possible */
     }
 
     /* --- Main Content Area --- */
@@ -646,102 +760,3 @@ body {
         width: 100%;
     }
 }
-
-/* --- recycle-bin.css --- */
-
-/* ... (Omitted existing styles for brevity, assume they are still there) ... */
-
-/* --- ITEM ACTIONS STYLES --- */
-.btn-restore {
-    background-color: var(--success-color); /* Green for recovery */
-    color: white;
-}
-.btn-restore:hover { background-color: #1e7e34; }
-
-.btn-permanent-delete {
-    background-color: var(--danger-color);
-    color: white;
-}
-.btn-permanent-delete:hover { background-color: #c82333; }
-
-/* --- MODAL OVERLAYS (Confirmation Dialogs) --- */
-/* ... (Omitted general modal styles) ... */
-
-/* --- 1. RESTORE MODAL SPECIFIC STYLES --- */
-#restoreModal .modal-header h3 {
-    /* Set header to success color to match the action */
-    color: var(--success-color); 
-}
-
-#restoreModal .modal-header h3 i {
-    color: var(--success-color);
-}
-
-#confirmRestore {
-    background-color: var(--success-color);
-    color: white;
-    font-weight: 600;
-    transition: background-color 0.2s;
-}
-
-#confirmRestore:hover {
-    background-color: #1e7e34; /* Darker green hover */
-}
-
-/* --- 2. DELETE/EMPTY BIN MODAL SPECIFIC STYLES --- */
-#deleteModal .modal-header h3,
-#emptyBinModal .modal-header h3 {
-    /* Set header to danger color to match the action */
-    color: var(--danger-color);
-}
-
-#deleteModal .modal-header h3 i,
-#emptyBinModal .modal-header h3 i {
-    color: var(--danger-color);
-}
-
-#confirmDelete,
-#confirmEmptyBin {
-    /* Use btn-danger styles defined earlier, adding weight for emphasis */
-    background-color: var(--danger-color);
-    color: white;
-    font-weight: 600;
-    transition: background-color 0.2s;
-}
-
-#confirmDelete:hover,
-#confirmEmptyBin:hover {
-    background-color: #c82333; /* Darker red hover */
-}
-
-/* New style for the common btn-primary to ensure it looks right in modals if used */
-.btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: background-color 0.2s;
-}
-.btn-primary:hover {
-    background-color: var(--primary-hover);
-}
-
-/* The existing warning-message is good, keeping it as-is: */
-.warning-message {
-    background-color: #f8d7da;
-    color: var(--danger-color);
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 20px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-/* ... (Omitted the rest of the existing styles) ... */

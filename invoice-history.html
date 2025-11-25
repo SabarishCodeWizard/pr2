@@ -9,11 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-     <!-- Firebase App (the core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <!-- Firebase Firestore -->
+      <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase Auth (if needed) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 
@@ -34,57 +31,53 @@
                 <button id="logoutBtn">Logout</button>
             </div>
         </div>
+        <div class="main-content-wrapper">
+            <div class="invoice-history-container">
+                <h2>Invoice History</h2>
 
-        <div class="invoice-history-container">
-            <h2>Invoice History</h2>
+                <div class="recent-invoices-section">
+                    <h3>Recent Invoices</h3>
+                    <div class="recent-invoices-list" id="recentInvoicesList">
+                        </div>
+                </div>
 
-            <!-- Recent Invoices Section -->
-            <div class="recent-invoices-section">
-                <h3>Recent Invoices</h3>
-                <div class="recent-invoices-list" id="recentInvoicesList">
-                    <!-- Recent invoices will be loaded here dynamically -->
+                <div class="customer-statement-section">
+                    <h3>Customer Statement</h3>
+                    <div class="customer-search">
+                        <input type="text" id="customerSearch"
+                            placeholder="Enter customer name to generate combined statement">
+                        <button id="generateCustomerStatement">Generate Combined Statement</button>
+                        <button id="clearCustomerStatement" class="btn-clear">Clear</button>
+                    </div>
+                    <div id="customerStatementResults" class="customer-statement-results">
+                        </div>
                 </div>
-            </div>
 
-            <!-- ADD THIS NEW SECTION -->
-            <div class="customer-statement-section">
-                <h3>Customer Statement</h3>
-                <div class="customer-search">
-                    <input type="text" id="customerSearch"
-                        placeholder="Enter customer name to generate combined statement">
-                    <button id="generateCustomerStatement">Generate Combined Statement</button>
-                    <button id="clearCustomerStatement" class="btn-clear">Clear</button>
+                <div class="search-filters">
+                    <div class="filter-group">
+                        <input type="text" id="searchInput" placeholder="Search by customer name or invoice number">
+                    </div>
+                    <div class="filter-group">
+                        <input type="number" id="fromInvoiceNo" placeholder="From Invoice No" min="1">
+                        <span class="range-separator">to</span>
+                        <input type="number" id="toInvoiceNo" placeholder="To Invoice No" min="1">
+                    </div>
+                    <div class="filter-group">
+                        <input type="date" id="fromDate" placeholder="From Date">
+                        <span class="range-separator">to</span>
+                        <input type="date" id="toDate" placeholder="To Date">
+                    </div>
+                    <div class="filter-actions">
+                        <button id="searchBtn">Search</button>
+                        <button id="clearFilters">Clear Filters</button>
+                    </div>
                 </div>
-                <div id="customerStatementResults" class="customer-statement-results">
-                    <!-- Customer statement results will appear here -->
-                </div>
-            </div>
 
-            <div class="search-filters">
-                <div class="filter-group">
-                    <input type="text" id="searchInput" placeholder="Search by customer name or invoice number">
-                </div>
-                <div class="filter-group">
-                    <input type="number" id="fromInvoiceNo" placeholder="From Invoice No" min="1">
-                    <span class="range-separator">to</span>
-                    <input type="number" id="toInvoiceNo" placeholder="To Invoice No" min="1">
-                </div>
-                <div class="filter-group">
-                    <input type="date" id="fromDate" placeholder="From Date">
-                    <span class="range-separator">to</span>
-                    <input type="date" id="toDate" placeholder="To Date">
-                </div>
-                <div class="filter-actions">
-                    <button id="searchBtn">Search</button>
-                    <button id="clearFilters">Clear Filters</button>
-                </div>
-            </div>
-
-            <div class="invoices-list" id="invoicesList">
-                <!-- Invoices will be loaded here dynamically -->
+                <div class="invoices-list" id="invoicesList">
+                    </div>
             </div>
         </div>
-    </div>
+        </div>
 
     <script src="js/db.js"></script>
     <script src="js/utils.js"></script>

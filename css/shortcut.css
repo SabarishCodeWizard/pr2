@@ -45,20 +45,15 @@ body {
 }
 
 /* --- 2. Main Layout and Structure (Sidebar/Main Content) --- */
-/* Your HTML uses .container as the wrapper for both controls and content.
-   We'll use it to set up the main flex layout. */
 .container {
     display: flex;
-    min-height: 100vh;
+    /* min-height: 100vh; - Removed for fixed layout */
     width: 100%;
     margin: 0;
     padding: 0;
 }
 
-/* --- 3. Sidebar (Controls) - Consistent Dark Theme --- */
-/* The shortcut page HTML structure puts the controls and content side-by-side
-   on desktop, but your initial HTML used a header-like structure. 
-   We style it here as a traditional sidebar for desktop view, like the reference. */
+/* --- 3. Sidebar (Controls) - NOW FIXED --- */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -70,6 +65,15 @@ body {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
     /* Prevent sidebar from shrinking */
+    
+    /* === FIX: Fixed Position === */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh; /* Full viewport height */
+    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    z-index: 1000;
+    /* =========================== */
 }
 
 .bill-system-header {
@@ -99,13 +103,15 @@ body {
 .dashboard,
 .logout-btn,
 .view-history-btn {
-    display: block;
+    display: flex; /* Changed from block to flex for icon alignment */
+    align-items: center;
+    gap: 10px;
     padding: 12px 15px;
     text-decoration: none;
     color: var(--bg-white);
     background-color: var(--text-dark);
     border: none;
-    text-align: center;
+    text-align: left; /* Changed from center to left for consistent sidebar buttons */
     cursor: pointer;
     font-size: 1rem;
     border-radius: 4px;
@@ -118,6 +124,7 @@ body {
 .logout-btn {
     background-color: var(--danger-color);
     margin-top: 20px;
+    justify-content: center; /* Center content in logout button */
 }
 
 .logout-btn:hover {
@@ -145,28 +152,40 @@ body {
     background-color: var(--primary-hover);
 }
 
+/* === NEW CLASS: Main Content Area Wrapper === */
+.main-content-wrapper {
+    /* Compensation for fixed sidebar width */
+    margin-left: 250px; 
+    flex-grow: 1; /* Takes up the remaining horizontal space */
+    min-height: 100vh; /* Ensures the wrapper covers the full viewport height */
+}
+/* =========================================== */
+
 
 /* --- 4. Main Content Area --- */
 .shortcut-management {
-    flex-grow: 1;
+    /* flex-grow: 1; - Removed because wrapper handles flex now */
     padding: 30px;
-    background-color: var(--bg-white);
+    background-color: var(--bg-light); /* Changed back to bg-light to match other pages' main area */
     position: relative;
+    display: flex; /* Added flex properties to keep children contained vertically */
+    flex-direction: column;
+    gap: 25px;
 }
 
 /* --- 5. Shortcut Header & Management Sections --- */
 .shortcut-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column; /* Changed to column for better stacked title/subtitle */
+    align-items: flex-start;
     border-bottom: 2px solid var(--text-dark);
     /* Use primary color for main page header */
     padding-bottom: 20px;
-    margin-bottom: 25px;
+    margin-bottom: 0;
 }
 
 .shortcut-header h2 {
-    color: var(--danger-color);
+    color: var(--primary-color); /* Changed color for consistency */
     font-size: 1.8rem;
     margin: 0;
 }
@@ -174,7 +193,7 @@ body {
 .shortcut-header p {
     color: var(--secondary-color);
     font-size: 0.9rem;
-    margin: 0;
+    margin: 5px 0 0 0;
 }
 
 /* --- 6. Shortcut Form (Card Style) --- */
@@ -184,7 +203,7 @@ body {
     padding: var(--padding-lg);
     border-radius: 8px;
     box-shadow: var(--shadow-light);
-    margin-bottom: 25px;
+    margin-bottom: 0; /* Margin should be handled by gap in parent .shortcut-management */
     border: 2px solid var(--border-light);
     border-top: 5px solid var(--success-color);
     /* Highlight form card */
@@ -236,7 +255,7 @@ input[type="text"]:focus {
 }
 
 .btn-primary {
-    background-color: var(--success-color);
+    background-color: var(--primary-color); /* Changed to Primary for consistency with system actions */
     color: white;
     border: none;
     padding: 10px 15px;
@@ -473,7 +492,7 @@ input[type="text"]:focus {
 
 /* --- 9. Loading and Toast Styles (Adopted from Recycle Bin) --- */
 /* (Styles for .loading-overlay, .professional-spinner, .toast-notification, etc., are copied directly
-   from the bottom sections of your recycle-bin.css as they are shared utility styles) */
+    from the bottom sections of your recycle-bin.css as they are shared utility styles) */
 
 .loading-overlay {
     position: fixed;
@@ -600,15 +619,16 @@ input[type="text"]:focus {
 
 
 /* --- 10. Responsive Design for Mobile/Small Screens --- */
-@media (max-width: 768px) {
-
-    /* Switch to mobile view: Sidebar becomes top navigation */
+@media (max-width: 992px) {
+    /* Controls become top navigation */
     .container {
         flex-direction: column;
     }
 
     /* Controls (Sidebar) becomes a full-width header/nav */
     .controls {
+        /* Revert to static flow for mobile */
+        position: static; 
         width: 100%;
         height: auto;
         padding: var(--padding-md);
@@ -619,6 +639,11 @@ input[type="text"]:focus {
         justify-content: space-between;
         align-items: center;
     }
+    
+    /* Remove compensation margin */
+    .main-content-wrapper {
+        margin-left: 0;
+    }
 
     .bill-system-header {
         width: 100%;
@@ -626,22 +651,36 @@ input[type="text"]:focus {
         margin-bottom: 10px;
         padding-bottom: 5px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        flex-basis: 100%;
     }
 
     .system-name {
         font-size: 0.75rem;
     }
 
-    /* Navigation buttons alignment */
+    /* Navigation buttons alignment: Use flex properties for scrolling nav bar */
     .dashboard,
     .view-history-btn {
-        flex-grow: 1;
-        width: 48%;
-        /* Adjust for side-by-side buttons */
+        flex-grow: 0;
+        flex-shrink: 0; /* Important for horizontal scrolling */
         margin-bottom: 5px;
         font-size: 0.85rem;
+        width: auto;
+        padding: 10px 12px;
     }
+    
+    /* Wrap all nav links in a container to enforce horizontal scroll if necessary */
+    .controls a, .controls button {
+        margin-bottom: 5px;
+    }
+    
+    .logout-btn {
+        flex-grow: 1;
+        width: auto;
+    }
+}
 
+@media (max-width: 768px) {
     /* Main Content */
     .shortcut-management {
         padding: 20px 15px;

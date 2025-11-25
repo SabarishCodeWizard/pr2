@@ -7,11 +7,8 @@
     <title>Product Shortcuts - PR Fabrics</title>
     <link rel="stylesheet" href="css/shortcut.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase App (the core Firebase SDK) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <!-- Firebase Firestore -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase Auth (if needed) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 
@@ -23,62 +20,62 @@
                 <a href="index.html" class="brand-name">PR Fabrics</a>
                 <span class="system-name">Product Shortcuts</span>
             </h1>
-            <a href="index.html" class="view-history-btn"> <i class="fas fa-file-invoice"></i>  New Bill</a>
+            <a href="index.html" class="view-history-btn"> <i class="fas fa-file-invoice"></i>  New Bill</a>
             <a href="invoice-history.html" class="view-history-btn"> <i class="fas fa-history"></i> View Invoice History</a>
             <a href="customer-details.html" class="view-history-btn"> <i class="fas fa-users"></i> Customer Details</a>
             <a href="shortcut.html" class="dashboard"> <i class="fas fa-bolt"></i> Product Shortcuts</a>
             <a href="recycle-bin.html" class="view-history-btn"> <i class="fas fa-trash"></i> Recycle Bin</a>
+            <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+        <div class="main-content-wrapper">
+            <div class="shortcut-management">
+                <div class="shortcut-header">
+                    <h2>Manage Product Shortcuts</h2>
+                    <p>Create shortcuts for frequently used product descriptions</p>
+                </div>
+
+                <div class="shortcut-form">
+                    <h3>Add New Shortcut</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="shortcutKey">Shortcut Key:</label>
+                            <input type="text" id="shortcutKey" placeholder="e.g., Lk, Ly d, Sj" maxlength="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="fullDescription">Full Description:</label>
+                            <input type="text" id="fullDescription"
+                                placeholder="e.g., Loopknit, Lycra Derby, Single Jersey">
+                        </div>
+                        <button id="addShortcut" class="btn-primary">
+                            <i class="fas fa-plus"></i> Add Shortcut
+                        </button>
+                    </div>
+                </div>
+
+                <div class="shortcuts-list">
+                    <h3>Existing Shortcuts</h3>
+                    <div class="search-box">
+                        <input type="text" id="searchShortcuts" placeholder="Search shortcuts...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="table-container">
+                        <table id="shortcutsTable">
+                            <thead>
+                                <tr>
+                                    <th>Shortcut</th>
+                                    <th>Full Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shortcutsTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
 
-        <div class="shortcut-management">
-            <div class="shortcut-header">
-                <h2>Manage Product Shortcuts</h2>
-                <p>Create shortcuts for frequently used product descriptions</p>
-            </div>
-
-            <div class="shortcut-form">
-                <h3>Add New Shortcut</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="shortcutKey">Shortcut Key:</label>
-                        <input type="text" id="shortcutKey" placeholder="e.g., Lk, Ly d, Sj" maxlength="20">
-                    </div>
-                    <div class="form-group">
-                        <label for="fullDescription">Full Description:</label>
-                        <input type="text" id="fullDescription"
-                            placeholder="e.g., Loopknit, Lycra Derby, Single Jersey">
-                    </div>
-                    <button id="addShortcut" class="btn-primary">
-                        <i class="fas fa-plus"></i> Add Shortcut
-                    </button>
-                </div>
-            </div>
-
-            <div class="shortcuts-list">
-                <h3>Existing Shortcuts</h3>
-                <div class="search-box">
-                    <input type="text" id="searchShortcuts" placeholder="Search shortcuts...">
-                    <i class="fas fa-search"></i>
-                </div>
-                <div class="table-container">
-                    <table id="shortcutsTable">
-                        <thead>
-                            <tr>
-                                <th>Shortcut</th>
-                                <th>Full Description</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="shortcutsTableBody">
-                            <!-- Shortcuts will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Shortcut Modal -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
