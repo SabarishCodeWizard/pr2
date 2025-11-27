@@ -425,7 +425,7 @@ body {
 /* Column Widths */
 #productTable th:nth-child(1), #productTable td:nth-child(1) { width: 5%; } /* S.No */
 #productTable th:nth-child(2), #productTable td:nth-child(2) { width: 45%; text-align: left; } /* Description */
-#productTable th:nth-child(3), #productTable td:nth-child(3) { width: 10%; } /* Qty */
+#productTable th:nth-child(3), #productTable td:nth-child(3) { width: 15%; } /* Qty */
 #productTable th:nth-child(4), #productTable td:nth-child(4) { width: 15%; } /* Rate */
 #productTable th:nth-child(5), #productTable td:nth-child(5) { width: 15%; } /* Amount */
 #productTable th:nth-child(6), #productTable td:nth-child(6) { width: 10%; } /* Action */
