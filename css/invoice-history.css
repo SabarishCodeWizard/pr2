@@ -473,7 +473,7 @@ body {
 }
 
 .date-group-header {
-    background-color: var(--purple-color    );
+    background-color: var(--primary-color );
     padding: 15px 20px;
     border-bottom: 2px solid var(--border-light);
     display: flex;
@@ -483,7 +483,7 @@ body {
 
 .date-title {
     font-size: 1.2rem;
-    color: var(--bg-white);
+    color: var(--text-dark);
     margin: 0;
 }
 
@@ -493,7 +493,7 @@ body {
 
 .invoice-count {
     font-size: 0.9rem;
-    color: var(--bg-white);
+    color: var(--text-dark);
     font-weight: 600;
 }
 
