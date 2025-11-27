@@ -506,6 +506,29 @@ document.addEventListener('DOMContentLoaded', async function () {
             setupAutoCompletion();
         };
 
+
+
+        // START: NEW MOBILE MENU TOGGLE LOGIC
+        const menuToggle = document.getElementById('menuToggle');
+        const menuPanel = document.getElementById('menuPanel');
+
+        if (menuToggle && menuPanel) {
+            menuToggle.addEventListener('click', () => {
+                menuPanel.classList.toggle('menu-open');
+            });
+        }
+
+        // Optional: Close menu when a link is clicked on mobile
+        const navLinks = menuPanel.querySelectorAll('a, button');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                // Check if we are in mobile view before closing
+                if (window.innerWidth <= 992) {
+                    menuPanel.classList.remove('menu-open');
+                }
+            });
+        });
+
         // Add event listener for apply suggestion button
         document.getElementById('applySuggestion').addEventListener('click', applySuggestedInvoiceNumber);
 

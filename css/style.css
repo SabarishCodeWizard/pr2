@@ -1,6 +1,3 @@
-/* --- style.css (Main Billing Page) --- */
-
-/* --- 1. CSS Variables & Global Reset (Unified Theme) --- */
 :root {
     --primary-color: #007bff; /* Blue for branding/primary action */
     --primary-hover: #0056b3;
@@ -39,10 +36,38 @@ body {
 /* --- 2. Main Layout and Sidebar (Unified Theme) --- */
 .container {
     display: flex;
-    /* min-height: 100vh; - Removed as controls are fixed */
 }
 
-/* Sidebar Styling - NOW FIXED */
+/* === NEW: Mobile Header Container (Hidden on Desktop) === */
+#mobileHeader {
+    display: none; /* Hidden by default on desktop */
+    width: 100%;
+    background-color: var(--text-dark);
+    color: var(--bg-white);
+    padding: var(--padding-md) var(--padding-lg);
+    justify-content: space-between;
+    align-items: center;
+    position: fixed; /* Fixed position on top for mobile */
+    top: 0;
+    left: 0;
+    z-index: 1010;
+}
+
+#menuToggle {
+    background: none;
+    border: none;
+    color: var(--bg-white);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+/* Utility Class for Desktop-only Elements */
+.desktop-only {
+    display: block;
+}
+
+/* Sidebar Styling - DESKTOP/FIXED */
 .controls {
     width: 250px;
     background-color: var(--text-dark);
@@ -53,12 +78,12 @@ body {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     gap: 10px;
     
-    /* === FIX: Fixed Position === */
+    /* === DESKTOP: Fixed Position === */
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh; /* Full viewport height */
-    overflow-y: auto; /* Allows the sidebar content to scroll if it exceeds screen height */
+    overflow-y: auto; 
     z-index: 1000;
     /* =========================== */
 }
@@ -105,7 +130,7 @@ body {
 }
 
 .dashboard {
-    background-color: var(--primary-color); /* Active link for New Bill */
+    background-color: var(--primary-color); 
 }
 .dashboard:hover { background-color: var(--primary-hover); }
 
@@ -136,23 +161,23 @@ body {
 }
 
 #generatePDF {
-    background-color: var(--info-color); /* Cyan */
+    background-color: var(--info-color); 
 }
 #generatePDF:hover { background-color: #138496; }
 
 #saveBill {
-    background-color: var(--success-color); /* Green */
+    background-color: var(--success-color); 
 }
 #saveBill:hover { background-color: #1e7e34; }
 
 #resetForm {
-    background-color: var(--warning-color); /* Yellow/Orange */
+    background-color: var(--warning-color); 
     color: var(--text-dark);
 }
 #resetForm:hover { background-color: #e0a800; }
 
 #logoutBtn {
-    background-color: var(--danger-color); /* Red */
+    background-color: var(--danger-color); 
     margin-top: 10px;
 }
 #logoutBtn:hover { background-color: #c82333; }
@@ -161,13 +186,13 @@ body {
     background: var(--success-color) !important;
 }
 
-/* === NEW CLASS: Main Content Area Wrapper === */
+/* Main Content Area Wrapper */
 .main-content-wrapper {
-    /* Compensation for fixed sidebar width */
+    /* Compensation for fixed sidebar width on DESKTOP */
     margin-left: 250px; 
-    flex-grow: 1; /* Takes up the remaining horizontal space */
-    min-height: 100vh; /* Ensures the wrapper fills the screen height for scrolling */
-    position: relative; /* IMPORTANT: Enables content-loading-overlay positioning */
+    flex-grow: 1; 
+    min-height: 100vh; 
+    position: relative; 
 }
 /* =========================================== */
 
@@ -733,47 +758,65 @@ body {
     .container {
         flex-direction: column;
     }
-    .controls {
-        /* Revert to static flow for mobile */
-        position: static; 
-        width: 100%;
-        height: auto;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        gap: 15px;
-    }
     
-    /* Revert Main Content Wrapper margin for mobile */
-    .main-content-wrapper {
-        margin-left: 0;
+    /* Show mobile header and hide desktop header */
+    #mobileHeader {
+        display: flex;
+    }
+    .desktop-only {
+        display: none;
+    }
+    .bill-system-header.desktop-only {
+        display: none; /* Explicitly hide the desktop header */
     }
 
-    .bill-system-header, .button-group, #logoutBtn {
-        margin: 0;
-        padding: 0;
-        border: none;
+    /* === MOBILE MENU SLIDE-IN LOGIC === */
+    .controls {
+        /* Fixed for full-screen slide-in */
+        position: fixed; 
+        width: 250px;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 1005; /* Above main content, below mobileHeader */
+        
+        /* Start off-screen (left-to-right slide) */
+        transform: translateX(-100%); 
+        transition: transform 0.3s ease-out; 
+        
+        /* Add padding-top to account for fixed mobile header */
+        padding-top: 80px; 
     }
+    
+    /* Class applied by JavaScript to slide menu in */
+    .controls.menu-open {
+        transform: translateX(0);
+    }
+    /* =================================== */
+    
+    /* Content Wrapper adjustments */
+    .main-content-wrapper {
+        margin-left: 0;
+        /* Push content down to account for the fixed mobile header */
+        padding-top: 70px; 
+    }
+
+    /* Full-width links and column stack for buttons in the menu */
     .controls > a, .controls > button {
-        flex-grow: 1;
-        width: auto;
-        padding: 8px 12px;
-        font-size: 0.9rem;
+        flex-grow: 0; 
+        width: 100%;
+        padding: 10px 12px;
+        margin: 0;
     }
-    .bill-system-header {
-        flex-basis: 100%;
-        text-align: left;
-        margin-bottom: 10px;
-    }
+    
     .button-group {
-        flex-basis: 100%;
-        flex-direction: row;
+        flex-direction: column; 
         gap: 10px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-basis: 100%;
+        margin: 20px 0;
     }
+    
+    /* General Mobile Layout Cleanup */
     .invoice-container {
         margin: 10px;
     }
@@ -783,7 +826,7 @@ body {
         text-align: center;
     }
     .invoice-header img {
-        display: none; /* Hide image on mobile */
+        display: none; 
     }
     .company-details, .invoice-title {
         text-align: center;
