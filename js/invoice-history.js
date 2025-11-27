@@ -1119,7 +1119,7 @@ _This is an automated statement. Please contact us for any queries._`;
     }
 }
 
-// Share individual invoice via WhatsApp
+// Share individual invoice via WhatsApp with Mobile-Optimized Box Alignment & Full Details
 async function shareInvoiceViaWhatsApp(invoiceNo) {
     try {
         const invoiceData = await db.getInvoice(invoiceNo);
@@ -1129,96 +1129,121 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
             return;
         }
 
-        // Calculate previous balance and returns
+        // --- Data Preparation & Calculations ---
         const previousBalance = invoiceData.grandTotal - invoiceData.subtotal;
         const totalReturns = await Utils.calculateTotalReturns(invoiceNo);
         const adjustedBalanceDue = invoiceData.balanceDue - totalReturns;
-
-        // Get detailed return information
         const returns = await db.getReturnsByInvoice(invoiceNo);
+        const dateStr = new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN');
 
-        // Build payment breakdown message
-        let paymentBreakdownMessage = '';
-        if (invoiceData.paymentBreakdown) {
-            const paymentMethods = [];
-            if (invoiceData.paymentBreakdown.cash > 0) paymentMethods.push(`💵 Cash: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.cash)}`);
-            if (invoiceData.paymentBreakdown.upi > 0) paymentMethods.push(`📱 UPI: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.upi)}`);
-            if (invoiceData.paymentBreakdown.account > 0) paymentMethods.push(`🏦 Account: ₹${Utils.formatCurrency(invoiceData.paymentBreakdown.account)}`);
+        // Helper for currency - removes decimals for whole numbers to save space
+        const fmt = (amt) => Math.round(amt) === amt ? amt : Utils.formatCurrency(amt);
+        
+        // --- Message Construction (Mobile Optimized Box Style) ---
+        // Width ~22 chars to prevent wrapping
+        const line = "──────────────────────"; 
+        
+        // 1. Header
+        let message = `*INVOICE STATEMENT*
+*PR FABRICS*
+GSTIN: 33CLJPG4331G1ZG
 
-            if (paymentMethods.length > 0) {
-                paymentBreakdownMessage = `\n💳 ${paymentMethods.join(' | ')}`;
-            }
+┌${line}
+│ *INVOICE DETAILS*
+├${line}
+│ No: ${invoiceData.invoiceNo}
+│ Date: ${dateStr}
+└${line}\n\n`;
+
+        // 2. Bill To (Customer)
+        // Truncate name/address slightly to fit box if needed
+        const custName = invoiceData.customerName.length > 20 ? invoiceData.customerName.substring(0, 20) + ".." : invoiceData.customerName;
+        const custAddr = invoiceData.customerAddress ? (invoiceData.customerAddress.length > 20 ? invoiceData.customerAddress.substring(0, 20) + ".." : invoiceData.customerAddress) : 'Not specified';
+
+        message += `┌${line}
+│ *BILL TO*
+├${line}
+│ ${custName}
+│ ${invoiceData.customerPhone || 'No Phone'}
+│ ${custAddr}
+└${line}\n\n`;
+
+        // 3. Product Details
+        message += `┌${line}
+│ *PRODUCT DETAILS*
+├${line}\n`;
+
+        // Loop through products
+        invoiceData.products.forEach((p) => {
+            message += `│ ${p.description}
+│ ${p.qty} x ₹${fmt(p.rate)} = ₹${fmt(p.amount)}
+├${line}\n`;
+        });
+        
+        // 4. Returns (With Reasons)
+        if (totalReturns > 0) {
+            message += `│ *RETURNED ITEMS*
+├${line}\n`;
+            returns.forEach((r) => {
+                message += `│ ${r.description}
+│ ${r.qty} x ₹${fmt(r.rate)} = -₹${fmt(r.returnAmount)}`;
+                
+                if (r.reason) {
+                    message += `\n│ Rsn: ${r.reason}`;
+                }
+                message += `\n├${line}\n`;
+            });
+        }
+        
+        // Clean up last separator
+        if (message.endsWith(`├${line}\n`)) {
+            message = message.substring(0, message.lastIndexOf("├"));
+            message += `└${line}\n\n`;
+        } else {
+             message += `└${line}\n\n`;
         }
 
-        // Create WhatsApp message with professional formatting
-        const message = `*PR FABRICS - INVOICE STATEMENT*
-*GSTIN: 33CLJPG4331G1ZG*
+        // 5. Account Summary (With Payment Breakdown)
+        message += `┌${line}
+│ *ACCOUNT SUMMARY*
+├${line}
+│ Bill Amt:   ₹${fmt(invoiceData.subtotal)}
+`;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if (previousBalance > 0) {
+            message += `│ Prev Bal:   ₹${fmt(previousBalance)}\n`;
+        }
 
-*INVOICE DETAILS*
-────────────────────────────────
-📄 Invoice #: ${invoiceData.invoiceNo}
-📅 Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString('en-IN')}
-👤 Customer: ${invoiceData.customerName}
-📍 Address: ${invoiceData.customerAddress || 'Not specified'}
-📞 Phone: ${invoiceData.customerPhone || 'Not specified'}
+        message += `│ Total:      ₹${fmt(invoiceData.grandTotal)}\n`;
+        
+        if (totalReturns > 0) {
+            message += `│ Returns:   -₹${fmt(totalReturns)}\n`;
+        }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        message += `│ Paid:       ₹${fmt(invoiceData.amountPaid)}\n`;
 
-*PRODUCT DETAILS*
-────────────────────────────────
-${invoiceData.products.map((product, index) =>
-            `   ${index + 1}. ${product.description}
-      Qty: ${product.qty} × Rate: ₹${Utils.formatCurrency(product.rate)}
-      Amount: ₹${Utils.formatCurrency(product.amount)}`
-        ).join('\n\n')}
+        // Payment Breakdown - Indented slightly
+        if (invoiceData.paymentBreakdown) {
+            if (invoiceData.paymentBreakdown.cash > 0) message += `│  💵 Cash:   ₹${fmt(invoiceData.paymentBreakdown.cash)}\n`;
+            if (invoiceData.paymentBreakdown.upi > 0)  message += `│  📱 UPI:    ₹${fmt(invoiceData.paymentBreakdown.upi)}\n`;
+            if (invoiceData.paymentBreakdown.account > 0) message += `│  🏦 Acct:   ₹${fmt(invoiceData.paymentBreakdown.account)}\n`;
+        }
 
-${totalReturns > 0 ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        message += `│ ${line}
+│ *DUE:       ₹${fmt(totalReturns > 0 ? adjustedBalanceDue : invoiceData.balanceDue)}*
+└${line}\n`;
 
-*RETURN DETAILS*
-────────────────────────────────
-${returns.map((returnItem, index) =>
-            `   ${index + 1}. ${returnItem.description}
-      Qty: ${returnItem.qty} × Rate: ₹${Utils.formatCurrency(returnItem.rate)}
-      Amount: -₹${Utils.formatCurrency(returnItem.returnAmount)}${returnItem.reason ? `\n      Reason: ${returnItem.reason}` : ''}`
-        ).join('\n\n')}
-` : ''}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*ACCOUNT SUMMARY*
-────────────────────────────────
-💰 Current Bill Amount: ₹${Utils.formatCurrency(invoiceData.subtotal)}
-${previousBalance > 0 ? `📊 Previous Balance: ₹${Utils.formatCurrency(previousBalance)}` : ''}
-💳 Total Amount: ₹${Utils.formatCurrency(invoiceData.grandTotal)}
-✅ Amount Paid: ₹${Utils.formatCurrency(invoiceData.amountPaid)}${paymentBreakdownMessage}
-${totalReturns > 0 ? `🔄 Return Amount: -₹${Utils.formatCurrency(totalReturns)}` : ''}
-
-${totalReturns > 0 ?
-                `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(adjustedBalanceDue)}*` :
-                `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoiceData.balanceDue)}*`}
-
-${totalReturns > 0 ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*RETURN SUMMARY*
-────────────────────────────────
-📦 Total Return Amount: ₹${Utils.formatCurrency(totalReturns)}
-` : ''}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+        // 6. Footer (Full Contact Info)
+        message += `
+━━━━━━━━━━━━━━━━━━━━━━
 *CONTACT INFORMATION*
-────────────────────────────────
 🏢 *PR FABRICS*
 📍 Tirupur
-📞 *Phone: 9952520181*
+📞 9952520181
 
-_This is an automated invoice statement. Please contact us for any queries._`;
+_Automated invoice statement._`;
 
-        // Open WhatsApp with the message
+        // --- Final Send ---
         openWhatsApp(invoiceData.customerPhone, message);
 
     } catch (error) {
