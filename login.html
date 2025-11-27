@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | PR Fabrics</title>
-    <link rel="stylesheet" href="css/login.css">
-     <!-- Firebase App (the core Firebase SDK) -->
+   <link rel="stylesheet" href="css/login.css">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <!-- Firebase Firestore -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <!-- Firebase Auth (if needed) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+ 
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
+    <div class="container">
+        <div class="top"></div>
+        <div class="bottom"></div>
+
+        <div class="center">
             <div class="logo-section">
-                <div class="logo">
-                    <img src="image.png" alt="PR Fabrics Logo" class="logo-img">
-                </div>
+                
                 <h1>PR Fabrics</h1>
                 <p class="subtitle">Invoice Management System</p>
             </div>
@@ -44,7 +44,7 @@
                 </div>
 
                 <div class="error-message" id="errorMessage">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -65,7 +65,8 @@
             </div>
         </div>
     </div>
+ <script src="js/login.js"></script>
+   
 
-    <script src="js/login.js"></script>
-</body>
+    </body>
 </html>
