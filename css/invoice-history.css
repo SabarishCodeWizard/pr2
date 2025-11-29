@@ -4,7 +4,7 @@
 :root {
     --primary-color: #007bff; /* Blue for branding/primary action */
     --primary-hover: #0056b3;
-    --secondary-color: #6c757d; /* Gray for secondary elements/neutral */
+    --secondary-color: #595f69; /* Gray for secondary elements/neutral */
     --success-color: #28a745; /* Green for success/add payment */
     --danger-color: #dc3545; /* Red for delete/warning */
     --info-color: #17a2b8; /* Cyan for info/edit */
