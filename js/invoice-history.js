@@ -42,6 +42,72 @@ function clearCustomerStatement() {
     document.getElementById('customerStatementResults').innerHTML = '';
 }
 
+
+// Add scroll to top button functionality
+function addScrollToTopButton() {
+    // Create the button element
+    const scrollButton = document.createElement('button');
+    scrollButton.id = 'scrollToTopBtn';
+    scrollButton.className = 'scroll-to-top-btn';
+    scrollButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
+    scrollButton.title = 'Scroll to top';
+
+    // Add styles dynamically
+    scrollButton.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 50px;
+        height: 50px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 20px;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        transition: all 0.3s ease;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    `;
+
+    // Add hover effects
+    scrollButton.addEventListener('mouseenter', function () {
+        this.style.background = '#0056b3';
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.4)';
+    });
+
+    scrollButton.addEventListener('mouseleave', function () {
+        this.style.background = '#007bff';
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.3)';
+    });
+
+    // Add click event to scroll to top
+    scrollButton.addEventListener('click', function () {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+
+    // Add to page
+    document.body.appendChild(scrollButton);
+
+    // Show/hide button based on scroll position
+    window.addEventListener('scroll', function () {
+        if (window.pageYOffset > 300) {
+            scrollButton.style.display = 'flex';
+        } else {
+            scrollButton.style.display = 'none';
+        }
+    });
+}
+
+
 document.addEventListener('DOMContentLoaded', async function () {
     if (!checkAuthentication()) {
         return;
@@ -55,6 +121,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Load recent invoices - uses its own skeleton loading now
         await loadRecentInvoices();
 
+
+
         // Check for URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const searchParam = urlParams.get('search');
@@ -65,6 +133,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Load all invoices - uses skeleton loading now
         await loadInvoices();
+
+        addScrollToTopButton();
 
         // Add event listeners
         document.getElementById('searchBtn').addEventListener('click', loadInvoices);
@@ -1068,8 +1138,8 @@ ${invoicesWithReturns.map((invoice, index) => {
 ${productDetails}${returnDetails}
 
 ${invoice.totalReturns > 0 ?
-                `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` :
-                `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
+                    `✅ *ADJUSTED BALANCE DUE: ₹${Utils.formatCurrency(invoice.adjustedBalanceDue)}*` :
+                    `✅ *BALANCE DUE: ₹${Utils.formatCurrency(invoice.balanceDue)}*`}`;
         }).join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1138,11 +1208,11 @@ async function shareInvoiceViaWhatsApp(invoiceNo) {
 
         // Helper for currency - removes decimals for whole numbers to save space
         const fmt = (amt) => Math.round(amt) === amt ? amt : Utils.formatCurrency(amt);
-        
+
         // --- Message Construction (Mobile Optimized Box Style) ---
         // Width ~22 chars to prevent wrapping
-        const line = "──────────────────────"; 
-        
+        const line = "──────────────────────";
+
         // 1. Header
         let message = `*INVOICE STATEMENT*
 *PR FABRICS*
@@ -1179,7 +1249,7 @@ GSTIN: 33CLJPG4331G1ZG
 │ ${p.qty} x ₹${fmt(p.rate)} = ₹${fmt(p.amount)}
 ├${line}\n`;
         });
-        
+
         // 4. Returns (With Reasons)
         if (totalReturns > 0) {
             message += `│ *RETURNED ITEMS*
@@ -1187,20 +1257,20 @@ GSTIN: 33CLJPG4331G1ZG
             returns.forEach((r) => {
                 message += `│ ${r.description}
 │ ${r.qty} x ₹${fmt(r.rate)} = -₹${fmt(r.returnAmount)}`;
-                
+
                 if (r.reason) {
                     message += `\n│ Rsn: ${r.reason}`;
                 }
                 message += `\n├${line}\n`;
             });
         }
-        
+
         // Clean up last separator
         if (message.endsWith(`├${line}\n`)) {
             message = message.substring(0, message.lastIndexOf("├"));
             message += `└${line}\n\n`;
         } else {
-             message += `└${line}\n\n`;
+            message += `└${line}\n\n`;
         }
 
         // 5. Account Summary (With Payment Breakdown)
@@ -1215,7 +1285,7 @@ GSTIN: 33CLJPG4331G1ZG
         }
 
         message += `│ Total:      ₹${fmt(invoiceData.grandTotal)}\n`;
-        
+
         if (totalReturns > 0) {
             message += `│ Returns:   -₹${fmt(totalReturns)}\n`;
         }
@@ -1225,7 +1295,7 @@ GSTIN: 33CLJPG4331G1ZG
         // Payment Breakdown - Indented slightly
         if (invoiceData.paymentBreakdown) {
             if (invoiceData.paymentBreakdown.cash > 0) message += `│  💵 Cash:   ₹${fmt(invoiceData.paymentBreakdown.cash)}\n`;
-            if (invoiceData.paymentBreakdown.upi > 0)  message += `│  📱 UPI:    ₹${fmt(invoiceData.paymentBreakdown.upi)}\n`;
+            if (invoiceData.paymentBreakdown.upi > 0) message += `│  📱 UPI:    ₹${fmt(invoiceData.paymentBreakdown.upi)}\n`;
             if (invoiceData.paymentBreakdown.account > 0) message += `│  🏦 Acct:   ₹${fmt(invoiceData.paymentBreakdown.account)}\n`;
         }
 
@@ -2859,10 +2929,10 @@ async function deleteInvoice(invoiceNo) {
     const confirmInput = document.getElementById('confirmInvoiceNo');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-    confirmInput.addEventListener('input', function() {
+    confirmInput.addEventListener('input', function () {
         const isConfirmed = this.value.trim() === invoiceNo;
         confirmBtn.disabled = !isConfirmed;
-        
+
         if (isConfirmed) {
             this.style.borderColor = '#28a745';
             this.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.25)';
@@ -2873,7 +2943,7 @@ async function deleteInvoice(invoiceNo) {
     });
 
     // Enter key support
-    confirmInput.addEventListener('keypress', function(e) {
+    confirmInput.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && !confirmBtn.disabled) {
             proceedWithDelete(invoiceNo);
         }
@@ -2897,16 +2967,16 @@ function closeDeleteDialog() {
 async function proceedWithDelete(invoiceNo) {
     try {
         closeDeleteDialog();
-        
+
         showLoading('Deleting Invoice', 'Please wait while we securely remove the invoice and all related data...');
 
         await db.deleteInvoice(invoiceNo);
 
         hideLoading();
-        
+
         // Show success message
         showSuccessMessage(`Invoice #${invoiceNo} and all related data have been permanently deleted.`);
-        
+
         await loadInvoices();
 
     } catch (error) {
@@ -2930,9 +3000,9 @@ function showSuccessMessage(message) {
             <i class="fas fa-times"></i>
         </button>
     `;
-    
+
     document.body.appendChild(successToast);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         if (successToast.parentElement) {
@@ -2954,9 +3024,9 @@ function showErrorMessage(message) {
             <i class="fas fa-times"></i>
         </button>
     `;
-    
+
     document.body.appendChild(errorToast);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         if (errorToast.parentElement) {

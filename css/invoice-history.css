@@ -1366,3 +1366,56 @@ body {
 .operation-toast {
 /* ... existing toast CSS ... */
 }
+
+
+/* Scroll to Top Button */
+.scroll-to-top-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.scroll-to-top-btn:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.scroll-to-top-btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .scroll-to-top-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .scroll-to-top-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+}
